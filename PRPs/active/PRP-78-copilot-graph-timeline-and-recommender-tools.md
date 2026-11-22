@@ -1,6 +1,7 @@
 ---
 name: PRP-78-copilot-graph-timeline-and-recommender-tools
-status: backlog
+status: active
+started: 2026-11-22
 priority: P0
 order: 69
 review: required
@@ -55,6 +56,8 @@ Out of scope: `search_docs`, the 100-question groundedness set and Helm copilot 
 | 6 | Local demo copilot | stay disabled; recorded demo model | Decided by the owner 2026-11-16 ("Allow recorded mode locally", D15): allow a `recorded` mode for the LOCAL demo only, under three conditions: it works only when `NS_ENV=local`, it is labelled synthetic in status and UI, and it answers by quoting real tool results. This overrides, for the local demo only, the 2026-11-11 PRP-19 round 2 decision "No fake or sandbox model mode"; hosted Azure still needs a real approved model endpoint. Background: that decision said "No fake or sandbox model mode"; the 2026-11-16 restored-scope assignment asks for "copilot on in the local demo profile with the recorded model" and PRP-71 could not deliver it. Resolution: this PRP owns a `recorded` mode (`NS_COPILOT_MODE=recorded`, only with `NS_ENV=local`, labelled synthetic in status and UI, extractive over real tool results, never default outside the demo profile) and the demo-profile switch (`NS_DEMO_COPILOT_MODE`, shipped by PRP-71 as `disabled`). History: the fallback (descope items 6 and 8) was not needed after the 2026-11-16 decision |
 | 7 | Audit of allowed tool calls | refusals only; every call | Every call, read-audit failure rule (PRP-48 decision 3: a failed read-audit write is logged and counted, never blocks) |
 | 8 | Domains for `recommend_agent` | all readable; capped | At most 5 readable domains, context-narrowed first; truncation flagged |
+| 9 | Geography filter for the `list` access query (decided by the owner 2026-11-22 at plan approval) | map `eu_eea` to region group `eu`; two-step lookup | Two-step: the shipped PRP-73 `AccessQuery` has no `residency_geography` filter (only `residency_regions`/`region_group`) and `catalog/**` is must-not-touch, so `graph_query` first runs the catalog `list` on `grounding_source` with the contract filters through the existing `CatalogReader` port (at most 50 asset ids, truncation flagged), then `who_accesses(asset_ids=..., modes=...)` |
+| 10 | Demo copilot switch blocked by the seeded stored setting (decided by the owner 2026-11-22) | leave demo off; extend item 8 | Extend item 8: `scripts/sandbox/sbx_demo_settings.py` seeds a stored `copilot` setting with `enabled: false`, which beats env (PRP-45), and `tests/unit/demo_profile/test_compose_passthrough.py` pins `disabled`; item 8 also owns those two files and `tests/unit/demo_profile/test_demo_settings.py` |
 
 ## Context manifest
 
@@ -115,6 +118,9 @@ owns:
   - docs/runbooks/copilot.md
   - infra/dev/demo-profile.env
   - scripts/sandbox/sbx_demo_check.py
+  - scripts/sandbox/sbx_demo_settings.py
+  - tests/unit/demo_profile/test_demo_settings.py
+  - tests/unit/demo_profile/test_compose_passthrough.py
 tier1:
   - services/api/neurosphere_api/runtime/builders/copilot.py
   - docker-compose.yml
@@ -141,7 +147,7 @@ must_not_touch:
 Parallelization: items 1, 2 and 3 are [P] (separate core modules and test files; each adds its own port class at the end of `ports.py`, merged in order 1, 2, 3). Item 4 after 1-3. Items 5 and 6 after 4; item 7 after 5; item 8 after 6 and 7.
 
 ### Item 1 - `graph_query` tool  [P]
-- Deliverable: `copilot/tools/graph.py` and `GraphQueryArgs {query: StructuredQuery, access_mode: read|write|any|None}`; `neighbors`/`impact_paths` through `GraphReader` (the `GraphQuery` protocol) with copilot caps and relation allowlist; `list` on `grounding_source` with `access_mode` through `AccessReader` (PRP-73); records for nodes and edges with provenance and evidence ids; every node re-filtered against readable domains.
+- Deliverable: `copilot/tools/graph.py` and `GraphQueryArgs {query: StructuredQuery, access_mode: read|write|any|None}`; `neighbors`/`impact_paths` through `GraphReader` (the `GraphQuery` protocol) with copilot caps and relation allowlist; `list` on `grounding_source` with `access_mode`: contract filters resolved to at most 50 asset ids through the existing `CatalogReader` port, then `AccessReader` (PRP-73) `who_accesses` on those ids (clarification 9); records for nodes and edges with provenance and evidence ids; every node re-filtered against readable domains.
 - Owned files: `copilot/tools/graph.py`, `copilot/tools/ports.py` (append `GraphReader`, `AccessReader`), `packages/core/tests/copilot_graph_tools/test_graph_query.py`.
 - Must NOT touch: `builtin.py` tool bodies.
 - Depends on: PRP-70, PRP-73 merged.
@@ -200,7 +206,7 @@ Parallelization: items 1, 2 and 3 are [P] (separate core modules and test files;
 
 ### Item 8 - Demo profile default, runbook and close-out  [serial-after: PRP-71]
 - Deliverable: switch the PRP-71 local demo profile to the recorded mode: set `NS_DEMO_COPILOT_MODE=recorded` in `infra/dev/demo-profile.env` and, if compose does not already map it to `NS_COPILOT_MODE`, the one passthrough line in `docker-compose.yml` (Tier 1 in this PRP's ownership; nobody else owns it in W23). Remove the `pending_prp_78` state from `scripts/sandbox/sbx_demo_check.py` (PRP-71 file, granted here for that one check). Runbook section (recorded mode, the eight tools, the real-endpoint path, audit records); Tier-3 regeneration (`openapi.json`, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`); changelog fragment; completion note with OPEN live turn and env vars.
-- Owned files: `docs/runbooks/copilot.md`, `infra/dev/demo-profile.env`, `scripts/sandbox/sbx_demo_check.py`, `docker-compose.yml` (one line), this PRP file, Tier-3 files.
+- Owned files: `docs/runbooks/copilot.md`, `infra/dev/demo-profile.env`, `scripts/sandbox/sbx_demo_check.py`, `scripts/sandbox/sbx_demo_settings.py` (no stored `copilot` row in recorded mode, clarification 10), `tests/unit/demo_profile/test_demo_settings.py`, `tests/unit/demo_profile/test_compose_passthrough.py`, `docker-compose.yml` (one line), this PRP file, Tier-3 files.
 - Depends on: items 6, 7; PRP-71 merged.
 - Acceptance criteria: validation gates pass; product check: a fresh demo stack answers the five demo questions in the dock without editing files.
 
