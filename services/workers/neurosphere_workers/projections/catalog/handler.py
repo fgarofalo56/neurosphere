@@ -48,7 +48,11 @@ from neurosphere_core.errors import (
 )
 from neurosphere_core.scope import IdentityScope
 
-from neurosphere_workers.projections.catalog.discovery import build_entity, referenced_entity_ids
+from neurosphere_workers.projections.catalog.discovery import (
+    agent_discovery_entity,
+    build_entity,
+    referenced_entity_ids,
+)
 from neurosphere_workers.projections.catalog.mapping import (
     EdgeCandidate,
     build_edge,
@@ -142,6 +146,12 @@ class ProjectionStats:
     entities_created: int = 0
     entities_existing: int = 0
     stale_retries: int = 0
+    #: PRP-137 derived-agent drafts (events with ``agent_resolution == "derived"``).
+    agent_drafts_created: int = 0
+    agent_drafts_existing: int = 0
+    agent_undiscoverable_no_domain: int = 0
+    agent_draft_out_of_scope: int = 0
+    agent_draft_collision: int = 0
     by_rule: dict[str, int] = field(default_factory=dict)
 
 
@@ -200,6 +210,8 @@ class CatalogProjection:
             raise DependencyTransientError(
                 "trace event is not readable yet", reason="trace_event_missing"
             )
+        if loaded.agent_resolution == "derived":
+            await self._discover_agent(scope, loaded)
         candidates = await self._candidates(scope, loaded, entry.customer_id)
         if not candidates:
             self.stats.no_candidates += 1
@@ -209,6 +221,37 @@ class CatalogProjection:
 
     async def __call__(self, entry: OutboxEntry) -> None:
         await self.handle(entry)
+
+    async def _discover_agent(self, scope: IdentityScope, loaded: LoadedEvent) -> None:
+        """Create-if-absent the draft Agent for a derived id; never updates an existing one."""
+        event = loaded.event
+        if event.domain_id is None:
+            self.stats.agent_undiscoverable_no_domain += 1
+            return
+        if (
+            event.cloud != scope.cloud
+            or event.customer_id.root != scope.customer_id
+            or event.domain_id.root not in scope.allowed_domains
+        ):
+            self.stats.agent_draft_out_of_scope += 1  # nothing to quarantine: no edge candidate
+            return
+        entity = agent_discovery_entity(loaded, format_timestamp(self._clock()))
+        if entity is None:
+            self.stats.agent_undiscoverable_no_domain += 1
+            return
+        if await self._repo.get_entity(scope, entity.id) is not None:
+            self.stats.agent_drafts_existing += 1
+            return
+        try:
+            await self._repo.create_entity(scope, entity)
+            self.stats.agent_drafts_created += 1
+        except InvalidSchemaError as exc:
+            if exc.reason != ENTITY_ID_TAKEN_REASON:
+                raise
+            if await self._repo.get_entity(scope, entity.id) is None:
+                self.stats.agent_draft_collision += 1  # taken outside this scope
+            else:
+                self.stats.agent_drafts_existing += 1  # concurrent or earlier create: success
 
     # ------------------------------------------------------------------ mapping
 
