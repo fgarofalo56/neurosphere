@@ -80,7 +80,7 @@ def test_four_states_are_reachable(
 
 def test_admin_connectors_view_carries_the_counts() -> None:
     counts = {"queries": 2, "rows": 9, "events_posted": 7, "rows_skipped": 2}
-    summary = summarize([run("ok", **counts)], [cfg()])
+    summary = summarize([run("ok", queries=2, rows=9, events_posted=7, rows_skipped=2)], [cfg()])
     connector = summary.connectors[3]
     assert connector.kind == KIND
     assert dict(connector.counts) == counts
