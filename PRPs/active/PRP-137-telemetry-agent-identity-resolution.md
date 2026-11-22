@@ -1,10 +1,11 @@
 ---
 name: PRP-137-telemetry-agent-identity-resolution
-status: backlog
+status: active
 priority: P0
 order: 59
 review: required
 created: 2026-11-16
+started: 2026-11-22
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -129,7 +130,14 @@ tier2_appends:
   - services/api/tests/authz/test_route_inventory.py
   - services/api/tests/authz/test_startup_route_check.py
   - services/api/tests/runtime_routes/manifest_calls.py
+  - services/api/tests/runtime_routes/test_manifest_routes_serve.py
   - tests/integration/real_stack/test_manifest_routes.py
+  - services/api/tests/runtime_api/test_readiness.py
+  - services/api/tests/runtime_gateway_builder/test_gateway_builder.py
+  - services/api/tests/runtime_data/data_helpers.py
+  - services/api/tests/admin_identity_api/test_builder.py
+  - services/api/tests/analytics_runtime/test_analytics_builder.py
+  - docs/runbooks/system-settings.md
   - mkdocs.yml
 must_not_touch:
   - packages/contracts/**
@@ -242,12 +250,14 @@ An alias for derived drafts; automatic merging of a draft into a registered agen
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 6, 8 and 9 are ASSUMPTIONS for plan approval)
+- [x] All clarification questions are decided, not guessed (rows 6 and 9 accepted by the owner at plan approval 2026-11-22; row 8 decided 2026-11-16)
+
+Plan approval 2026-11-22: item 5 runs after item 1 (it calls `declare_agent_alias`); item 5 keeps its own builder and also owns the builder-pinned files PRP-139 found: `services/api/tests/admin_identity_api/test_builder.py`, `services/api/tests/analytics_runtime/test_analytics_builder.py`, `docs/runbooks/system-settings.md`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, plus the `services/api/openapi.json` and `docs/reference/**` regen. One reviewer pass covers the whole PRP diff before item 8.
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | in-progress | prp-137-item1 | sonnet, dispatched 2026-11-22 |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
