@@ -28,7 +28,7 @@ All routes are under `/api/v1/admin/sources/connectors` and need **customer-leve
 | DELETE | `/{config_id}` | retire (kept for audit), `If-Match` required |
 
 The body is the `admin/v1` `ConnectorConfig`: `connector_id`, `connector_kind`
-(`gateway_poll`, `foundry_discovery`, `billing_export`, `otel`), `domain_ids`, bounded scalar
+(`gateway_poll`, `foundry_discovery`, `billing_export`, `azure_monitor_ai`, `otel`), `domain_ids`, bounded scalar
 `settings`, `credential` and `enabled`. One active configuration per kind.
 
 A body the worker would refuse is a 422 with a field pointer and nothing is stored (for example a
@@ -43,6 +43,7 @@ credential of the wrong kind (`gateway_poll` and `billing_export` need `key_vaul
 | `gateway_poll` | `api_base_url` (required), `interval_seconds`, `window_seconds`, `lookback_seconds`, `batch_size`, `producer_id`, `source_id`, `metrics_app_id`, `allow_unverified_government`, `managed_identity_client_id` |
 | `foundry_discovery` | `projects` (`resource/project,...`, required), `interval_seconds`, `max_items`, `max_pages`; exactly one domain |
 | `billing_export` | `storage_account_url`, `container`, `manifest_blob`, `api_base_url` (all required), `basis`, `interval_seconds`, `batch_size`, `producer_id`, `source_id`, `managed_identity_client_id`; exactly one domain; Commercial only |
+| `azure_monitor_ai` | `workspace_ids` (1 to 4 GUIDs, required), the guards `interval_seconds`, `window_seconds`, `lookback_seconds`, `overlap_seconds`, `max_queries_per_tick`, `max_events_per_tick`, `batch_size`, `app_role_names`, `allow_unverified_government`, `producer_id`, `source_id`, `api_base_url`, `managed_identity_client_id`; exactly one domain; credential `key_vault_secret`; see `docs/runbooks/azure-monitor-ai-telemetry.md` |
 | `otel` | `producer_id`, `source_id` (stored and validated; nothing consumes it yet) |
 
 Gateway registrations stay in their own registry (`POST /domains/{d}/gateways`); a `gateway_poll`
@@ -88,7 +89,7 @@ Rollback: set `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env` and restart. Stored docume
 
 ## 5. Known limits
 
-- Real-tenant mode of the hosted deployment turns the three connector roles on (PRP-139; see
+- Real-tenant mode of the hosted deployment turns the connector roles on (PRP-139; `azure_monitor_ai` joined in PRP-141; see
   `docs/deploy/hosted-real-tenant.md`). The Helm profiles still do not run them; local proof uses
   emulators and in-memory twins. A real Key Vault read with stored config is an OPEN live gate.
 - `foundry_discovery` authenticates with `DefaultAzureCredential`; its token provider takes no
