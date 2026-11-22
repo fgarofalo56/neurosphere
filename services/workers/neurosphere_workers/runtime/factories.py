@@ -152,6 +152,12 @@ from neurosphere_workers.actions.deploy import (
     PlanApprovals,
 )
 from neurosphere_workers.admin_platform import ledger_price_table, load_review_policies
+from neurosphere_workers.agent_identity import ResolvingRecordSource, ResolvingTraceEventSource
+from neurosphere_workers.agent_identity.wiring import (
+    CountersRole,
+    LazyScopeProvider,
+    build_agent_identity_resolver,
+)
 from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
@@ -201,6 +207,7 @@ from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 from neurosphere_workers.lifecycle.assembly import LifecycleParts, assemble, build_targets
 from neurosphere_workers.projections.catalog import CatalogProjection
 from neurosphere_workers.projections.catalog.quarantine_cosmos import CosmosCandidateQuarantine
+from neurosphere_workers.projections.catalog.scope import ScopeProvider
 from neurosphere_workers.projections.outbox import (
     SINK_AGGREGATES,
     SINK_CATALOG,
@@ -457,6 +464,28 @@ async def build_ingestion(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleR
 # projections and aggregates
 
 
+def _lazy_scopes(cfg: RuntimeConfig, cosmos: CosmosClient) -> LazyScopeProvider:
+    """The worker's scope provider, built on first use so a role that never needed a tenant at
+    build time still builds (a missing tenant then fails the lookup, which retries)."""
+
+    def build() -> ScopeProvider:
+        stack = build_policy_stack(
+            cfg.settings, cosmos=cosmos, auth=cfg.auth, store=cfg.store, tenant_id=cfg.tenant_id
+        )
+        identity = build_identity(
+            cfg.settings, stack=stack, worker=cfg.worker, customer_id=cfg.customer_id
+        )
+        return identity.scope_provider
+
+    return LazyScopeProvider(build)
+
+
+def _identity_resolver(db: DatabaseProxy, scopes: ScopeProvider) -> Any:
+    """PRP-137: one alias resolver per role, over the catalog in the worker's own scope."""
+    repo = CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER))
+    return build_agent_identity_resolver(repo, scopes)
+
+
 def _outbox_reader(db: DatabaseProxy) -> OutboxReader:
     return OutboxReader(
         CosmosOutboxStore(db.get_container_client(_OUTBOX_CONTAINER)),
@@ -472,7 +501,10 @@ async def build_projections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Rol
         cfg.settings, cosmos=cosmos, auth=cfg.auth, store=cfg.store, tenant_id=cfg.tenant_id
     )
     identity = build_identity(cfg.settings, stack=stack, worker=cfg.worker, customer_id=customer)
-    source = ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime)))
+    resolver = _identity_resolver(db, identity.scope_provider)
+    source = ResolvingTraceEventSource(
+        ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime))), resolver
+    )
     projection = CatalogProjection(
         repository=wrap_catalog_for_search(
             cfg.cloud,
@@ -487,7 +519,18 @@ async def build_projections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Rol
         quarantine_warn=CatalogProjectionSettings().quarantine_warn,
     )
     tick = _drain_tick(_outbox_reader(db), SINK_CATALOG, customer, projection.handle)
-    return _tick_role("projections", tick, cfg)
+    drafts = projection.stats
+    return CountersRole(
+        _tick_role("projections", tick, cfg),
+        lambda: {
+            **resolver.stats.snapshot(),
+            "agent_drafts_created": drafts.agent_drafts_created,
+            "agent_drafts_existing": drafts.agent_drafts_existing,
+            "agent_undiscoverable_no_domain": drafts.agent_undiscoverable_no_domain,
+            "agent_draft_out_of_scope": drafts.agent_draft_out_of_scope,
+            "agent_draft_collision": drafts.agent_draft_collision,
+        },
+    )
 
 
 async def build_aggregates(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
@@ -501,7 +544,10 @@ async def build_aggregates(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
     reader = _outbox_reader(db)
     store = CosmosAggregateStore(db.get_container_client(_AGGREGATES_CONTAINER))
     ledger = StoreLedgerSource(CosmosLedgerStore(db.get_container_client(_LEDGER_CONTAINER)))
-    events = ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime)))
+    resolver = _identity_resolver(db, _lazy_scopes(cfg, cosmos))
+    events = ResolvingTraceEventSource(
+        ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime))), resolver
+    )
 
     def make_projection(prices: PriceTable) -> AggregateProjection:
         return AggregateProjection(store=store, ledger=ledger, events=events, prices=prices)
@@ -521,7 +567,59 @@ async def build_aggregates(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
         await _drain_tick(reader, SINK_AGGREGATES, customer, projection.handle)()
         await prune()
 
-    return _tick_role("aggregates", tick, cfg)
+    return CountersRole(_tick_role("aggregates", tick, cfg), resolver.stats.snapshot)
+
+
+@dataclass(slots=True)
+class ResolvingHandlers:
+    """The aggregates and catalog handlers over resolving sources (PRP-137 re-resolution job)."""
+
+    reader: ArchiveReader
+    store: CosmosAggregateStore
+    aggregates: AggregateProjection
+    catalog: CatalogProjection
+    resolver: Any
+
+
+async def build_resolving_handlers(
+    cfg: RuntimeConfig, lifetime: ClientLifetime
+) -> ResolvingHandlers:
+    """Public for ``python -m neurosphere_workers.agent_identity``: same wiring as the roles."""
+    cosmos = await _cosmos(cfg, lifetime)
+    db = _database(cfg, cosmos)
+    stack = build_policy_stack(
+        cfg.settings, cosmos=cosmos, auth=cfg.auth, store=cfg.store, tenant_id=cfg.tenant_id
+    )
+    identity = build_identity(
+        cfg.settings, stack=stack, worker=cfg.worker, customer_id=cfg.customer_id
+    )
+    resolver = _identity_resolver(db, identity.scope_provider)
+    reader = ArchiveReader(_archive_container(cfg, lifetime))
+    events = ResolvingTraceEventSource(ArchiveTraceEventSource(reader), resolver)
+    refresher = PriceTableRefresher(
+        partial(_list_price_snapshots, cfg),
+        await _list_price_snapshots(cfg),
+        cfg.worker.price_refresh_seconds,
+    )
+    store = CosmosAggregateStore(db.get_container_client(_AGGREGATES_CONTAINER))
+    ledger = StoreLedgerSource(CosmosLedgerStore(db.get_container_client(_LEDGER_CONTAINER)))
+    aggregates = AggregateProjection(
+        store=store, ledger=ledger, events=events, prices=refresher.table
+    )
+    catalog = CatalogProjection(
+        repository=wrap_catalog_for_search(
+            cfg.cloud,
+            cfg.settings.cloud_profile,
+            lifetime,
+            CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
+        ),
+        review_queue=CosmosReviewQueue.from_client(cosmos, database=cfg.store.database),
+        source=events,
+        scope_provider=identity.scope_provider,
+        quarantine=CosmosCandidateQuarantine.from_client(cosmos, database=cfg.store.database),
+        quarantine_warn=CatalogProjectionSettings().quarantine_warn,
+    )
+    return ResolvingHandlers(reader, store, aggregates, catalog, resolver)
 
 
 async def _prune(projection: AggregateProjection, customer_id: str) -> None:
@@ -1193,7 +1291,10 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     results = CosmosEvaluationStore.from_client(cosmos, database=cfg.store.database)
-    source = ArchiveRecordSource(ArchiveReader(_archive_container(cfg, lifetime)), customer)
+    resolver = _identity_resolver(_database(cfg, cosmos), _lazy_scopes(cfg, cosmos))
+    source = ResolvingRecordSource(
+        ArchiveRecordSource(ArchiveReader(_archive_container(cfg, lifetime)), customer), resolver
+    )
     matrix = load_matrix()
     cloud = cfg.cloud
 
@@ -1235,7 +1336,7 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
             "offline evaluation stage idles: no pilot datasets configured",
             extra={"event": "worker.evaluation_offline_idle"},
         )
-        return _tick_role("evaluation", online_tick, cfg)
+        return CountersRole(_tick_role("evaluation", online_tick, cfg), resolver.stats.snapshot)
 
     stack = build_policy_stack(
         cfg.settings, cosmos=cosmos, auth=cfg.auth, store=cfg.store, tenant_id=cfg.tenant_id
@@ -1270,7 +1371,7 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
         if failure is not None:
             raise failure
 
-    return _tick_role("evaluation", tick, cfg)
+    return CountersRole(_tick_role("evaluation", tick, cfg), resolver.stats.snapshot)
 
 
 # --------------------------------------------------------------------------------------------
