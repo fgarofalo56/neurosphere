@@ -16,8 +16,8 @@ Rules per built-in source (connector kind in parentheses):
 * an ``ok`` or ``partial`` run with nothing delivered, and an ``idle`` run of an enabled
   configuration, is ``connected_no_data``.
 
-Application Insights call telemetry is never built in this release: always ``not_connected``,
-``available: false``, reason ``not_available_in_release``.
+Application Insights call telemetry follows the same rules from the ``azure_monitor_ai`` run
+status; it counts as delivered when ``events_posted`` > 0.
 """
 
 from __future__ import annotations
@@ -28,7 +28,6 @@ from datetime import datetime
 from typing import Final, Literal
 
 from neurosphere_core.sources_status.models import (
-    NOT_AVAILABLE_IN_RELEASE,
     ConnectorKind,
     ConnectorRunStatus,
     RunState,
@@ -60,6 +59,7 @@ _KIND_OF: Final[Mapping[str, ConnectorKind]] = {
     "foundry": "foundry_discovery",
     "apim_gateway": "gateway_poll",
     "billing": "billing_export",
+    "azure_monitor_telemetry": "azure_monitor_ai",
 }
 AWAITING_FIRST_RUN: Final = "awaiting_first_run"
 UNCHANGED: Final = "unchanged"
@@ -120,6 +120,8 @@ def _delivered(kind: ConnectorKind, status: ConnectorRunStatus) -> bool:
     counts = status.counts
     if kind == "gateway_poll":
         return counts.get("gateways_polled", 0) > 0
+    if kind == "azure_monitor_ai":
+        return counts.get("events_posted", 0) > 0
     return counts.get("records", 0) > 0 or status.reason == UNCHANGED
 
 
@@ -160,14 +162,7 @@ def summarize(
     items: list[SourceSummaryItem] = []
     connectors: list[ConnectorSummary] = []
     for source in SOURCE_ORDER:
-        kind = _KIND_OF.get(source)
-        if kind is None:
-            items.append(
-                SourceSummaryItem(
-                    source, "not_connected", None, False, reason=NOT_AVAILABLE_IN_RELEASE
-                )
-            )
-            continue
+        kind = _KIND_OF[source]
         status = by_kind.get(kind)
         enabled = kind in enabled_kinds
         state, reason = _state_for(kind, status, enabled, gateways)

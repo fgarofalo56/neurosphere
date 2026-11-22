@@ -25,7 +25,9 @@ __all__ = [
 
 SourceName = Literal["foundry", "apim_gateway", "billing", "azure_monitor_telemetry"]
 SourceStateName = Literal["not_connected", "connected_no_data", "connected", "failing"]
-ConnectorKindName = Literal["foundry_discovery", "gateway_poll", "billing_export"]
+ConnectorKindName = Literal[
+    "foundry_discovery", "gateway_poll", "billing_export", "azure_monitor_ai"
+]
 RunStateName = Literal["ok", "partial", "failed", "idle", "not_configured"]
 
 

@@ -41,26 +41,27 @@ def test_nothing_configured_is_four_sources_in_order_not_connected() -> None:
         "azure_monitor_telemetry",
     ]
     assert {i.state for i in summary.sources} == {"not_connected"}
-    assert [i.available for i in summary.sources] == [True, True, True, False]
+    assert [i.available for i in summary.sources] == [True, True, True, True]
     assert [c.kind for c in summary.connectors] == [
         "foundry_discovery",
         "gateway_poll",
         "billing_export",
+        "azure_monitor_ai",
     ]
 
 
-def test_application_insights_is_never_connected_whatever_is_stored() -> None:
+def test_application_insights_ignores_the_other_connectors_runs() -> None:
     everything = [
-        run(k, "ok", records=5, gateways_polled=1)
+        run(k, "ok", records=5, gateways_polled=1, events_posted=0)
         for k in ("foundry_discovery", "gateway_poll", "billing_export")
     ]
     item = summarize(everything, [cfg("foundry_discovery")]).sources[3]
     assert (item.source, item.state, item.available) == (
         "azure_monitor_telemetry",
         "not_connected",
-        False,
+        True,
     )
-    assert item.reason == "not_available_in_release"
+    assert item.reason is None
     assert item.last_success_at is None
 
 

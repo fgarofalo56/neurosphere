@@ -143,7 +143,7 @@ def test_a_viewer_of_one_domain_reads_the_summary(
         "available": True,
     }
     assert body["sources"][3]["state"] == "not_connected"
-    assert body["sources"][3]["available"] is False
+    assert body["sources"][3]["available"] is True
     text = response.text
     assert "reason" not in text and "counts" not in text and "connectors" not in text
 
@@ -209,11 +209,13 @@ def test_a_customer_level_admin_reads_reasons_and_counts(
     body = response.json()
     assert [s["source"] for s in body["sources"]] == FOUR
     assert body["sources"][0]["reason"] == "source_access_denied"
-    assert body["sources"][3]["reason"] == "not_available_in_release"
+    assert body["sources"][3]["state"] == "not_connected"
+    assert body["sources"][3]["reason"] is None
     assert [c["kind"] for c in body["connectors"]] == [
         "foundry_discovery",
         "gateway_poll",
         "billing_export",
+        "azure_monitor_ai",
     ]
     assert body["connectors"][0] == {
         "kind": "foundry_discovery",
