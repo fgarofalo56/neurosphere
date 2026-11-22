@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `0cd5926d4a911a54fa9aa00add5b0beeb5d4ad35`. Generated: 2026-11-20.
+> Source commit: `dc6fbdac7a434fe400ce0e2663b38417b3b9606e`. Generated: 2026-11-21.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 219 operations on 185 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 221 operations on 186 paths.
 
 ## Status and verification
 
@@ -88,6 +88,8 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-system-settings | GET | `/api/v1/admin/system/settings` | List Settings |
 | admin-system-settings | GET | `/api/v1/admin/system/settings/{key}` | Get Setting |
 | admin-system-settings | PUT | `/api/v1/admin/system/settings/{key}` | Put Setting |
+| agent-identity | GET | `/api/v1/agent-identity/domains/{domain}/aliases` | Read Alias |
+| agent-identity | PUT | `/api/v1/agent-identity/domains/{domain}/aliases` | Declare Alias |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/verify` | Verify Audit Chain |
 | audit | GET | `/api/v1/audit/denials` | List Audit Denials |
@@ -658,6 +660,24 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Parameters: `key` (path, required), `If-Match` (header)
 - Request body: application/json: `object` (optional)
 - Responses: `200` `SettingWriteResult`; `422` `HTTPValidationError`
+
+### Tag: agent-identity
+
+#### GET `/api/v1/agent-identity/domains/{domain}/aliases`
+
+- Operation id: `read_alias_api_v1_agent_identity_domains__domain__aliases_get`
+- Summary: Read Alias
+- Parameters: `domain` (path, required), `source_id` (query, required), `external_agent_id` (query, required)
+- Responses: `200` `AliasView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/agent-identity/domains/{domain}/aliases`
+
+- Operation id: `declare_alias_api_v1_agent_identity_domains__domain__aliases_put`
+- Summary: Declare Alias
+- Description: Declare (or repoint) the alias from an external agent id seen in telemetry to a catalog agent of this domain. A previous active alias for the same key is retired first. `reresolve_needed` is true when events already processed must be re-resolved with the returned operator job (`python -m neurosphere_workers.agent_identity reresolve`).
+- Parameters: `domain` (path, required)
+- Request body: application/json: `AliasDeclareRequest` (required)
+- Responses: `200` `AliasDeclareView`; `422` `HTTPValidationError`
 
 ### Tag: audit
 

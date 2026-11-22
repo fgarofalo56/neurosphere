@@ -29,6 +29,8 @@ class LoadedEvent:
 
     doc_id: str
     event: TelemetryEvent
+    agent_resolution: str | None = None
+    """PRP-137 status (alias, derived, declared, none); None when the event was not resolved."""
 
 
 @runtime_checkable

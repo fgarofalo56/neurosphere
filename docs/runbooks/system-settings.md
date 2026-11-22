@@ -52,6 +52,7 @@ carries a reason code. The item ids are stable:
 | `optional.admin_system` | `admin_system` | as above | as above |
 | `optional.agent_matcher` | `agent_matcher` | as above | as above |
 | `optional.sources_status` | `sources_status` | as above | as above |
+| `optional.agent_identity` | `agent_identity` | as above | as above |
 | `ingest.producers` | `ingest` | ingestion is composed with producers | `ingest_producers_unconfigured` |
 | `write_targets.registered` | `write_targets` | a write connector is registered | `write_targets_unconfigured`, `write_targets_stored_not_registered` |
 | `stored_settings.store` | `admin_config` | the stored-settings read at startup succeeded | `stored_settings_unavailable`, `stored_settings_unconfigured` |

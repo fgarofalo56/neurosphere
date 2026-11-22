@@ -37,6 +37,7 @@ from neurosphere_connector_foundry import (
 )
 from neurosphere_contracts.catalog.v1.agent import Agent
 from neurosphere_contracts.catalog.v1.model_deployment import ModelDeployment
+from neurosphere_core.agent_identity import agent_alias_key, declare_agent_alias
 from neurosphere_core.catalog.protocol import CatalogEntity, CatalogRepository
 from neurosphere_core.catalog.rules import format_timestamp
 from neurosphere_core.errors import InvalidSchemaError
@@ -84,6 +85,13 @@ class TickStats:
     collision_projects: list[tuple[str, str]] = field(
         default_factory=lambda: list[tuple[str, str]]()
     )
+    #: PRP-137: ``external_id`` aliases written for discovered agents (created or repointed).
+    aliases_declared: int = 0
+    aliases_unchanged: int = 0
+    #: The key was already actively aliased to a different agent; nothing was changed.
+    alias_collisions: int = 0
+    #: Alias writes that failed or were refused, by reason code (an exception class name).
+    alias_refused: dict[str, int] = field(default_factory=lambda: dict[str, int]())
     #: Per project: ``ok`` / ``partial`` / ``failed:<ErrorClass>``.
     status: dict[str, str] = field(default_factory=lambda: dict[str, str]())
     #: Per project: capabilities documented as unavailable in this cloud (never empty-as-none).
@@ -153,6 +161,10 @@ class FoundryDiscoveryPoller:
                 "skipped_invalid": stats.skipped_invalid,
                 "projects_failed": stats.projects_failed,
                 "collisions": stats.collisions,
+                "aliases_declared": stats.aliases_declared,
+                "aliases_unchanged": stats.aliases_unchanged,
+                "alias_collisions": stats.alias_collisions,
+                "alias_refused": dict(stats.alias_refused),
             },
         )
         if stats.collisions:
@@ -201,7 +213,10 @@ class FoundryDiscoveryPoller:
             },
         )
         for agent in result.agents or []:  # None = unknown (call failed): nothing to create
-            await self._ensure(scope, self._agent(target.project, agent, now_text), stats, None)
+            entity = self._agent(target.project, agent, now_text)
+            await self._ensure(scope, entity, stats, None)
+            if entity is not None and agent.id is not None:
+                await self._alias(scope, entity.id, agent.id[:512], stats)
         for deployment in result.deployments or []:
             await self._ensure(
                 scope,
@@ -209,6 +224,46 @@ class FoundryDiscoveryPoller:
                 stats,
                 target.project,
             )
+
+    async def _alias(self, scope: Any, agent_id: str, external_id: str, stats: TickStats) -> None:
+        """PRP-137: make the discovered external id resolve to the discovered agent.
+
+        Never raises: a key already actively aliased to a different agent is a counted collision
+        (never repointed here, that is a steward decision), and any failed or refused write is
+        counted by reason code. The next tick retries.
+        """
+        try:
+            current = await self._repo.resolve_alias(
+                scope, agent_alias_key(DISCOVERED_FROM, external_id)
+            )
+            if current is not None and current != agent_id:
+                stats.alias_collisions += 1
+                logger.warning(
+                    "foundry agent external id is already aliased to another agent",
+                    extra={"event": "worker.foundry_discovery_alias_collision"},
+                )
+                return
+            declared = await declare_agent_alias(
+                self._repo,
+                scope,
+                source_id=DISCOVERED_FROM,
+                external_agent_id=external_id,
+                target_agent_id=agent_id,
+                method="import",
+                clock=self._clock,
+            )
+        except Exception as exc:
+            reason = type(exc).__name__[:64]
+            stats.alias_refused[reason] = stats.alias_refused.get(reason, 0) + 1
+            logger.warning(
+                "foundry agent alias not written",
+                extra={"event": "worker.foundry_discovery_alias_refused", "reason": reason},
+            )
+            return
+        if declared.outcome == "unchanged":
+            stats.aliases_unchanged += 1
+        else:
+            stats.aliases_declared += 1
 
     def _base(
         self, entity_id: str, entity_type: str, now_text: str, project: str

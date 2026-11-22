@@ -127,6 +127,7 @@ nav:
       - runbooks/ingest.md
       - runbooks/admission-and-federation.md
       - runbooks/ingest-cost-attribution.md
+      - runbooks/agent-identity-resolution.md
       - runbooks/lifecycle.md
       - runbooks/catalog-review-queue.md
       - runbooks/catalog-access.md

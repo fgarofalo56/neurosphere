@@ -13,10 +13,13 @@ from typing import Any, Final
 from neurosphere_contracts.catalog.v1.agent import Agent
 from neurosphere_contracts.catalog.v1.model_deployment import ModelDeployment
 from neurosphere_contracts.catalog.v1.tool import Tool
+from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.catalog.protocol import CatalogEntity
 
 from neurosphere_workers.projections.catalog.mapping import EdgeCandidate
+from neurosphere_workers.projections.catalog.source import LoadedEvent
 
+AGENT_IDENTITY_DERIVED: Final = "derived_from_external_id"
 DISCOVERED_FROM: Final = "telemetry"
 UNKNOWN_TOKEN: Final = "unknown"  # noqa: S105 - contract Token value, not a secret
 _DISPLAY_MAX: Final = 256
@@ -77,3 +80,48 @@ def build_entity(entity_id: str, candidate: EdgeCandidate, now_text: str) -> Cat
 def referenced_entity_ids(candidate: EdgeCandidate) -> tuple[str, ...]:
     """Both endpoints, source first (an edge source is always an agent)."""
     return (candidate.source_id, candidate.target_id)
+
+
+def agent_discovery_entity(
+    item: LoadedEvent | TelemetryEvent, now_text: str
+) -> CatalogEntity | None:
+    """Draft ``Agent`` for the derived canonical id of a telemetry event (PRP-137 item 3).
+
+    None unless the event carries a canonical agent id, an external agent id and a domain.
+    The id is trusted as stamped by the resolver; ``Agent`` validation rejects a malformed one.
+    """
+    event = item.event if isinstance(item, LoadedEvent) else item
+    if (
+        event.canonical_agent_id is None
+        or event.external_agent_id is None
+        or event.domain_id is None
+    ):
+        return None
+    entity_id = event.canonical_agent_id.root
+    parts = entity_id.split(":", 4)
+    if len(parts) != 5 or parts[3] != "agent":
+        return None
+    external = event.external_agent_id.root
+    doc: dict[str, Any] = {
+        "schema_version": "1.0.0",
+        "id": entity_id,
+        "entity_type": "agent",
+        "version": 1,
+        "etag": "pending",  # the repository assigns the real ETag
+        "lifecycle_status": "draft",
+        "created_at": now_text,
+        "updated_at": now_text,
+        "cloud": event.cloud,
+        "customer_id": event.customer_id.root,
+        "domain_id": event.domain_id.root,
+        "attributes": {
+            "discovered_from": DISCOVERED_FROM,
+            "agent_identity": AGENT_IDENTITY_DERIVED,
+        },
+        "display_name": _display(external),
+        "agent_kind": "unknown",
+        "platform": UNKNOWN_TOKEN,
+        "source_id": parts[2],
+        "external_agent_id": external,
+    }
+    return Agent.model_validate(doc)

@@ -283,6 +283,12 @@ def _register_catalog_access(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_agent_identity(registry: RouterRegistry) -> None:
+    from neurosphere_api.agent_identity import register
+
+    register(registry)
+
+
 def _register_sources_status(registry: RouterRegistry) -> None:
     from neurosphere_api.sources_status import register
 
@@ -329,6 +335,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_agent_match,
     _register_catalog_access,
     _register_sources_status,
+    _register_agent_identity,
 )
 
 
