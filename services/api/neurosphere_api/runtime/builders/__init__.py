@@ -410,7 +410,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         admin_connectors.BUILDER,
         admin_platform.BUILDER,
         admin_system.BUILDER,
+        sources_status.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
-        sources_status.BUILDER,
     )

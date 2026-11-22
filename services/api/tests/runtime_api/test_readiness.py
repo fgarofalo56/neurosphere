@@ -193,9 +193,9 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "admin_connectors",
         "admin_platform",
         "admin_system",
+        "sources_status",
         "admin",
         "analytics",
-        "sources_status",
     ]
     assert copilot_builder.BUILDER in default_builders()
 
@@ -231,9 +231,9 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "admin_connectors",
         "admin_platform",
         "admin_system",
+        "sources_status",
         "admin",
         "analytics",
-        "sources_status",
     ]
     assert {spec.components for spec in builders_with_stubs()} == {
         spec.components for spec in default_builders()
