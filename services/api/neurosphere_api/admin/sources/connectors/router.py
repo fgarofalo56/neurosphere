@@ -45,7 +45,8 @@ ConfigScope = Annotated[IdentityScope, Depends(require_customer_control())]
 ConfigPath = Annotated[str, Path(pattern=r"^[a-z0-9][a-z0-9._-]{0,63}$")]
 IfMatch = Annotated[str, Header(alias="If-Match", min_length=1, max_length=300)]
 Kind = Annotated[
-    str | None, Query(pattern=r"^(gateway_poll|foundry_discovery|billing_export|otel)$")
+    str | None,
+    Query(pattern=r"^(gateway_poll|foundry_discovery|billing_export|otel|azure_monitor_ai)$"),
 ]
 
 

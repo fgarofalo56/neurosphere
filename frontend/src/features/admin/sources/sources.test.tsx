@@ -157,8 +157,7 @@ const STATUS: SourcesAdminStatus = {
       source: "azure_monitor_telemetry",
       state: "not_connected",
       last_success_at: null,
-      available: false,
-      reason: "not_available_in_release",
+      available: true,
     },
   ],
   connectors: [
@@ -358,7 +357,7 @@ describe("ConnectorsPage first sources and run status", () => {
     counts: {},
   });
 
-  it("lists the four sources, Connect for three, and no Connect for Azure Monitor", async () => {
+  it("lists the four sources, each with Connect, and the Azure Monitor access note", async () => {
     const { impl } = world({});
     renderAdmin(<ConnectorsPage />, impl);
     const panel = await screen.findByTestId("first-sources-panel");
@@ -366,13 +365,18 @@ describe("ConnectorsPage first sources and run status", () => {
     expect(within(panel).getByText("API Management AI gateways")).toBeTruthy();
     expect(within(panel).getByText("Cost and billing")).toBeTruthy();
     const monitor = within(panel).getByTestId("source-row-azure_monitor_telemetry");
-    expect(monitor.textContent).toContain(
-      "not available in this release; use the gateway or OpenTelemetry path",
-    );
-    expect(within(monitor).queryByRole("button")).toBeNull();
+    expect(monitor.textContent).not.toContain("not available in this release");
+    expect(monitor.textContent).toContain("Log Analytics Data Reader");
+    expect(monitor.textContent).toContain("Privileged Monitoring Data Reader");
+    expect(monitor.textContent).toContain("owner of the workspace approves");
     expect(within(panel).getAllByText("Connected").length).toBe(3);
     expect(within(panel).getAllByText(STAMP).length).toBe(3);
-    for (const name of ["Azure AI Foundry", "API Management AI gateways", "Cost and billing"]) {
+    for (const name of [
+      "Azure AI Foundry",
+      "API Management AI gateways",
+      "Cost and billing",
+      "Azure Monitor and Application Insights",
+    ]) {
       expect(within(panel).getByRole("button", { name: `Connect ${name}` })).toBeTruthy();
     }
     expect(panel.textContent).toContain("no key or connection string");
@@ -388,11 +392,53 @@ describe("ConnectorsPage first sources and run status", () => {
     const panel = await screen.findByTestId("first-sources-panel");
     expect(screen.queryAllByTestId("connector-row")).toHaveLength(0);
     expect(within(panel).getAllByText("Not connected").length).toBe(4);
-    expect(within(panel).getAllByRole("button", { name: /^Connect / })).toHaveLength(3);
+    expect(within(panel).getAllByRole("button", { name: /^Connect / })).toHaveLength(4);
     await userEvent.click(within(panel).getByRole("button", { name: "Connect Cost and billing" }));
     await screen.findByTestId("change-confirm-dialog");
     const kind = dialog().getByLabelText(/Connector kind/) as HTMLSelectElement;
     expect(kind.value).toBe("billing_export");
+  });
+
+  it("pre-sets azure_monitor_ai and its settings template from the Azure Monitor Connect", async () => {
+    const { impl } = world({ items: [] });
+    renderAdmin(<ConnectorsPage />, impl);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Connect Azure Monitor and Application Insights" }),
+    );
+    await screen.findByTestId("change-confirm-dialog");
+    expect((dialog().getByLabelText(/Connector kind/) as HTMLSelectElement).value).toBe(
+      "azure_monitor_ai",
+    );
+    const settings = dialog().getByLabelText(/Settings/) as HTMLTextAreaElement;
+    expect(settings.value).toContain("interval_seconds=300");
+    expect(settings.value).toContain("producer_id=azure-monitor-ai");
+    expect(
+      dialog().getByText(/workspace_ids \(1 to 4 workspace GUIDs/, { exact: false }),
+    ).toBeTruthy();
+  });
+
+  it("renders the Azure Monitor reason codes in plain language", async () => {
+    const codes = [
+      "query_budget_exhausted",
+      "event_budget_exhausted",
+      "rate_limited",
+      "stalled",
+      "ingest_failed",
+      "cloud_mismatch",
+      "refused_government_unverified",
+      "source_unreachable",
+      "partial_results",
+      "source_access_denied",
+    ];
+    for (const code of codes) {
+      const sentence = SOURCE_STRINGS.reasonText(code, "azure_monitor_ai");
+      expect(sentence).not.toBeNull();
+      expect(sentence).not.toContain("_");
+      expect(sentence).not.toContain("does not describe");
+    }
+    expect(SOURCE_STRINGS.reasonText("source_access_denied", "azure_monitor_ai")).toContain(
+      "Log Analytics Data Reader",
+    );
   });
 
   it("pre-sets foundry_discovery from the Foundry Connect action", async () => {
@@ -449,7 +495,6 @@ describe("ConnectorsPage first sources and run status", () => {
       "unchanged",
       "tick_error",
       "awaiting_first_run",
-      "not_available_in_release",
     ];
     for (const code of codes) {
       const sentence = SOURCE_STRINGS.reasonText(code, "gateway_poll");
@@ -465,7 +510,7 @@ describe("ConnectorsPage first sources and run status", () => {
       expect(await screen.findAllByTestId("connector-row")).toHaveLength(1);
       expect(await screen.findByText("Status unavailable")).toBeTruthy();
       expect(screen.getByTestId("status-unavailable-note")).toBeTruthy();
-      expect(screen.getAllByRole("button", { name: /^Connect / })).toHaveLength(3);
+      expect(screen.getAllByRole("button", { name: /^Connect / })).toHaveLength(4);
       expect(screen.queryByTestId("forbidden-state")).toBeNull();
       expect(screen.queryByTestId("unavailable-state")).toBeNull();
       cleanup();

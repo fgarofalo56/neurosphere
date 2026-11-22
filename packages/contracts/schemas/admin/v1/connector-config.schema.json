@@ -22,7 +22,7 @@
     },
     "connector_kind": {
       "type": "string",
-      "enum": ["gateway_poll", "foundry_discovery", "billing_export", "otel"]
+      "enum": ["gateway_poll", "foundry_discovery", "billing_export", "otel", "azure_monitor_ai"]
     },
     "domain_ids": {
       "description": "Domains the connector's data is attributed to. At least one; no wildcard.",

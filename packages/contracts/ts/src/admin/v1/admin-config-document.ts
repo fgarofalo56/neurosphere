@@ -124,7 +124,8 @@ export interface ConnectorConfig {
    * Operator-chosen id of this connector instance, unique per customer.
    */
   connector_id: string;
-  connector_kind: "gateway_poll" | "foundry_discovery" | "billing_export" | "otel";
+  connector_kind:
+    "gateway_poll" | "foundry_discovery" | "billing_export" | "otel" | "azure_monitor_ai";
   /**
    * Domains the connector's data is attributed to. At least one; no wildcard.
    *

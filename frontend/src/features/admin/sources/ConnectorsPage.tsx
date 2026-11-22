@@ -106,14 +106,6 @@ function FirstSourcesPanel({
             header: SS.headers.state,
             render: (n) => {
               const row = byName.get(n);
-              if (n === "azure_monitor_telemetry") {
-                return (
-                  <>
-                    <StatusPill label={SS.state.not_connected} tone="neutral" />
-                    <div>{SS.access.azure_monitor_telemetry}</div>
-                  </>
-                );
-              }
               if (row === undefined) return <span>{SS.statusUnavailable}</span>;
               const reason = SS.reasonText(row.reason ?? null, SOURCE_KIND[n] ?? null);
               return (
@@ -135,7 +127,7 @@ function FirstSourcesPanel({
           {
             key: "access",
             header: SS.headers.access,
-            render: (n) => (n === "azure_monitor_telemetry" ? "-" : <span>{SS.access[n]}</span>),
+            render: (n) => <span>{SS.access[n]}</span>,
           },
           {
             key: "action",
@@ -352,7 +344,11 @@ function ConnectorsBody(): ReactElement {
       </fieldset>
       <Field
         label={S.fields.settings}
-        hint={S.settingsHint}
+        hint={
+          form.kind === "azure_monitor_ai"
+            ? `${S.settingsHint} ${S.azureMonitorHint}`
+            : S.settingsHint
+        }
         validationState={settings === undefined ? "error" : "none"}
         validationMessage={settings === undefined ? S.settingsInvalid : undefined}
       >
@@ -422,7 +418,7 @@ function ConnectorsBody(): ReactElement {
         onConnect={(kind) => {
           closeDialog();
           setDone(null);
-          setForm({ ...EMPTY_FORM, kind });
+          setForm({ ...EMPTY_FORM, kind, settingsText: SS.connectTemplate[kind] ?? "" });
           setDialog({ kind: "create" });
         }}
       />

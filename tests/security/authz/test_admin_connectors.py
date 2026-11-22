@@ -239,3 +239,59 @@ def test_customer_level_admin_is_allowed(cworld: tuple[World, dict[str, Plane]])
     response = dep.client.post(BASE, headers=_bearer(dep, CONTROL_ADMIN_OID), json=body())
     assert response.status_code == 201, response.text
     assert len(_stored(planes["contoso"])) == 1
+
+
+def monitor_body() -> dict[str, Any]:
+    return body(
+        connector_id="azure-monitor-ai",
+        connector_kind="azure_monitor_ai",
+        settings={
+            "workspace_ids": "11111111-2222-4333-8444-555555555555",
+            "api_base_url": "https://api.example.test",
+        },
+    )
+
+
+@pytest.mark.parametrize("role", DENIED_ROLES, ids=lambda r: r.value)
+def test_azure_monitor_ai_create_needs_config_manage(
+    cworld: tuple[World, dict[str, Plane]], role: Role
+) -> None:
+    world, planes = cworld
+    dep = world["contoso"]
+    response = dep.client.post(
+        BASE, headers=dep.bearer(Who("contoso", FIN, role)), json=monitor_body()
+    )
+    assert response.status_code == 403, response.text
+    assert _reasons(dep), "a denial record is written"
+    assert _stored(planes["contoso"]) == []
+
+
+def test_azure_monitor_ai_create_needs_customer_scope_and_is_audited(
+    cworld: tuple[World, dict[str, Plane]],
+) -> None:
+    world, planes = cworld
+    dep = world["contoso"]
+    response = dep.client.post(BASE, headers=dep.bearer(ADMIN), json=monitor_body())
+    assert response.status_code == 403, response.text
+    assert "customer_scope_required" in _reasons(dep)
+    assert _stored(planes["contoso"]) == []
+
+
+def test_azure_monitor_ai_customer_admin_creates_and_managed_identity_is_422(
+    cworld: tuple[World, dict[str, Plane]],
+) -> None:
+    world, planes = cworld
+    dep = world["contoso"]
+    headers = _bearer(dep, CONTROL_ADMIN_OID)
+    identity = {
+        "kind": "managed_identity",
+        "managed_identity_client_id": "6c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5",
+    }
+    refused = dep.client.post(
+        BASE, headers=headers, json={**monitor_body(), "credential": identity}
+    )
+    assert refused.status_code == 422, refused.text
+    assert _stored(planes["contoso"]) == []
+    created = dep.client.post(BASE, headers=headers, json=monitor_body())
+    assert created.status_code == 201, created.text
+    assert len(_stored(planes["contoso"])) == 1
