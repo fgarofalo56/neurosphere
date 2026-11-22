@@ -23,11 +23,13 @@ from neurosphere_core.catalog import CatalogEntity, EntityFilter
 from neurosphere_core.catalog.graph.access import AccessQuery, AccessResult
 from neurosphere_core.catalog.protocol import GraphResult, ImpactRequest, NeighborsRequest
 from neurosphere_core.paging import Page, PageRequest
+from neurosphere_core.recommendations.matching.service import AgentMatchReader
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
     "AccessReader",
     "ActionDrafter",
+    "AgentMatchReader",
     "CatalogReader",
     "ChangeLogReader",
     "ChangeRecord",
