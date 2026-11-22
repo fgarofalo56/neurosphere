@@ -51,10 +51,11 @@ flowchart LR
   `/subscriptions/`.
 - Exit codes: 0 ok, 1 failed (evidence written), 2 refused (nothing changed).
 
-Call telemetry paths. Azure Monitor and Application Insights AI call telemetry is not available in
-this release (a follow-up PRP builds it). The two shipped paths for model and agent calls are API
-Management gateway logs and OpenTelemetry pushed by the workload to the ingest edge with a producer
-credential.
+Call telemetry paths. Three paths exist for model and agent calls: API Management gateway logs,
+OpenTelemetry pushed by the workload to the ingest edge with a producer credential, and the Azure
+Monitor AI reader (PRP-141), which reads GenAI spans from a workspace-based Application Insights
+resource (`docs/runbooks/azure-monitor-ai-telemetry.md`). Use one path per workload. Row 4 of the
+gate now has a runner (`verify`); the live gate is OPEN (`docs/evidence/PRP-141/`).
 
 ## 2. Role assignments NeuroSphere needs
 
@@ -150,8 +151,8 @@ MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py
   --approve-shared hub-subnet,hub-pe,hub-dns,budget
 ```
 
-Real-tenant mode turns the three connector roles (`foundry_discovery`, `gateway_poll`,
-`billing_export`) on and sets `NS_HOSTED_DATA_MODE=real-tenant` on the API and workers. The template
+Real-tenant mode turns the four connector roles (`foundry_discovery`, `gateway_poll`,
+`billing_export`, `azure_monitor_ai`) on and sets `NS_HOSTED_DATA_MODE=real-tenant` on the API and workers. The template
 sets that setting; you do not. After the restart the pages show empty states that say what is
 missing and link to `/admin/sources/connectors`.
 
@@ -251,7 +252,7 @@ header or body.
 | Azure AI Foundry | Agents and model deployments of the named projects, written as draft catalog entities marked as discovered from Foundry | Prompts, responses, files, threads |
 | API Management gateways | Gateway and LLM log rows from the one workspace, a fixed column allowlist: token counts, model, status, latency; tier and diagnostic settings of the service at registration | Any body or header column |
 | Cost and billing | CSV files of the owner's Cost Management export in one blob container; invoiced cost for closed months | Anything else in the storage account |
-| Azure Monitor and Application Insights | Nothing in this release beyond the gateway tables | Not available in this release |
+| Azure Monitor and Application Insights | GenAI spans of one workspace-based Application Insights resource, a fixed column and attribute allowlist (PRP-141; live gate OPEN) | Prompts, completions, messages, tool arguments, user ids, any content attribute |
 
 ## 5. What is disabled when access is missing
 

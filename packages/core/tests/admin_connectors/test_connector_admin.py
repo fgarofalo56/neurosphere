@@ -65,7 +65,7 @@ def _admin(
     repo = repo or InMemoryAdminConfigRepository(cloud="commercial")
     validators = {
         k: _validator(checks.get(k))
-        for k in ("gateway_poll", "foundry_discovery", "billing_export", "otel")
+        for k in ("gateway_poll", "foundry_discovery", "billing_export", "otel", "azure_monitor_ai")
     }
     return ConnectorConfigAdmin(repo, cloud="commercial", validators=validators), repo
 
@@ -228,3 +228,49 @@ async def test_producer_mismatches_are_422(producer: dict[str, Any], reason: str
             CUSTOMER, _body(settings={"producer_id": "apim-gateway-poll"}), updated_by=ACTOR
         )
     assert caught.value.reason == reason
+
+
+_AMA = KindCheck(producer_id="apim-gateway-poll", source_id="ama")
+
+
+def _ama_body() -> dict[str, Any]:
+    return _body(
+        connector_id="ama-main",
+        connector_kind="azure_monitor_ai",
+        settings={"producer_id": "apim-gateway-poll"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("producer", "reason"),
+    [
+        (_producer(cloud="government", kind="application", source="ama"), "cross_cloud"),
+        (_producer(kind="gateway", source="ama"), "producer_source_kind_mismatch"),
+        (_producer(kind="billing", source="ama"), "producer_source_kind_mismatch"),
+    ],
+)
+async def test_azure_monitor_ai_producer_must_be_an_application_source_on_this_cloud(
+    producer: dict[str, Any], reason: str
+) -> None:
+    # A producer record of another cloud cannot be written through a commercial store, so the
+    # record sits in a store of its own cloud while the admin serves the commercial deployment.
+    repo = InMemoryAdminConfigRepository(cloud=producer["cloud"])
+    await repo.create(CUSTOMER, "producer", "apim-gateway-poll", producer, updated_by=ACTOR)
+    admin, _ = _admin(repo, azure_monitor_ai=_AMA)
+    with pytest.raises(InvalidSchemaError) as caught:
+        await admin.create(CUSTOMER, _ama_body(), updated_by=ACTOR)
+    assert caught.value.reason == reason
+
+
+async def test_azure_monitor_ai_with_an_application_producer_is_accepted() -> None:
+    repo = InMemoryAdminConfigRepository(cloud="commercial")
+    await repo.create(
+        CUSTOMER,
+        "producer",
+        "apim-gateway-poll",
+        _producer(kind="application", source="ama"),
+        updated_by=ACTOR,
+    )
+    admin, _ = _admin(repo, azure_monitor_ai=_AMA)
+    write = await admin.create(CUSTOMER, _ama_body(), updated_by=ACTOR)
+    assert write.warnings == ()

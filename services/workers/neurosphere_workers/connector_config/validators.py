@@ -53,6 +53,13 @@ def _gateway_poll(config: ConnectorConfig, *, cloud: CloudLiteral) -> KindCheck:
     return KindCheck(producer_id=settings.producer_id, source_id=settings.source_id)
 
 
+def _azure_monitor_ai(config: ConnectorConfig, *, cloud: CloudLiteral) -> KindCheck:
+    _require_secret_reference(config)
+    settings = stored.build_azure_monitor_ai(config)
+    _raise(stored.azure_monitor_ai_problem(settings, CloudName(cloud)))
+    return KindCheck(producer_id=settings.producer_id, source_id=settings.source_id)
+
+
 def _foundry_discovery(config: ConnectorConfig, *, cloud: CloudLiteral) -> KindCheck:
     _require_identity_reference(config)
     settings = stored.build_foundry_discovery(config)
@@ -90,4 +97,5 @@ VALIDATORS: Final[dict[str, ConnectorKindValidator]] = {
     "foundry_discovery": _foundry_discovery,
     "billing_export": _billing_export,
     "otel": _otel,
+    "azure_monitor_ai": _azure_monitor_ai,
 }

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "connector_id": "azure-monitor-ai",
+  "connector_kind": "azure_monitor_ai",
+  "domain_ids": [
+    "commercial:contoso:neurosphere:domain:finance"
+  ],
+  "settings": {
+    "workspace_ids": "11111111-2222-4333-8444-555555555555",
+    "interval_seconds": 300,
+    "producer_id": "azure-monitor-ai",
+    "source_id": "azure-monitor-ai"
+  },
+  "credential": {
+    "kind": "key_vault_secret",
+    "secret_uri": "https://kv-ns-contoso.vault.azure.net/secrets/azure-monitor-ai-producer/0123456789abcdef0123456789abcdef"
+  },
+  "enabled": true
+}

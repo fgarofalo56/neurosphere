@@ -136,6 +136,7 @@ nav:
       - runbooks/identity-admin.md
       - runbooks/entra-role-mapping.md
       - runbooks/connector-config.md
+      - runbooks/azure-monitor-ai-telemetry.md
       - runbooks/platform-config.md
       - runbooks/system-settings.md
       - runbooks/audit-siem.md

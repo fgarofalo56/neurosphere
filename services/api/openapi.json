@@ -4279,7 +4279,8 @@
               "gateway_poll",
               "foundry_discovery",
               "billing_export",
-              "otel"
+              "otel",
+              "azure_monitor_ai"
             ],
             "title": "Connector Kind",
             "type": "string"
@@ -18346,7 +18347,8 @@
             "enum": [
               "foundry_discovery",
               "gateway_poll",
-              "billing_export"
+              "billing_export",
+              "azure_monitor_ai"
             ],
             "title": "Kind",
             "type": "string"
@@ -23897,7 +23899,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(gateway_poll|foundry_discovery|billing_export|otel)$",
+                  "pattern": "^(gateway_poll|foundry_discovery|billing_export|otel|azure_monitor_ai)$",
                   "type": "string"
                 },
                 {

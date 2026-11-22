@@ -408,6 +408,11 @@
       "valid": true
     },
     {
+      "file": "valid/connector-config.azure-monitor-ai.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
       "file": "invalid/connector-config.nested-setting.json",
       "schema": "connector-config.schema.json",
       "valid": false,

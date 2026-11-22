@@ -26,16 +26,20 @@ from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
 from pydantic import SecretStr, ValidationError
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
+from neurosphere_workers.ingestion.azure_monitor_ai.settings import AzureMonitorAiSettings
 from neurosphere_workers.ingestion.billing_export import BillingExportSettings
 from neurosphere_workers.ingestion.foundry_discovery import FoundryDiscoverySettings
 from neurosphere_workers.ingestion.gateway_poll import GatewayPollSettings
 
 __all__ = [
     "ALLOWED_SETTINGS",
+    "StoredAzureMonitorAiSettings",
     "StoredBillingExportSettings",
     "StoredFoundryDiscoverySettings",
     "StoredGatewayPollSettings",
+    "azure_monitor_ai_problem",
     "billing_export_problem",
+    "build_azure_monitor_ai",
     "build_billing_export",
     "build_foundry_discovery",
     "build_gateway_poll",
@@ -76,6 +80,24 @@ ALLOWED_SETTINGS: Final[Mapping[str, frozenset[str]]] = {
         }
     ),
     "otel": frozenset({"producer_id", "source_id"}),
+    "azure_monitor_ai": frozenset(
+        {
+            "workspace_ids",
+            "interval_seconds",
+            "window_seconds",
+            "lookback_seconds",
+            "overlap_seconds",
+            "max_queries_per_tick",
+            "max_events_per_tick",
+            "app_role_names",
+            "allow_unverified_government",
+            "producer_id",
+            "source_id",
+            "batch_size",
+            "api_base_url",
+            "managed_identity_client_id",
+        }
+    ),
 }
 _GUID: Final = re.compile(r"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}")
 
@@ -95,6 +117,23 @@ class StoredGatewayPollSettings(GatewayPollSettings):
 
     #: Client id of the user-assigned identity the Key Vault read uses (an identifier).
     managed_identity_client_id: str | None = None
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return _init_only(
+            settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+        )
+
+
+class StoredAzureMonitorAiSettings(AzureMonitorAiSettings):
+    """``AzureMonitorAiSettings`` built from init arguments only (no environment)."""
 
     @classmethod
     def settings_customise_sources(
@@ -223,6 +262,16 @@ def build_billing_export(
     return _construct(StoredBillingExportSettings, values, "/settings")
 
 
+def build_azure_monitor_ai(
+    config: ConnectorConfig, *, secret: SecretStr | None = None
+) -> StoredAzureMonitorAiSettings:
+    values = _values(config)
+    values["domain_id"] = _single_domain(config)
+    if secret is not None:
+        values["producer_secret"] = secret
+    return _construct(StoredAzureMonitorAiSettings, values, "/settings")
+
+
 def gateway_poll_problem(settings: GatewayPollSettings) -> tuple[str, str] | None:
     """First refusal ``build_gateway_poll`` (the role factory) would raise, as (pointer, reason)."""
     if not settings.domains:
@@ -268,4 +317,19 @@ def billing_export_problem(
         return "/settings/storage_account_url", "billing_export_storage_account_url_invalid"
     if cloud is not CloudName.COMMERCIAL:
         return "/connector_kind", "billing_export_cloud_unsupported"
+    return None
+
+
+def azure_monitor_ai_problem(
+    settings: AzureMonitorAiSettings, cloud: CloudName
+) -> tuple[str, str] | None:
+    """First refusal the ``azure_monitor_ai`` role builder would raise, as (pointer, reason)."""
+    if not settings.workspaces:
+        return "/settings/workspace_ids", "azure_monitor_ai_workspace_ids_missing"
+    if settings.domain_id is None:
+        return "/domain_ids", "azure_monitor_ai_domain_id_missing"
+    if not settings.domain_id.startswith(f"{cloud.value}:"):
+        return "/domain_ids", "cloud_mismatch"
+    if settings.api_base_url is None:
+        return "/settings/api_base_url", "azure_monitor_ai_api_base_url_missing"
     return None

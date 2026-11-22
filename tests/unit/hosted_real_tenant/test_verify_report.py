@@ -75,6 +75,9 @@ class FakeApi:
         self.status_code = status_code
         self.urls: list[str] = []
         self.bearers: set[str] = set()
+        # Azure Monitor AI row (PRP-141): admin status and latency dashboard, unreadable by default.
+        self.admin_status: tuple[int, dict[str, Any]] = (404, {})
+        self.dashboard: tuple[int, dict[str, Any]] = (404, {})
 
     def __call__(self, url: str, bearer: str) -> object:
         mod = load()
@@ -83,6 +86,10 @@ class FakeApi:
         path = urlsplit(url).path
         if path == "/api/v1/sources/status":
             return mod.HttpResponse(self.status_code, self.status())
+        if path == "/api/v1/admin/sources/status":
+            return mod.HttpResponse(*self.admin_status)
+        if path.startswith("/api/v1/dashboards/domains/"):
+            return mod.HttpResponse(*self.dashboard)
         if path == "/api/v1/me/domains":
             return mod.HttpResponse(200, {"items": [{"domain_id": DOMAIN}]})
         if path == "/api/v1/catalog/entities":
@@ -153,7 +160,7 @@ def test_connected_sources_pass_and_monitor_is_always_open(tmp_path: Path) -> No
         "billing": "PASS",
         "azure_monitor": "OPEN",
     }
-    assert doc["sources"]["azure_monitor"]["reason"] == "follow_up_prp"
+    assert doc["sources"]["azure_monitor"]["reason"] == "status_unavailable"
     assert doc["sources"]["foundry"]["counts"] == {"foundry_entities": 2}
     assert doc["synthetic"]["result"] == "PASS"
     assert doc["overall"] == "OPEN"

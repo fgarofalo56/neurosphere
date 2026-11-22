@@ -17,14 +17,25 @@ from neurosphere_connector_azure_monitor.gateway_mapping import (
     map_gateway_row,
     map_mcp_row,
 )
-from neurosphere_connector_azure_monitor.queries import MonitorSource, SourceKind
+from neurosphere_connector_azure_monitor.genai_mapping import GenAiRowSkipped, map_genai_row
+from neurosphere_connector_azure_monitor.queries import (
+    CONTENT_DENYLIST,
+    GENAI_ATTRIBUTE_KEYS,
+    GENAI_COLUMNS,
+    MonitorSource,
+    SourceKind,
+)
 
 __all__ = [
+    "CONTENT_DENYLIST",
     "ENDPOINTS",
+    "GENAI_ATTRIBUTE_KEYS",
+    "GENAI_COLUMNS",
     "AzureMonitorConnector",
     "CostCenterIndex",
     "GatewayCostObservation",
     "GatewayObservation",
+    "GenAiRowSkipped",
     "ManagedIdentityTokenProvider",
     "McpToolObservation",
     "MonitorEndpoints",
@@ -37,5 +48,6 @@ __all__ = [
     "endpoints_for",
     "hash_subscription_id",
     "map_gateway_row",
+    "map_genai_row",
     "map_mcp_row",
 ]

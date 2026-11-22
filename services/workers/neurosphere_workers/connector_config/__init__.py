@@ -6,13 +6,14 @@ connector roles read it here at startup, stored winning over the environment per
 refuse is never saved. See ``docs/runbooks/connector-config.md``.
 """
 
+from neurosphere_workers.connector_config.idle import ConnectorIdle
 from neurosphere_workers.connector_config.keyvault import (
     ConnectorCredentialUnavailableError,
     KeyVaultSecretReader,
 )
 from neurosphere_workers.connector_config.loader import load_stored_config
 from neurosphere_workers.connector_config.resolve import (
-    ConnectorIdle,
+    resolve_azure_monitor_ai_settings,
     resolve_billing_export_settings,
     resolve_foundry_discovery_settings,
     resolve_gateway_poll_settings,
@@ -27,6 +28,7 @@ __all__ = [
     "ConnectorIdle",
     "KeyVaultSecretReader",
     "load_stored_config",
+    "resolve_azure_monitor_ai_settings",
     "resolve_billing_export_settings",
     "resolve_foundry_discovery_settings",
     "resolve_gateway_poll_settings",

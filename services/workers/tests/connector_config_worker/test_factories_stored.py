@@ -30,6 +30,7 @@ from .support import (
     config,
     foundry,
     gateway,
+    monitor,
     repo,
     store,
 )
@@ -286,3 +287,32 @@ async def test_foundry_discovery_runs_from_the_stored_config(
         await f.build_foundry_discovery(_cfg(), lifetime)
     assert Capture.kwargs["domain_id"] == "commercial:synthco:neurosphere:domain:d1"
     assert [t.project for t in Capture.kwargs["targets"]] == ["res/proj"]
+
+
+async def test_azure_monitor_ai_role_idles_when_the_stored_config_is_disabled(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+
+    async def _no_status(*_: Any, **__: Any) -> None:
+        return None
+
+    monkeypatch.setattr(f, "_cosmos", lambda *_: _no_status())
+    monkeypatch.setattr(f, "cosmos_repository", lambda *a, **k: object())
+    monkeypatch.setattr(f, "idle_recording", lambda *a, **k: _Idle())
+    monkeypatch.setattr(f, "_tick_role", lambda name, tick, cfg: (name, tick))
+    repository = repo()
+    body = monitor()
+    body["enabled"] = False
+    await store(repository, body)
+    _use(monkeypatch, repository)
+    with caplog.at_level(logging.INFO):
+        async with ClientLifetime() as lifetime:
+            role = await f.build_azure_monitor_ai(_cfg(), lifetime)
+    assert isinstance(role, tuple) and isinstance(role[1], _Idle)
+    events = [getattr(r, "event", None) for r in caplog.records]
+    assert "worker.connector_config_disabled" in events
+    assert "worker.azure_monitor_ai_unconfigured" in events
+
+
+class _Idle:
+    pass
