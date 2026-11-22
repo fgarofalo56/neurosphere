@@ -260,3 +260,33 @@ def test_foundry_ids_must_be_arm_ids() -> None:
     ns = _args(mod, "--foundry-account-ids", "not-an-id")
     with pytest.raises(mod.RefusedError, match="resource ids"):
         mod.infra_values(SimpleNamespace(args=ns, deployment_id="dep"))
+
+
+def test_real_tenant_lists_four_connector_roles_and_demo_is_unchanged() -> None:
+    """PRP-141 item 3: azure_monitor_ai joins the real-tenant roles; demo stays as is."""
+    spec = importlib.util.spec_from_file_location("hosted_demo_roles", GATES / "hosted_demo.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    assert module.CONNECTOR_ROLES == (
+        "gateway_poll",
+        "foundry_discovery",
+        "billing_export",
+        "azure_monitor_ai",
+    )
+    text = MAIN.read_text(encoding="utf-8")
+    start = text.index("var effectiveConnectorRoles")
+    block = text[start : text.index("var workerRoles", start)]
+    for role in module.CONNECTOR_ROLES:
+        assert f"'{role}'" in block
+    assert block.count("'") == 2 * 4 + 2  # four quoted roles plus 'real-tenant'
+    assert block.rstrip().endswith(": connectorRoles")  # the demo branch is unchanged
+    appservice = (ROOT / "infra" / "appservice" / "main.bicep").read_text(encoding="utf-8")
+    expected = ", ".join(f"'{r}'" for r in module.CONNECTOR_ROLES)
+    assert f"var connectorWorkerRoles = [{expected}]" in appservice
+
+
+@requires_az
+def test_no_azure_monitor_role_in_the_default_role_list(main_arm: dict[str, Any]) -> None:
+    assert "azure_monitor_ai" not in json.dumps(main_arm["variables"]["workerRoles"])
