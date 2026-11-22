@@ -13,6 +13,7 @@ from typing import Final
 from neurosphere_core.agent_identity import (
     AgentIdentityResolver,
     AgentIdentitySettings,
+    CatalogAgentDomainLookup,
     CatalogAliasLookup,
 )
 from neurosphere_core.catalog.protocol import AliasKey, CatalogRepository
@@ -24,6 +25,7 @@ from neurosphere_workers.runtime.supervisor import RoleRunnable
 __all__ = [
     "CountersRole",
     "LazyScopeProvider",
+    "ScopedAgentDomainLookup",
     "ScopedAliasLookup",
     "build_agent_identity_resolver",
 ]
@@ -60,6 +62,18 @@ class ScopedAliasLookup:
         return await CatalogAliasLookup(self._repo, lambda: scope).lookup(key)
 
 
+class ScopedAgentDomainLookup:
+    """``AgentDomainLookup`` over the catalog in the worker's own scope (never the event's)."""
+
+    def __init__(self, repo: CatalogRepository, scopes: ScopeProvider) -> None:
+        self._repo = repo
+        self._scopes = scopes
+
+    async def domain_of(self, agent_id: str) -> str | None:
+        scope = await self._scopes.get()
+        return await CatalogAgentDomainLookup(self._repo, lambda: scope).domain_of(agent_id)
+
+
 def build_agent_identity_resolver(
     repo: CatalogRepository,
     scopes: ScopeProvider,
@@ -75,6 +89,8 @@ def build_agent_identity_resolver(
         positive_ttl_seconds=config.positive_ttl_seconds,
         negative_ttl_seconds=config.negative_ttl_seconds,
         max_entries=_MAX_ENTRIES,
+        domain_lookup=ScopedAgentDomainLookup(repo, scopes),
+        discovery_domain_id=config.discovery_domain,
     )
 
 

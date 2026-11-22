@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from neurosphere_core.agent_identity import AgentIdentityResolver, derive_agent_id
 
@@ -11,7 +13,7 @@ OWN = "commercial:acme:foundry:agent:real"
 
 
 def _resolver(
-    lookup: StubLookup, clock: FakeClock | None = None, **kw: int
+    lookup: StubLookup, clock: FakeClock | None = None, **kw: Any
 ) -> tuple[AgentIdentityResolver, FakeClock]:
     clock = clock or FakeClock()
     return AgentIdentityResolver(lookup, clock=clock, **kw), clock
@@ -161,6 +163,9 @@ def test_stats_snapshot_has_only_counters() -> None:
         "lookup_failures",
         "drafts_created",
         "contributions_moved",
+        "domain_from_agent",
+        "domain_from_setting",
+        "domain_unattributed",
     }
     assert all(v == 0 for v in snap.values())
 

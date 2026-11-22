@@ -16,6 +16,7 @@ _UNSAFE: Final = re.compile(r"[^a-z0-9._-]+")
 _MAX_ID: Final = 512
 _HASH_CHARS: Final = 8
 AGENT_TYPE: Final = "agent"
+DOMAIN_TYPE: Final = "domain"
 
 
 def slug(value: str, fallback: str) -> str:
@@ -51,9 +52,18 @@ def derive_agent_id(cloud: str, customer: str, source: str, external_id: str) ->
     return f"{prefix}{base}-{digest}" if base else f"{prefix}agent-{digest}"
 
 
-def is_owned_agent(value: str | None, cloud: str, customer: str) -> bool:
-    """True for a canonical id of type ``agent`` in the same cloud and customer."""
+def _is_owned(value: str | None, cloud: str, customer: str, wanted: str) -> bool:
     if value is None or len(value) > _MAX_ID or not _CANONICAL.fullmatch(value):
         return False
     value_cloud, value_customer, _source, kind, _ident = value.split(":", 4)
-    return value_cloud == cloud and value_customer == customer and kind == AGENT_TYPE
+    return value_cloud == cloud and value_customer == customer and kind == wanted
+
+
+def is_owned_agent(value: str | None, cloud: str, customer: str) -> bool:
+    """True for a canonical id of type ``agent`` in the same cloud and customer."""
+    return _is_owned(value, cloud, customer, AGENT_TYPE)
+
+
+def is_owned_domain(value: str | None, cloud: str, customer: str) -> bool:
+    """True for a canonical id of type ``domain`` in the same cloud and customer."""
+    return _is_owned(value, cloud, customer, DOMAIN_TYPE)

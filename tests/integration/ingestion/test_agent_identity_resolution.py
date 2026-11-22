@@ -7,8 +7,9 @@ feeds ``AggregateProjection`` and ``CatalogProjection`` (in-memory aggregate and
 ``CatalogAliasLookup`` over an in-memory catalog repository).
 
 Run locally with ``docker compose up -d --wait``; the emulator endpoints below use 127.0.0.1.
-The OTLP edge sets no ``domain_id`` today, so the catalog side is asserted through its draft and
-undiscoverable counters rather than an edge.
+The OTLP edge sets no ``domain_id``: the resolver attributes one at read time (the aliased
+agent's catalog domain, or the ``NS_AGENT_IDENTITY_DISCOVERY_DOMAIN`` setting, set here through
+``AgentIdentitySettings``), so the catalog side is asserted through an edge or a draft.
 """
 
 from __future__ import annotations
@@ -26,13 +27,17 @@ import pytest
 import pytest_asyncio
 from neurosphere_core.agent_identity import (
     AgentIdentityResolver,
+    AgentIdentitySettings,
+    CatalogAgentDomainLookup,
     CatalogAliasLookup,
     declare_agent_alias,
     derive_agent_id,
 )
 from neurosphere_core.aggregates import InMemoryAggregateStore
+from neurosphere_core.catalog import EdgeFilter
 from neurosphere_core.cloud import Settings
 from neurosphere_core.ledger import InMemoryLedgerStore
+from neurosphere_core.paging import PageRequest
 from neurosphere_workers.agent_identity import ResolvingTraceEventSource, reresolve_external_id
 from neurosphere_workers.aggregates import AggregateProjection, StoreLedgerSource
 from neurosphere_workers.projections.catalog import CatalogProjection, WorkloadScopeProvider
@@ -177,8 +182,14 @@ async def build_stack(landed: Landed, *, alias: bool) -> Stack:
             clock=lambda: datetime.now(UTC),
         )
     ticks = [1000.0]
+    settings = AgentIdentitySettings(
+        discovery_domain=DOMAIN
+    )  # as NS_AGENT_IDENTITY_DISCOVERY_DOMAIN
     resolver = AgentIdentityResolver(
-        CatalogAliasLookup(rig.inner, lambda: scope), clock=lambda: ticks[0]
+        CatalogAliasLookup(rig.inner, lambda: scope),
+        clock=lambda: ticks[0],
+        domain_lookup=CatalogAgentDomainLookup(rig.inner, lambda: scope),
+        discovery_domain_id=settings.discovery_domain,
     )
     reader = ArchiveReader(landed.pipe.archive_container)  # type: ignore[arg-type]
     source = ResolvingTraceEventSource(ArchiveTraceEventSource(reader), resolver)
@@ -212,6 +223,13 @@ async def test_alias_present_series_under_the_aliased_agent(landed: Landed) -> N
     assert stack.events(REAL) == SPANS
     assert stack.events(DERIVED) == 0
     assert stack.resolver.stats.resolved_alias >= SPANS
+    edges = await stack.rig.inner.list_edges_by_domain(
+        await stack.rig.worker_scope(),
+        DOMAIN,
+        EdgeFilter(relation_types=["uses_model"]),
+        PageRequest(page_size=200),
+    )
+    assert REAL in {e.source_id for e in edges.items}  # the agent's domain, none on the span
 
 
 async def test_no_alias_series_under_derived_id_and_nothing_dropped(landed: Landed) -> None:
@@ -220,9 +238,11 @@ async def test_no_alias_series_under_derived_id_and_nothing_dropped(landed: Land
     assert stack.events(DERIVED) == SPANS
     assert stack.resolver.stats.derived >= SPANS
     assert not await landed.pipe.quarantine_records()
-    # the OTLP edge sets no domain, so a draft can only be created once one is mapped
+    # no alias: the discovery-domain setting supplies the domain, so a draft is created
     stats = stack.catalog.stats
-    assert stats.agent_drafts_created + stats.agent_undiscoverable_no_domain == SPANS
+    assert stats.agent_drafts_created == 1
+    assert stats.agent_undiscoverable_no_domain == 0
+    assert stack.resolver.stats.domain_from_setting >= SPANS
 
 
 async def test_alias_added_later_reresolve_moves_the_series(landed: Landed) -> None:

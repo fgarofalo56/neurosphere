@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Mapping, Sequence
 from typing import Any
 
-from neurosphere_contracts.telemetry.v1.telemetry_event import CanonicalId
+from neurosphere_contracts.telemetry.v1.telemetry_event import CanonicalId, Identifier
 from neurosphere_core.agent_identity import AgentIdentityResolver, AgentResolution
 from neurosphere_core.errors import DependencyTransientError
 
@@ -23,7 +23,7 @@ from neurosphere_workers.projections.catalog.source import LoadedEvent, TraceEve
 
 __all__ = ["ResolvingRecordSource", "ResolvingTraceEventSource"]
 
-_Key = tuple[str, str, str, str | None, str | None]
+_Key = tuple[str, str, str, str | None, str | None, str | None]
 
 
 async def _resolve(
@@ -32,9 +32,9 @@ async def _resolve(
     found = memo.get(key)
     if found is not None:
         return found
-    cloud, customer, source, external, canonical = key
+    cloud, customer, source, external, canonical, domain = key
     try:
-        found = await resolver.resolve(cloud, customer, source, external, canonical)
+        found = await resolver.resolve(cloud, customer, source, external, canonical, domain)
     except Exception as exc:
         raise DependencyTransientError(
             "agent identity lookup unavailable", reason="agent_identity_lookup"
@@ -58,16 +58,16 @@ class ResolvingTraceEventSource:
             event.source_id.root,
             event.external_agent_id.root if event.external_agent_id else None,
             event.canonical_agent_id.root if event.canonical_agent_id else None,
+            event.domain_id.root if event.domain_id else None,
         )
         resolution = await _resolve(self._resolver, memo, key)
         canonical = (
             CanonicalId(resolution.canonical_id) if resolution.canonical_id is not None else None
         )
-        return LoadedEvent(
-            loaded.doc_id,
-            event.model_copy(update={"canonical_agent_id": canonical}),
-            resolution.status,
-        )
+        update: dict[str, Any] = {"canonical_agent_id": canonical}
+        if event.domain_id is None and resolution.domain_id is not None:
+            update["domain_id"] = Identifier(resolution.domain_id)
+        return LoadedEvent(loaded.doc_id, event.model_copy(update=update), resolution.status)
 
     async def get_event(self, customer_id: str, doc_id: str) -> LoadedEvent | None:
         loaded = await self._inner.get_event(customer_id, doc_id)
@@ -117,8 +117,11 @@ class ResolvingRecordSource:
                 source,
                 _text(contract.get("external_agent_id")),
                 _text(contract.get("canonical_agent_id")),
+                _text(contract.get("domain_id")),
             )
             resolution = await _resolve(self._resolver, memo, key)
             stamped = dict(contract)
             stamped["canonical_agent_id"] = resolution.canonical_id
+            if key[5] is None and resolution.domain_id is not None:
+                stamped["domain_id"] = resolution.domain_id
             yield {**record, "contract": stamped}
