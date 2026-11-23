@@ -1421,6 +1421,8 @@ def single_document_validators(
             ),
             "connectors/v1/connector-manifest.schema.json": (check_connector_manifest,),
             "telemetry/v1/content-envelope.schema.json": (check_content_envelope_parts,),
+            "interactions/v1/interaction-record.schema.json": (check_encrypted_ref_cloud,),
+            "interactions/v1/interaction-export-manifest.schema.json": (check_encrypted_ref_cloud,),
             "policy/v1/policy-exception.schema.json": (check_policy_exception_window,),
             "policy/v1/policy-decision-request.schema.json": (check_decision_request_subject,),
         }
@@ -1492,6 +1494,20 @@ def check_kek_uri_cloud(kek_uri: object, cloud: str) -> Problems:
     if not host.endswith(suffix):
         return [f"kek_uri host {host!r} is not a {cloud} Key Vault ({suffix})"]
     return []
+
+
+def check_encrypted_ref_cloud(doc: Doc) -> Problems:
+    """InteractionRecord ``content_ref`` and InteractionExportManifest ``bundle``: the key
+    encryption key lives in a vault on the document's own cloud (no cross-cloud key wrap)."""
+    cloud = doc.get("cloud")
+    if not isinstance(cloud, str):
+        return []
+    problems: Problems = []
+    for field in ("content_ref", "bundle"):
+        ref = doc.get(field)
+        if isinstance(ref, Mapping) and "kek_uri" in ref:
+            problems.extend(f"{field}: {p}" for p in check_kek_uri_cloud(ref["kek_uri"], cloud))
+    return problems
 
 
 def check_system_setting_cloud(setting: Doc) -> Problems:

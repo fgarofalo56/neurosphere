@@ -46,7 +46,7 @@ export interface NotificationChannel {
    */
   kind: "webhook" | "teams_webhook" | "email";
   /**
-   * The one host this channel may call: a lowercase bare hostname (no scheme, port or path), checked against the egress allow-list at send time.
+   * The one host this channel may call: a lowercase bare DNS hostname (no scheme, port, path or IP literal; the last label starts with a letter), checked against the egress allow-list at send time.
    */
   allowed_host: string;
   /**
@@ -56,7 +56,7 @@ export interface NotificationChannel {
   /**
    * Key Vault secret holding the webhook signing material. Required (non-null) for kind webhook unless local_sink.
    */
-  hmac_credential?: CredentialReference | null;
+  hmac_credential?: KeyVaultSecretReference | null;
   /**
    * Deliver to local_sink_url instead of the vaulted endpoint. Core refuses it unless NS_ENV=local (PRP-107 clarification 7).
    */

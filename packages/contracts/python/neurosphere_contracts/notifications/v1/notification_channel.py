@@ -11,7 +11,6 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, RootModel, StrictBool, StrictStr
 
 from ...admin.v1 import common as common_1
-from ...admin.v1 import credential_reference
 from ...admin.v1.credential_reference import CredentialReference
 from ...catalog.v1 import common
 
@@ -65,17 +64,17 @@ class NotificationChannel(BaseModel):
         Field(
             max_length=253,
             min_length=1,
-            pattern="^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$",
+            pattern="^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)*[a-z]([a-z0-9-]{0,61}[a-z0-9])?$",
         ),
     ]
     """
-    The one host this channel may call: a lowercase bare hostname (no scheme, port or path), checked against the egress allow-list at send time.
+    The one host this channel may call: a lowercase bare DNS hostname (no scheme, port, path or IP literal; the last label starts with a letter), checked against the egress allow-list at send time.
     """
     endpoint_credential: KeyVaultSecretReference | None = None
     """
     Key Vault secret holding the endpoint URL or transport settings. Null only when local_sink is true.
     """
-    hmac_credential: credential_reference.CredentialReference | None = None
+    hmac_credential: KeyVaultSecretReference | None = None
     """
     Key Vault secret holding the webhook signing material. Required (non-null) for kind webhook unless local_sink.
     """

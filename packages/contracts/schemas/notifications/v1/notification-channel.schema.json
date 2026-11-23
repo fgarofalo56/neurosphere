@@ -42,11 +42,11 @@
       "enum": ["webhook", "teams_webhook", "email"]
     },
     "allowed_host": {
-      "description": "The one host this channel may call: a lowercase bare hostname (no scheme, port or path), checked against the egress allow-list at send time.",
+      "description": "The one host this channel may call: a lowercase bare DNS hostname (no scheme, port, path or IP literal; the last label starts with a letter), checked against the egress allow-list at send time.",
       "type": "string",
       "minLength": 1,
       "maxLength": 253,
-      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$"
+      "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)*[a-z]([a-z0-9-]{0,61}[a-z0-9])?$"
     },
     "endpoint_credential": {
       "description": "Key Vault secret holding the endpoint URL or transport settings. Null only when local_sink is true.",
@@ -64,7 +64,7 @@
       "description": "Key Vault secret holding the webhook signing material. Required (non-null) for kind webhook unless local_sink.",
       "anyOf": [
         {
-          "$ref": "../../admin/v1/credential-reference.schema.json"
+          "$ref": "#/$defs/key_vault_secret_reference"
         },
         {
           "type": "null"

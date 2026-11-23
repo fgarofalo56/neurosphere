@@ -258,7 +258,20 @@ def test_channel_rejects_a_url_property() -> None:
 
 @pytest.mark.parametrize(
     "host",
-    ["https://x", "x:443", "Hooks.Example.com", "x/path", "-x.com", "x..com", "", "a" * 254],
+    [
+        "https://x",
+        "x:443",
+        "Hooks.Example.com",
+        "x/path",
+        "-x.com",
+        "x..com",
+        "",
+        "a" * 254,
+        "169.254.169.254",
+        "10.0.0.1",
+        "1234",
+        "hooks.example.123",
+    ],
 )
 def test_allowed_host_rejects(host: str) -> None:
     doc = _webhook()
@@ -287,6 +300,16 @@ def test_local_sink_url_requires_local_sink() -> None:
     assert not _ok(CHANNEL, doc)
     doc["local_sink"] = True
     assert _ok(CHANNEL, doc)
+
+
+def test_hmac_is_only_a_key_vault_secret_reference() -> None:
+    doc = _webhook()
+    doc["hmac_credential"] = {
+        "kind": "managed_identity",
+        "managed_identity_client_id": "00000000-0000-4000-8000-000000000001",
+    }
+    assert not _ok(CHANNEL, doc)
+    assert _ok(CHANNEL, _webhook())
 
 
 def test_endpoint_credential_null_only_with_local_sink() -> None:
