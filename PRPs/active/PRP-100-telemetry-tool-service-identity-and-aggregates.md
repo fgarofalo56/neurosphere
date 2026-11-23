@@ -188,7 +188,7 @@ None. The real-stack run with seeded data belongs to PRP-109 and the hosted run 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 Verify-first attribute names | in-progress | prp-100-telemetry-tool-service-identity | orchestrator (implementers have no web fetch); 2026-11-23 |
+| 1 Verify-first attribute names | merged | prp-100-telemetry-tool-service-identity | orchestrator (implementers have no web fetch); GenAI conventions moved to `semantic-conventions-genai` (ae8214a8f3a9), core registry aef58d05090b; nav line added to `mkdocs.yml` (tests/docs/test_nav_allowlist requires built == nav); tests/docs 129 passed; 2026-11-23 |
 | 2 Core kinds and resolver | in-progress | prp-100-item-2-core-kinds | sonnet implementer; dispatched 2026-11-23 |
 | 3 OTLP mapping | todo | | |
 | 4 Aggregates mapping and rollups | todo | | |
