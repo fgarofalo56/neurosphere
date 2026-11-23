@@ -17,6 +17,12 @@
     },
     "telemetry-event.tool-service-mcp.json": {
       "schema": "telemetry-event.schema.json"
+    },
+    "telemetry-event.payload-ref-capture.json": {
+      "schema": "telemetry-event.schema.json"
+    },
+    "content-envelope.prompt-response.json": {
+      "schema": "content-envelope.schema.json"
     }
   },
   "invalid": {
@@ -110,6 +116,12 @@
       "schema": "telemetry-event.schema.json",
       "keyword": "enum",
       "instance_path": "/span_kind"
+    },
+    "content-envelope.authorization-key.json": {
+      "schema": "content-envelope.schema.json",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "message_contains": "authorization"
     }
   }
 }

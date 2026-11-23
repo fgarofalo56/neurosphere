@@ -39,6 +39,34 @@ export type SpanId = string;
  * via the `definition` "label".
  */
 export type Label = string;
+/**
+ * Kind of sensitive content a detector found; open-ended: readers must tolerate unknown values. The first eight are credential categories (CredentialCategory).
+ */
+export type DetectedCategory =
+  | "private_key"
+  | "jwt"
+  | "bearer_token"
+  | "cloud_access_key"
+  | "vendor_api_key"
+  | "connection_string"
+  | "url_with_credentials"
+  | "password_assignment"
+  | "payment_card"
+  | "iban"
+  | "us_ssn"
+  | "email_address"
+  | "phone_number"
+  | "ip_address"
+  | "mac_address"
+  | "guid"
+  | "customer_dictionary_term"
+  | "customer_identifier_pattern"
+  | "other";
+/**
+ * Which part of an interaction a piece of content is.
+ */
+export type ContentPartKind =
+  "prompt" | "response" | "tool_input" | "tool_output" | "system_instructions";
 
 /**
  * Normalized telemetry envelope for one observed span or event (NS-01). Raw telemetry lives outside the catalog graph. Missing values are null or the enumerated 'unknown', never 0 by default; numeric 0 is only ever a measured zero. Prompt and response bodies are never carried here; see payload_ref. Rules JSON Schema cannot express are enforced by Python validators in tests/contracts: validate_span_not_self_parent (span_id must differ from parent_span_id) and validate_canonical_id_grammar (canonical_agent_id must also pass the catalog canonical-ID grammar owned by schemas/catalog/v1).
@@ -248,6 +276,38 @@ export interface PayloadRef {
    * Redaction status of the stored payload.
    */
   redaction_state: "redacted" | "pending" | "redaction_failed" | "not_required" | "unknown";
+  /**
+   * Interaction record this payload belongs to (lowercase UUID). Null when no content was captured. Added in schema_version 1.2.0; events without it stay valid.
+   */
+  interaction_id?: string | null;
+  /**
+   * Capture policy that allowed the capture (lowercase slug). Null when none. Added in schema_version 1.2.0; events without it stay valid.
+   */
+  capture_policy_id?: string | null;
+  /**
+   * Version of that capture policy. Null when none. Added in schema_version 1.2.0; events without it stay valid.
+   */
+  capture_policy_version?: number | null;
+  /**
+   * Version of the deterministic detector set that redacted the content. Null when none. Added in schema_version 1.2.0; events without it stay valid.
+   */
+  detector_set_version?: string | null;
+  /**
+   * Categories the detectors found in the captured content. Category names only, never matched text. Added in schema_version 1.2.0; events without it stay valid.
+   *
+   * @maxItems 32
+   */
+  detected_categories?: DetectedCategory[];
+  /**
+   * Which parts were captured and how large they were; sizes only, never text. Added in schema_version 1.2.0; events without it stay valid.
+   *
+   * @maxItems 5
+   */
+  content_parts?: {
+    part: ContentPartKind;
+    char_count: number;
+    truncated: boolean;
+  }[];
 }
 /**
  * Tool identity on a telemetry event. Identifiers and a name only; never an argument or result body.

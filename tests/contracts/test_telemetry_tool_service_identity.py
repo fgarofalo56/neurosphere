@@ -149,7 +149,13 @@ def test_identity_properties_are_optional_and_default_to_null() -> None:
 def test_payload_ref_untouched() -> None:
     current = load_json(SCHEMA_ROOT / REL)
     baseline = load_json(BASELINE)
-    assert current["$defs"]["payload_ref"] == baseline["$defs"]["payload_ref"]
+    # PRP-99 adds optional metadata-only members to payload_ref; the original three members
+    # (including redaction_state) and the required list stay exactly as they were.
+    now, before = current["$defs"]["payload_ref"], baseline["$defs"]["payload_ref"]
+    assert now["required"] == before["required"]
+    assert now["additionalProperties"] is False
+    for name, spec in before["properties"].items():
+        assert now["properties"][name] == spec
     assert current["properties"]["payload_ref"] == baseline["properties"]["payload_ref"]
 
 

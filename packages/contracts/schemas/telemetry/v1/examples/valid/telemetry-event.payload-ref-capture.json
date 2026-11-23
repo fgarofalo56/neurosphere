@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.2.0",
+  "event_id": "evt-0011",
+  "event_time": "2026-11-10T09:30:00Z",
+  "ingestion_time": "2026-11-10T09:30:01Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "finance",
+  "source_id": "otel-gateway-01",
+  "external_agent_id": "invoice-bot",
+  "canonical_agent_id": "commercial:contoso:otel-gateway-01:agent:invoice-bot",
+  "request_id": "req-77",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b8",
+  "parent_span_id": "00f067aa0ba902b7",
+  "span_kind": "tool_call",
+  "environment": "sandbox",
+  "outcome": "success",
+  "duration_ms": 84,
+  "tool": {
+    "external_tool_id": "lookup-invoice",
+    "canonical_tool_id": "commercial:contoso:otel-gateway-01:tool:lookup-invoice",
+    "tool_name": "Lookup invoice"
+  },
+  "service": {
+    "external_service_id": "billing-api",
+    "canonical_service_id": "commercial:contoso:otel-gateway-01:service:billing-api"
+  },
+  "mcp_server_ref": "commercial:contoso:otel-gateway-01:mcp_server:billing-mcp",
+  "payload_ref": {
+    "pointer": "interactions/2026/11/22/7c1f2c9e-3b1a-4c55-9f0a-5d2e8a1b6c40.bin",
+    "classification": null,
+    "redaction_state": "redacted",
+    "interaction_id": "7c1f2c9e-3b1a-4c55-9f0a-5d2e8a1b6c40",
+    "capture_policy_id": "finance-capture",
+    "capture_policy_version": 2,
+    "detector_set_version": "detectors-1.0",
+    "detected_categories": [
+      "jwt",
+      "email_address"
+    ],
+    "content_parts": [
+      {
+        "part": "prompt",
+        "char_count": 412,
+        "truncated": false
+      },
+      {
+        "part": "response",
+        "char_count": 1980,
+        "truncated": true
+      }
+    ]
+  }
+}

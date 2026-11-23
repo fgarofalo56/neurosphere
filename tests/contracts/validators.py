@@ -1418,9 +1418,51 @@ def single_document_validators(
                 lambda doc: check_capability_matrix([doc]),
             ),
             "connectors/v1/connector-manifest.schema.json": (check_connector_manifest,),
+            "telemetry/v1/content-envelope.schema.json": (check_content_envelope_parts,),
         }
     )
     return table
+
+
+# ----------------------------------------------------------------- content channel (PRP-99)
+
+
+def check_content_envelope_parts(doc: Doc) -> Problems:
+    """ContentEnvelope carries at most one part per kind (JSON Schema cannot express it)."""
+    parts = doc.get("parts")
+    if not isinstance(parts, list):
+        return []
+    kinds = [p.get("part") for p in parts if isinstance(p, Mapping)]
+    return [f"duplicate content part kind {k!r}" for k, n in Counter(kinds).items() if n > 1]
+
+
+# Python mirror of the `not` patterns in interactions/v1/redacted-content.schema.json
+# `$defs/secret_free_text` (a test keeps the two identical). PRP-101's credential detectors
+# must cover at least these formats.
+SECRET_TEXT_PATTERNS: dict[str, str] = {
+    "private key block": r"-----BEGIN [A-Z ]{0,30}PRIVATE KEY-----",
+    "JWT": r"eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*",
+    "bearer token": r"[Bb][Ee][Aa][Rr][Ee][Rr][ \t]+[A-Za-z0-9._~+/=-]{8,}",
+    "AWS access key id": r"(AKIA|ASIA)[A-Z0-9]{16}",
+    "GitHub token": r"(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})",
+    "sk- key": r"sk-[A-Za-z0-9_-]{20,}",
+    "Azure storage or Service Bus key assignment": (
+        r"(AccountKey|SharedAccessKey)=[A-Za-z0-9+/]{8,}"
+    ),
+    "SAS signature": r"sig=[A-Za-z0-9%+/=]{20,}",
+    "URL with userinfo": r"[A-Za-z][A-Za-z0-9+.-]*://[^\s/@:]+:[^\s/@]+@",
+}
+
+
+def check_secret_free_text(text: object) -> Problems:
+    """Return one problem per credential format found in `text` (empty means secret-free)."""
+    if not isinstance(text, str):
+        return []
+    return [
+        f"text contains a {name}"
+        for name, pattern in SECRET_TEXT_PATTERNS.items()
+        if re.search(pattern, text) is not None
+    ]
 
 
 def run_single_document_validators(

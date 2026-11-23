@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.2.0",
+  "interaction_id": "7c1f2c9e-3b1a-4c55-9f0a-5d2e8a1b6c40",
+  "redaction_state": "redacted",
+  "detector_set_version": "detectors-1.0",
+  "parts": [
+    {
+      "part": "prompt",
+      "text": "Call the API with token [[ns-redacted:jwt]] and report back.",
+      "truncated": false,
+      "findings": [
+        {
+          "category": "jwt",
+          "part": "prompt",
+          "detector_id": "jwt-detector",
+          "detector_version": "1.0.0",
+          "count": 1,
+          "action": "replaced",
+          "confidence": "high",
+          "spans": [
+            {
+              "start": 24,
+              "end": 43
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
