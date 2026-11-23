@@ -185,6 +185,7 @@ nav:
       - release/verify.md
   - Connectors:
       - connectors/coverage.md
+      - connectors/verification/otel-genai-tool-service.md
   - Architecture and gates:
       - ARCHITECTURE.md
       - RESEARCH-AND-GATES.md

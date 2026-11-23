@@ -1,8 +1,10 @@
 """Outbox subject -> ``Contribution`` (the facts one subject adds to the aggregates).
 
-* ``model_call`` telemetry spans give latency and outcome. Other span kinds are not counted:
-  an ``agent_run`` span and its child ``model_call`` spans describe the same work (the ledger
-  mapping makes the same choice for cost).
+* ``model_call`` telemetry spans give latency and outcome. Other span kinds feed the domain
+  latency/error and agent/model series NOT at all (an ``agent_run`` span and its child
+  ``model_call`` spans describe the same work; the ledger mapping makes the same choice for cost).
+  PRP-100: ``tool_call`` spans with a resolved tool id and spans with a resolved service id are
+  kept, but only for the tool and service subject series.
 * A ledger ENTRY gives cost facts (estimated and invoiced stay separate), the authoritative
   amount (the reference: one record per request, so a request seen by gateway, app and billing is
   counted once), coverage inputs and a per-source report.
@@ -33,6 +35,8 @@ from neurosphere_core.aggregates import (
 from neurosphere_core.aggregates.models import CostKind, Granularity, SourceName
 from neurosphere_core.ledger import AllocationRecord, LedgerEntry, Observation
 from neurosphere_core.ledger.models import UNKNOWN_CURRENCY, format_time, quantize
+
+from neurosphere_workers.ingestion.resolve_subjects import canonical_service_id, canonical_tool_id
 
 ENTRY_PREFIX: Final = "entry-"
 EVENT_PREFIX: Final = "event-"
@@ -150,8 +154,16 @@ def _utc(value: str) -> datetime:
 def contribution_from_event(
     customer_id: str, doc_id: str, event: TelemetryEvent
 ) -> Contribution | None:
-    """None for anything but a ``model_call`` span."""
-    if event.span_kind != "model_call":
+    """A contribution for a ``model_call`` span, a ``tool_call`` span with a resolved tool id, and
+    any non-``unknown`` span with a resolved service id. None for everything else.
+
+    ``customer_id`` is the worker's (server-derived) customer, never the event's own, so a foreign
+    producer-supplied canonical id is replaced by the derived one (see ``resolve_subjects``).
+    """
+    kind = event.span_kind or "unknown"
+    tool_id = canonical_tool_id(event, customer_id) if kind == "tool_call" else None
+    service_id = canonical_service_id(event, customer_id) if kind != "unknown" else None
+    if kind != "model_call" and tool_id is None and service_id is None:
         return None
     moment = format_fine(_utc(event.event_time.root))
     return Contribution(
@@ -164,6 +176,9 @@ def contribution_from_event(
         event=EventFact(
             duration_ms=event.duration_ms,
             outcome=event.outcome or "unknown",
+            span_kind=kind,
+            tool_id=tool_id,
+            service_id=service_id,
             agent_id=event.canonical_agent_id.root if event.canonical_agent_id else None,
             provider=event.provider.root if event.provider else None,
             model=event.model.root if event.model else None,

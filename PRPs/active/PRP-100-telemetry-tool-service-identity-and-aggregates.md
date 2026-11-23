@@ -1,6 +1,7 @@
 ---
 name: PRP-100-telemetry-tool-service-identity-and-aggregates
-status: backlog
+status: active
+started: 2026-11-23
 priority: P0
 order: 100
 review: required
@@ -101,7 +102,11 @@ owns:
   - services/workers/neurosphere_workers/ingestion/resolve_subjects.py
   - packages/core/tests/aggregates_subjects/**
   - services/api/tests/ingest_tool_service/**
-  - tests/integration/ingestion/test_tool_service_subjects.py
+  - tests/integration/tool_service_subjects/**
+  - services/api/neurosphere_api/realtime/source.py
+  - services/api/neurosphere_api/ingest/service.py
+  - docs/connectors/verification/otel-genai-tool-service.md
+  - mkdocs.yml
   - docs/connectors/verification/otel-genai-tool-service.md
 tier1: []
 tier2_appends: []
@@ -122,16 +127,16 @@ Pattern references: `docs/connectors/coverage.md`.
 
 ### Item 2 - Core subject kinds and resolver
 Deliverable: `SubjectKind`, key function and `SubjectPoint` extended; `resolve_subjects.py` with the two pure functions; read the generated F1 bindings first and use their real names.
-Owned files: `packages/core/neurosphere_core/aggregates/**`, `services/workers/neurosphere_workers/ingestion/resolve_subjects.py`, `packages/core/tests/aggregates_subjects/**`.
+Owned files: `packages/core/neurosphere_core/aggregates/**`, `services/workers/neurosphere_workers/ingestion/resolve_subjects.py`, `packages/core/tests/aggregates_subjects/**`, `services/api/neurosphere_api/realtime/source.py` (guard only), resolver test `services/workers/neurosphere_workers/aggregates/tests/test_resolve_subjects.py` (new; core tests cannot import the worker package).
 Must NOT touch: contracts, `ingestion/pipeline.py`. Depends on: PRP-70 merged.
-Acceptance criteria: key and resolver criteria; agent and model keys unchanged; `cosmos.py` query accepts the new kinds.
+Acceptance criteria: key and resolver criteria; agent and model keys unchanged; `cosmos.py` query accepts the new kinds. Realtime guard (decided 2026-11-23): `newest_subject_points` keeps returning agent and model points only, and `realtime/source.py` skips any other kind, because `DeltaNode.kind` has no `tool` or `service`; the live delta stays byte-identical until PRP-74/77 add those node kinds.
 Tests: `packages/core/tests/aggregates_subjects/test_tool_service_keys.py`, `.../test_resolver.py` (new); existing suites in that directory unchanged.
 Pattern references: `aggregates/subject.py:48-58`.
 
 ### Item 3 - OTLP mapping  [P]
 Deliverable: `map_span` reads the verified tool, service and MCP attributes into the F1 fields, with caps and counted drops; metric points are untouched.
-Owned files: `services/api/neurosphere_api/ingest/otlp_mapping.py`, `services/api/tests/ingest_tool_service/**`.
-Must NOT touch: `ingest/service.py`, `payload/guard.py`. Depends on: items 1 and 2 (names); PRP-70.
+Owned files: `services/api/neurosphere_api/ingest/otlp_mapping.py`, `services/api/tests/ingest_tool_service/**`, `services/api/neurosphere_api/ingest/service.py` (decided 2026-11-23: two call-site changes only, pass the resource into `map_span` through a new optional keyword and merge its attribute drop counts into the existing `IngestResult.dropped_fields`; no route-model change).
+Must NOT touch: `payload/guard.py`, `ingest/reasons.py`. Attribute names come from `docs/connectors/verification/otel-genai-tool-service.md`. Depends on: items 1 and 2 (names); PRP-70.
 Acceptance criteria: mapping criteria; negative body-field test.
 Tests: `services/api/tests/ingest_tool_service/test_otlp_tool_service.py` (new directory name is unique); existing `services/api/tests/ingest` unchanged.
 Pattern references: `otlp_mapping.py:245-280`.
@@ -145,11 +150,11 @@ Tests: `services/workers/neurosphere_workers/aggregates/tests/test_tool_service_
 Pattern references: `rollups.py:197-259`.
 
 ### Item 5 - End-to-end check on the seeded incident
-Deliverable: an integration test that posts the PRP-71 seeded telemetry through OTLP mapping to aggregates in memory and asserts the failing service and a failing tool point, reading ids from `incident-manifest.json`.
-Owned files: `tests/integration/ingestion/test_tool_service_subjects.py`.
+Deliverable: an integration test that aggregates the PRP-71 seeded telemetry (stored `TelemetryEvent` documents, which already carry F1 identity) in memory and asserts the failing service and a failing tool point, reading ids from `incident-manifest.json`; the failing tool is the one whose seeded spans call the outage service (the manifest names no tool). The OTLP leg is covered by item 3's tests.
+Owned files: `tests/integration/tool_service_subjects/**` (new directory; decided 2026-11-23 because every module in `tests/integration/ingestion/` starts the compose emulators through an autouse fixture and the python CI job deselects them).
 Must NOT touch: sandbox generator (PRP-71). Depends on: items 3, 4; PRP-71.
 Acceptance criteria: incident criterion. Tests: itself (runs under the python job with in-memory stores).
-Pattern references: `tests/integration/ingestion/support.py`.
+Pattern references: `tests/integration/ingestion/support.py` (style only; never import that package's conftest).
 
 ### Item 6 - Integration and close-out
 Deliverable: Tier-3 regeneration if needed (`openapi.json` only on route-model change), changelog fragment `changelog.d/PRP-100-telemetry-tool-service-identity-and-aggregates.md`, completion note, a hand-off line for PRP-74's last item.
@@ -158,7 +163,7 @@ Acceptance criteria: reference section 6 satisfied. Tests: the gate commands.
 
 ## Validation gates
 ```bash
-uv run pytest -q packages/core/tests/aggregates_subjects services/workers/neurosphere_workers/aggregates services/api/tests/ingest services/api/tests/ingest_tool_service tests/integration/ingestion/test_tool_service_subjects.py
+uv run pytest -q packages/core/tests/aggregates_subjects services/workers/neurosphere_workers/aggregates services/api/tests/ingest services/api/tests/ingest_tool_service tests/integration/tool_service_subjects
 uv run ruff check packages services tests
 uv run pyright
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
@@ -186,12 +191,12 @@ None. The real-stack run with seeded data belongs to PRP-109 and the hosted run 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 Verify-first attribute names | todo | | |
-| 2 Core kinds and resolver | todo | | |
-| 3 OTLP mapping | todo | | |
-| 4 Aggregates mapping and rollups | todo | | |
-| 5 End-to-end seeded incident check | todo | | |
-| 6 Integration and close-out | todo | | |
+| 1 Verify-first attribute names | merged | prp-100-telemetry-tool-service-identity | orchestrator (implementers have no web fetch); GenAI conventions moved to `semantic-conventions-genai` (ae8214a8f3a9), core registry aef58d05090b; nav line added to `mkdocs.yml` (tests/docs/test_nav_allowlist requires built == nav); tests/docs 129 passed; 2026-11-23 |
+| 2 Core kinds and resolver | merged | prp-100-item-2-core-kinds | sonnet; commit 778ced71, merged bccce30f; orchestrator verify PASS 2026-11-23 (aggregates_subjects + workers aggregates + api realtime + api map 164 passed, ruff clean, pyright repo-wide 0 errors); review at PR level; realtime guard in `pick_newest` (covers cosmos) |
+| 3 OTLP mapping | merged | prp-100-item-3-otlp-mapping | sonnet; commit 1c3b467d, merged ab854ebc; orchestrator verify PASS 2026-11-23 (api ingest + ingest_tool_service + realtime 132 passed, ruff + format clean, pyright services/api 0 errors); F1 events stamped schema 1.1.0, others stay 1.0.0; pre-existing: root `execute_tool` span (no parent) is model-valid but schema-invalid (follow-up) |
+| 4 Aggregates mapping and rollups | merged | prp-100-item-4-aggregates | sonnet; stopped once: `EventFact` lives in core `aggregates/models.py` (PRP-owned), granted that class; commit 506de67c, merged d67d1ba9; orchestrator verify PASS 2026-11-23 (workers aggregates + core aggregates_subjects + agent_identity_worker + api realtime + api map + sandbox incident 243 passed, ruff clean, pyright 0 errors); `model_call` guard on domain latency/error and agent/model keys; tool/service points carry no tokens |
+| 5 End-to-end seeded incident check | merged | prp-100-item-5-seeded-incident | sonnet; commit 6e0d5155, merged e77b0735; real `AggregateProjection` over in-memory stores, ids from the read-back manifest; measured outage service error_rate 0.8596 (failing), failing tool `payment-initiation` 0.8333, 6 other services ok; orchestrator verify PASS 2026-11-23 (item 5 + workers aggregates + sandbox incident + CI shard pin + tests/docs 212 passed, ruff + format clean) |
+| 6 Integration and close-out | in-progress | prp-100-telemetry-tool-service-identity | orchestrator; changelog fragment; no route model changed, so no `openapi.json` regeneration; PR-level review APPROVED 2026-11-23 (no blockers; 4 non-blocking findings to follow-up issues); Snyk Code 0 issues on ingest, realtime, core aggregates, worker aggregates and ingestion; verify-gates full 2026-11-23: typecheck PASS, tests PASS (16363 passed, 364 deselected), build PASS, lint FAIL only on 41 errors inside untracked stale `.claude/worktrees/wf_73a5d379-*` copies (ruff over all tracked trees: all checks passed) |
 
 ## Completion note (filled at ship)
 - Date, PR:

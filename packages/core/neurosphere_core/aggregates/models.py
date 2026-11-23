@@ -127,8 +127,27 @@ class _Frozen(BaseModel):
 # --------------------------------------------------------------------------- contributions
 
 
+SpanKind = Literal[
+    "request",
+    "agent_run",
+    "model_call",
+    "tool_call",
+    "delegation",
+    "retrieval",
+    "retry",
+    "error",
+    "cancellation",
+    "unknown",
+]  # the telemetry contract's span_kind values
+
+
 class EventFact(_Frozen):
-    """A ``model_call`` span: latency and outcome. ``None`` duration is unknown, never 0.
+    """A telemetry span fact: latency and outcome. ``None`` duration is unknown, never 0.
+
+    PRP-100 adds ``span_kind``, ``tool_id`` and ``service_id``. Before it only ``model_call`` spans
+    were stored, so ``span_kind`` defaults to ``"model_call"``: a contribution stored without it
+    behaves exactly as before. Existing agent/model/latency/error rollups count only
+    ``model_call`` facts.
 
     PRP-49 adds the optional agent and model dimension and token counts (all default ``None`` =
     unknown, so contributions stored before the change keep validating).
@@ -136,6 +155,9 @@ class EventFact(_Frozen):
 
     duration_ms: int | None = Field(default=None, ge=0)
     outcome: Outcome = "unknown"
+    span_kind: SpanKind = "model_call"
+    tool_id: str | None = None
+    service_id: str | None = None
     agent_id: str | None = None
     provider: str | None = None
     model: str | None = None
@@ -266,15 +288,16 @@ class CoveragePoint(_AggregateBase):
 
 
 class SubjectPoint(_AggregateBase):
-    """Per-agent or per-model rollup of ``model_call`` spans (PRP-49).
+    """Per-agent, per-model, per-tool or per-service rollup (PRP-49, PRP-100).
 
-    Series keys are ``agent:<canonical id>`` and ``model:<provider>/<model>`` (lower case).
+    Series keys are ``agent:<id>``, ``tool:<id>``, ``service:<id>`` (canonical ids) and
+    ``model:<provider>/<model>`` (lower case).
     Everything unknown stays ``None`` or is counted, never 0: ``error_count`` and ``error_rate``
     are ``None`` when no outcome is known, tokens are ``None`` when no count is known.
     """
 
     metric: Literal["subject"] = "subject"
-    subject_kind: Literal["agent", "model"]
+    subject_kind: Literal["agent", "model", "tool", "service"]
     subject_key: str
     event_count: int
     missing_duration_count: int
