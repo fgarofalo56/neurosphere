@@ -99,6 +99,8 @@ def pick_latest(
 
 def pick_newest(docs: Sequence[AggregateDoc], limit: int) -> SubjectLookup:
     """The ``limit`` subjects whose newest point is newest (ties broken by series key)."""
+    # Realtime guard (PRP-100): only agent and model subjects; tool/service never reach the delta.
+    docs = [d for d in docs if isinstance(d, SubjectPoint) and d.subject_kind in ("agent", "model")]
     best = pick_latest(docs, [d.series_key for d in docs], False).points
     ranked = sorted(best.values(), key=lambda p: p.series_key)
     ranked.sort(key=lambda p: p.bucket_start, reverse=True)  # stable: ties stay ordered by key

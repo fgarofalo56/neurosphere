@@ -266,15 +266,16 @@ class CoveragePoint(_AggregateBase):
 
 
 class SubjectPoint(_AggregateBase):
-    """Per-agent or per-model rollup of ``model_call`` spans (PRP-49).
+    """Per-agent, per-model, per-tool or per-service rollup (PRP-49, PRP-100).
 
-    Series keys are ``agent:<canonical id>`` and ``model:<provider>/<model>`` (lower case).
+    Series keys are ``agent:<id>``, ``tool:<id>``, ``service:<id>`` (canonical ids) and
+    ``model:<provider>/<model>`` (lower case).
     Everything unknown stays ``None`` or is counted, never 0: ``error_count`` and ``error_rate``
     are ``None`` when no outcome is known, tokens are ``None`` when no count is known.
     """
 
     metric: Literal["subject"] = "subject"
-    subject_kind: Literal["agent", "model"]
+    subject_kind: Literal["agent", "model", "tool", "service"]
     subject_key: str
     event_count: int
     missing_duration_count: int
