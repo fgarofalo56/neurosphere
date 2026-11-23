@@ -15,14 +15,20 @@ def test_ready_when_the_copilot_is_configured() -> None:
     http = make_http(ScriptedAdapter(say("x")))
     response = http.client.get(URL, headers=http.headers(ALICE))
     assert response.status_code == 200
-    assert response.json() == {"state": "ready", "reason_code": None}
+    # The scripted test adapter is synthetic. The non-synthetic (false) case is covered in
+    # copilot_tools_api/test_progress_and_audit.py.
+    assert response.json() == {"state": "ready", "reason_code": None, "synthetic": True}
 
 
 def test_disabled_answers_200_when_the_copilot_is_unconfigured() -> None:
     http = make_http(ScriptedAdapter(say("x")), configured=False)
     response = http.client.get(URL, headers=http.headers(ALICE))
     assert response.status_code == 200
-    assert response.json() == {"state": "disabled", "reason_code": "copilot_unconfigured"}
+    assert response.json() == {
+        "state": "disabled",
+        "reason_code": "copilot_unconfigured",
+        "synthetic": False,  # no adapter is composed
+    }
 
 
 def test_the_composition_record_decides_the_state() -> None:
@@ -32,17 +38,22 @@ def test_the_composition_record_decides_the_state() -> None:
 
     registry.disabled("copilot")
     body = http.client.get(URL, headers=http.headers(ALICE)).json()
-    assert body == {"state": "disabled", "reason_code": "disabled"}
+    assert body == {"state": "disabled", "reason_code": "disabled", "synthetic": False}
 
     registry.failed("copilot", "copilot_endpoint_invalid")
     response = http.client.get(URL, headers=http.headers(ALICE))
     assert response.status_code == 200
-    assert response.json() == {"state": "failed", "reason_code": "copilot_endpoint_invalid"}
+    assert response.json() == {
+        "state": "failed",
+        "reason_code": "copilot_endpoint_invalid",
+        "synthetic": False,  # only a ready copilot reports its adapter
+    }
 
     registry.ok("copilot")
     assert http.client.get(URL, headers=http.headers(ALICE)).json() == {
         "state": "ready",
         "reason_code": None,
+        "synthetic": True,
     }
 
 
@@ -57,4 +68,5 @@ def test_the_body_exposes_nothing_but_state_and_reason() -> None:
     assert set(http.client.get(URL, headers=http.headers(ALICE)).json()) == {
         "state",
         "reason_code",
+        "synthetic",
     }

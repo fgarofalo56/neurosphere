@@ -30,7 +30,7 @@ from neurosphere_api.copilot.models import (
 )
 from neurosphere_core.copilot.models import ModelEvent, ModelRequest
 from neurosphere_core.copilot.models.protocol import AdapterDescriptor
-from neurosphere_core.copilot.tools import TOOL_NAMES
+from neurosphere_core.copilot.tools import COPILOT_TOOL_NAMES, TOOL_NAMES
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.scope import IdentityScope
 
@@ -55,7 +55,13 @@ async def test_only_manifest_tools_are_offered_and_none_takes_a_scope() -> None:
     model = ScriptedAdapter(say("nothing"))
     await run_turn(make_engine(model, make_world()), analyst())
     offered = {t.name for t in model.requests[0].tools}
-    assert offered == set(TOOL_NAMES)  # no chart tool until a validator is bound
+    # The copilot registry: the five defaults plus get_timeline (always offered). make_engine binds
+    # no graph/matcher port, so graph_query and recommend_agent are absent. No chart tool until a
+    # validator is bound.
+    bound = set(TOOL_NAMES) | {"get_timeline"}
+    assert offered == bound
+    assert offered < set(COPILOT_TOOL_NAMES)
+    assert {"graph_query", "recommend_agent"}.isdisjoint(offered)
     assert "suggest_action" not in offered
     for tool in model.requests[0].tools:
         assert "domain_id" not in str(tool.parameters.get("properties", {}))
@@ -289,8 +295,20 @@ async def test_tokens_precede_citations_and_exactly_one_terminal_closes_the_stre
     )
     turn = await run_turn(make_engine(model, make_world()), analyst())
     order = {"context": 0, "tool": 1, "token": 2, "citation": 3, "done": 5}
-    ranks = [order[n] for n in turn.names]
+    # progress interleaves with model passes and tool phases, so it is ranked separately: the
+    # remaining events keep the old order, and the progress sequence is pinned exactly.
+    ranks = [order[n] for n in turn.names if n != "progress"]
     assert ranks == sorted(ranks)
+    assert turn.names[0] == "context"
+    assert [(e.payload.phase, e.payload.iteration) for e in turn.of("progress")] == [  # type: ignore[union-attr]
+        ("model", 1),
+        ("tools", 1),
+        ("model", 2),
+        ("checking", 2),
+    ]
+    first_token = turn.names.index("token")
+    assert turn.names[first_token - 1] == "progress"  # checking is the last thing before tokens
+    assert turn.events[first_token - 1].payload.phase == "checking"  # type: ignore[union-attr]
     assert turn.names.count("done") == 1 and turn.names[-1] == "done"
     assert len(turn.of("token")) > 1  # long answers are chunked
     assert all(isinstance(e.payload, TokenEvent) for e in turn.of("token"))

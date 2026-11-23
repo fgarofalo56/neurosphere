@@ -69,9 +69,30 @@ def test_event_order_and_shapes_match_the_wire_contract() -> None:
     names = [name for name, _ in events]
     assert names[0] == "context"
     assert names[-1] == "done" and sum(n in TERMINALS for n in names) == 1
+    # progress interleaves with model passes and tool phases (model, tools, tool..., model,
+    # checking), so it is excluded from the monotone rank and its sequence is pinned below.
     rank = {"context": 0, "tool": 1, "token": 2, "citation": 3, "chart": 3, "action_suggestion": 3}
-    body_ranks = [rank[n] for n in names[:-1]]
+    body_ranks = [rank[n] for n in names[:-1] if n != "progress"]
     assert body_ranks == sorted(body_ranks)
+    assert names == [
+        "context",
+        "progress",
+        "progress",
+        "tool",
+        "tool",
+        "progress",
+        "progress",
+        *["token"] * names.count("token"),
+        "citation",
+        "done",
+    ]
+    assert [(d["phase"], d["iteration"]) for n, d in events if n == "progress"] == [
+        ("model", 1),
+        ("tools", 1),
+        ("model", 2),
+        ("checking", 2),
+    ]
+    assert all(set(d) == {"phase", "iteration"} for n, d in events if n == "progress")
 
     by_name: dict[str, list[dict[str, Any]]] = {}
     for name, data in events:
@@ -104,16 +125,32 @@ def test_event_order_and_shapes_match_the_wire_contract() -> None:
 def test_a_denied_turn_is_a_normal_200_stream_ending_in_denied() -> None:
     http = make_http(ScriptedAdapter(call("delete_everything", {})))
     events = http.ask(ALICE)
-    assert [n for n, _ in events] == ["context", "tool", "tool", "denied"]
+    # A denied turn never reaches the judge: no "checking" progress.
+    assert [n for n, _ in events] == [
+        "context",
+        "progress",
+        "progress",
+        "tool",
+        "tool",
+        "denied",
+    ]
+    assert [d for n, d in events if n == "progress"] == [
+        {"phase": "model", "iteration": 1},
+        {"phase": "tools", "iteration": 1},
+    ]
     denied = DeniedEvent.model_validate(events[-1][1])
     assert denied.reason_code == "tool_not_registered" and denied.reason
-    assert events[1][1] == {"name": "<unregistered>", "status": "started"}
+    assert events[3][1] == {"name": "<unregistered>", "status": "started"}
 
 
 def test_an_abstained_turn_ends_in_abstain_with_a_reason() -> None:
     http = make_http(ScriptedAdapter(say("Spend doubled [cite:x].")))
     events = http.ask(ALICE)
-    assert [n for n, _ in events] == ["context", "abstain"]
+    assert [n for n, _ in events] == ["context", "progress", "progress", "abstain"]
+    assert [d for n, d in events if n == "progress"] == [
+        {"phase": "model", "iteration": 1},
+        {"phase": "checking", "iteration": 1},
+    ]
     abstain = AbstainEvent.model_validate(events[-1][1])
     assert abstain.reason_code == "no_authorized_evidence" and abstain.reason
 
@@ -125,7 +162,9 @@ def test_a_failure_after_the_stream_starts_is_an_error_event() -> None:
             yield Completed(stop_reason="end_turn")  # pragma: no cover
 
     events = make_http(Failing(say("x"))).ask(ALICE)
-    assert [n for n, _ in events] == ["context", "error"]
+    # The failure is in the first model pass: one "model" progress, no "checking".
+    assert [n for n, _ in events] == ["context", "progress", "error"]
+    assert events[1][1] == {"phase": "model", "iteration": 1}
     error = ErrorEvent.model_validate(events[-1][1])
     assert (error.code, error.detail) == ("dependency_transient", "model_unavailable")
 
