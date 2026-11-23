@@ -27,7 +27,12 @@ _TERMINALS = {"done", "abstain", "denied", "error"}
 def _assert_contract_order(names: list[str]) -> None:
     assert names[0] == "context"
     assert names[-1] in _TERMINALS and not _TERMINALS & set(names[:-1])
-    ranks = [_ORDER.index(n) for n in names[:-1]]
+    # ``progress`` (PRP-78) interleaves with model passes and tool phases: it follows ``context``
+    # and precedes every token/citation, but sits between tool events, so it is ranked apart.
+    assert names[1] == "progress", names
+    first_body = next((i for i, n in enumerate(names) if n in {"token", "citation"}), len(names))
+    assert "progress" not in names[first_body:-1], names
+    ranks = [_ORDER.index(n) for n in names[:-1] if n != "progress"]
     assert ranks == sorted(ranks), names
 
 

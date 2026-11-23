@@ -164,6 +164,13 @@ class ToolEvent(_Model):
     status: Literal["started", "ok", "refused"]
 
 
+class ProgressEvent(_Model):
+    """Where the turn is: a model pass, a tool phase or the answer check. No content."""
+
+    phase: Literal["model", "tools", "checking"]
+    iteration: int
+
+
 class TokenEvent(_Model):
     text: str
 
@@ -185,6 +192,8 @@ class CopilotStatus(_Model):
 
     state: Literal["ready", "disabled", "failed"]
     reason_code: str | None = None
+    synthetic: bool = False
+    """True when the composed adapter replays recordings and never reaches a model."""
 
 
 class ActionSuggestionEvent(_Model):
@@ -220,6 +229,7 @@ class ErrorEvent(_Model):
 EventPayload = (
     ContextEvent
     | ToolEvent
+    | ProgressEvent
     | TokenEvent
     | CitationEvent
     | ChartEvent
@@ -240,6 +250,7 @@ class SseEvent(BaseModel):
 
     name: Literal[
         "context",
+        "progress",
         "tool",
         "token",
         "citation",

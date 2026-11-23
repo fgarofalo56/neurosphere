@@ -33,7 +33,12 @@ def search(domain: str = FINANCE) -> Step:
 async def test_a_model_answer_with_no_tool_call_is_an_abstention() -> None:
     model = ScriptedAdapter(say("Finance spend is up 40% [cite:made-up]."))
     turn = await run_turn(make_engine(model, make_world()), analyst())
-    assert turn.names == ["context", "abstain"]
+    # One model pass, no tool phase, then the judge ("checking") before the abstain terminal.
+    assert turn.names == ["context", "progress", "progress", "abstain"]
+    assert [(e.payload.phase, e.payload.iteration) for e in turn.of("progress")] == [  # type: ignore[union-attr]
+        ("model", 1),
+        ("checking", 1),
+    ]
     payload = turn.terminal.payload
     assert isinstance(payload, AbstainEvent)
     assert payload.reason_code == "no_authorized_evidence" and payload.reason
