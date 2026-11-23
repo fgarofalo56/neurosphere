@@ -268,8 +268,8 @@ Stores, containers, routes, workers, detectors, encryption, UI, permissions in c
 |---|---|---|---|
 | 1 | merged | worktree-agent-a96adb3e589139b84 (sonnet) | 76e2976b merged c041412b; gen --check OK, 3614 passed (contracts+sdk+payload+audit+ingest+archive+quarantine), ruff/format/pyright clean, openapi drift 3 passed; deviation: PRP-70 test_payload_ref_untouched relaxed to pin original members (baseline-diff trap); 2026-11-23 |
 | 2 | merged | worktree-agent-a6ddddb4e1b70a52f (sonnet) | 9173fe86 merged bb2e0bcb; gen --check OK, 3691 passed (contracts+sdk+payload+audit+ingest+ingestion+openapi drift), ruff/format/pyright clean; deviations: parts $refs telemetry payload_ref/properties/content_parts (generator adds ContentParts RootModel, additive), check_kek_uri_cloud added here for item 5 reuse, EncryptedObjectRef shared $def; 2026-11-23 |
-| 3 | in-progress | worktree (implementer, sonnet) | dispatched 2026-11-23 |
-| 4 | todo | | |
+| 3 | merged | worktree-agent-a7b9c79d0077137b5 (sonnet) | 9d61b57e merged 8cb9239c; gen --check OK, 3707 passed (contracts+sdk+payload+audit+openapi drift), ruff/format/pyright clean; additions: published status requires published_* ids (if/then), evidence ref pattern, sha256:-prefixed content_sha256; 2026-11-23 |
+| 4 | in-progress | worktree (implementer, sonnet) | dispatched 2026-11-23 |
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |
