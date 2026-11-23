@@ -58,6 +58,7 @@ Out of scope: `search_docs`, the 100-question groundedness set and Helm copilot 
 | 8 | Domains for `recommend_agent` | all readable; capped | At most 5 readable domains, context-narrowed first; truncation flagged |
 | 9 | Geography filter for the `list` access query (decided by the owner 2026-11-22 at plan approval) | map `eu_eea` to region group `eu`; two-step lookup | Two-step: the shipped PRP-73 `AccessQuery` has no `residency_geography` filter (only `residency_regions`/`region_group`) and `catalog/**` is must-not-touch, so `graph_query` first runs the catalog `list` on `grounding_source` with the contract filters through the existing `CatalogReader` port (at most 50 asset ids, truncation flagged), then `who_accesses(asset_ids=..., modes=...)` |
 | 10 | Demo copilot switch blocked by the seeded stored setting (decided by the owner 2026-11-22) | leave demo off; extend item 8 | Extend item 8: `scripts/sandbox/sbx_demo_settings.py` seeds a stored `copilot` setting with `enabled: false`, which beats env (PRP-45), and `tests/unit/demo_profile/test_compose_passthrough.py` pins `disabled`; item 8 also owns those two files and `tests/unit/demo_profile/test_demo_settings.py` |
+| 11 | Pre-existing copilot tests pin the old SSE sequence, status JSON and five-tool offer (decided by the owner 2026-11-22) | hide progress behind a flag; extend item 5 | Extend item 5: it also owns `services/api/tests/copilot_api/{test_abstention,test_copilot_status,test_engine_policy,test_sse_contract}.py` and updates their pinned expectations additively (the `progress` event, `CopilotStatus.synthetic`, `get_timeline` in the offered tools); `tests/integration/copilot/**` is already owned |
 
 ## Context manifest
 
@@ -110,6 +111,12 @@ owns:
   - packages/core/tests/copilot_graph_tools/**
   - services/api/neurosphere_api/copilot/**
   - services/api/tests/copilot_tools_api/**
+  - services/api/tests/copilot_api/test_abstention.py
+  - services/api/tests/copilot_api/test_copilot_status.py
+  - services/api/tests/copilot_api/test_engine_policy.py
+  - services/api/tests/copilot_api/test_sse_contract.py
+  - services/api/openapi.json
+  - docs/reference/**
   - services/api/tests/runtime_planes/test_copilot_builder.py
   - tests/integration/copilot/**
   - frontend/src/features/copilot/**
@@ -245,10 +252,10 @@ The first real-model turn with the new tools (`NS_LIVE_APPROVED=1`, an operator-
 | 1 | merged | prp-78-item-1 | review pass 1 (items 1-3) APPROVED 2026-11-22, no blockers; follow-up: explicit node field allowlist in `_node_row`; | sonnet; 33d2bdbf verify PASS (pytest 273); merged a57c3d84 2026-11-22; `grants_access_to` excluded from copilot relations |
 | 2 | merged | prp-78-item-2 | review pass 1 APPROVED; | sonnet; 4e4f2463 verify PASS (pytest 248); merged bd73ba9d 2026-11-22 (ports.py tail conflict resolved, both kept); audit.read-only caller is denied, not partial (item 4 fixes) |
 | 3 | merged | prp-78-item-3 | review pass 1 APPROVED; | sonnet; 215f638b verify PASS (pytest 242); merged 3ebfe791 2026-11-22; post-merge wave A: ruff, pyright 0, pytest 311 passed |
-| 4 | in-progress | prp-78-item-4 | sonnet; dispatched 2026-11-22; also carries timeline partial fix + review follow-ups 2, 4 |
-| 5 | todo | | |
+| 4 | review | prp-78-item-4 | sonnet; 3e7c9846 verify PASS (ruff, pyright 0, pytest core+mcp 538 passed); merged 157a7cfe 2026-11-22 (post-merge core 333 passed); timeline partial fix + review follow-ups 2, 4 folded in; `ToolResult.domain_ids` excluded from dumps (MCP shape unchanged) |
+| 5 | in-progress | prp-78-item-5 | sonnet; 1c1ae24a: new suites 62 passed, corpus 78/78, pyright 0; 13 pre-existing pinned tests red (progress, synthetic, get_timeline offer) -> clarification 11, fix round 1 on prp-78-item-5-fix1 |
 | 6 | todo | | |
-| 7 | todo | | |
+| 7 | verifying | prp-78-item-7 | sonnet; dispatched against item 5's committed wire shape; 9a89f7bb verify PASS 2026-11-22 (eslint 0, tsc 0, vitest copilot 40 passed, e2e catalog+copilot 32 passed; agent's 3 catalog axe failures were full-suite load flakes, pass in isolation on both branches); merges after 5 |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
