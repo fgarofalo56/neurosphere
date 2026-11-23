@@ -17,6 +17,7 @@ from action_plane_harness import ALICE  # pyright: ignore[reportMissingImports]
 from copilot_api_harness import (  # pyright: ignore[reportMissingImports]
     FINANCE,
     NOW,
+    OPERATIONS,
     SCHEMAS,
     World,
     agent,
@@ -26,6 +27,7 @@ from copilot_api_harness import (  # pyright: ignore[reportMissingImports]
 )
 from copilot_http_harness import COPILOT_PREFIX, make_http  # pyright: ignore[reportMissingImports]
 from neurosphere_api.copilot import CopilotExtraPorts
+from neurosphere_api.copilot.models import MessageContext
 from neurosphere_contracts.catalog.v1.grounding_source import GroundingSource
 from neurosphere_contracts.recommendations.v1.agent_match_request import AgentMatchRequest
 from neurosphere_contracts.recommendations.v1.agent_match_response import AgentMatchResponse
@@ -298,6 +300,24 @@ async def test_who_writes_resolves_the_source_id_from_the_first_step_result() ->
     assert second.arguments["query"]["traversal"]["start_ids"] == [AP_SOURCE]
     # The writer is cited, the reader of the same source is not.
     assert READER not in {e.payload.record_id for e in turn.of("citation")}
+
+
+@pytest.mark.parametrize("script_id", sorted(QUESTIONS))
+async def test_each_demo_question_still_answers_when_the_dock_is_narrowed(script_id: str) -> None:
+    """A domain selected in the dock narrows every tool call; no demo question may be refused."""
+    world, ports = await _seeded()
+    adapter = Recording()
+    engine = make_tools_engine(cast(Any, adapter), world, extra_ports=ports)
+    scope = make_scope(
+        [("domain_steward", [FINANCE, OPERATIONS]), ("security_auditor", [FINANCE, OPERATIONS])],
+        [FINANCE, OPERATIONS],
+    )
+    turn = await run_turn(
+        engine, scope, QUESTIONS[script_id], hint=MessageContext(domain_id=FINANCE)
+    )
+    assert turn.events[0].payload.applied_domains == [FINANCE]
+    assert turn.terminal.name == "done", [e.name for e in turn.events]
+    assert [e.payload for e in turn.of("citation")]
 
 
 async def test_the_cost_window_is_seven_days_ending_at_the_adapter_clock() -> None:

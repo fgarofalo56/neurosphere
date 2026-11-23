@@ -129,19 +129,22 @@ def test_stored_values_are_non_secret_and_consistent_with_the_profile_env() -> N
         assert marker.lower() not in text.lower()
 
 
-def test_recorded_mode_does_not_seed_the_copilot_row(scope: Any) -> None:
-    """A stored copilot row beats the environment, so recorded mode must leave it out."""
+def test_recorded_mode_does_not_seed_the_copilot_or_search_rows(scope: Any) -> None:
+    """A stored row beats the environment, so recorded mode leaves out copilot (disabled model)
+    and search (a disabled row leaves the agent matcher without search)."""
     keys = [key for key, _ in settings.demo_settings("recorded")]
-    assert keys == ["scan", "mcp_server", "search", "write_targets", "write_targets"]
+    assert keys == ["scan", "mcp_server", "write_targets", "write_targets"]
     repo, audit = _stores()
     created, skipped = asyncio.run(
         settings.apply_demo_settings(
             repo, audit, scope, environ={**ENV, "NS_DEMO_COPILOT_MODE": "recorded"}
         )
     )
-    assert (created, skipped) == (5, 0)
+    assert (created, skipped) == (4, 0)
     docs = asyncio.run(repo.list_by_kind(CUSTOMER, SYSTEM_SETTING_KIND))
-    assert document_id("copilot") not in {d.id.root for d in docs}
+    ids = {d.id.root for d in docs}
+    assert document_id("copilot") not in ids
+    assert document_id("search") not in ids
 
 
 def test_the_copilot_placeholder_stays_disabled_for_any_other_mode() -> None:

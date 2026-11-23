@@ -131,7 +131,7 @@ _COMMON_UNSUPPORTED: Final = (
     "time_range",
     "cursor",
 )
-_GRAPH_UNSUPPORTED: Final = ("filters", *_COMMON_UNSUPPORTED)
+_GRAPH_UNSUPPORTED: Final = _COMMON_UNSUPPORTED
 _LIST_UNSUPPORTED: Final = ("traversal", *_COMMON_UNSUPPORTED)
 _DIRECTION: Final[dict[str, Direction]] = {"outgoing": "out", "incoming": "in", "both": "both"}
 _LIST_FIELDS: Final = frozenset(
@@ -320,11 +320,25 @@ def _graph_request_checks(query: StructuredQuery) -> tuple[list[str], list[Relat
     return start_ids, relations
 
 
+def _traversal_domains(query: StructuredQuery, readable: tuple[str, ...]) -> tuple[str, ...]:
+    """Readable domains narrowed (never widened) by a ``domain_id`` eq/in filter.
+
+    A traversal accepts no other filter field or operator: those stay refused.
+    """
+    if not query.filters:
+        return readable
+    if any(str(f.root.field.root) != "domain_id" for f in query.filters):  # pyright: ignore[reportAny]
+        raise _refuse("filter field is not supported by this tool", "unsupported_filter")
+    return _narrow(readable, _list_filters(query)["domain_id"])
+
+
 async def _walk_graph(
     graph: GraphReader, scope: IdentityScope, query: StructuredQuery, readable: tuple[str, ...]
 ) -> _Merged:
     start_ids, relations = _graph_request_checks(query)
     assert query.traversal is not None
+    if not readable:
+        return _Merged({}, {}, {})
     node_cap = min(query.budget.max_nodes or MAX_GRAPH_NODES, MAX_GRAPH_NODES)
     edge_cap = min(query.budget.max_edges or MAX_GRAPH_EDGES, MAX_GRAPH_EDGES)
     flt = EdgeFilter(relation_types=list(relations))
@@ -577,12 +591,14 @@ def _graph_query(
         if query.operation in _GRAPH_OPERATIONS:
             if args.access_mode is not None:
                 raise _refuse("access_mode applies to list queries only", "unsupported_query")
-            merged = await _walk_graph(deps.graph, scope, query, readable)
+            _graph_request_checks(query)
+            narrowed = _traversal_domains(query, readable)
+            merged = await _walk_graph(deps.graph, scope, query, narrowed)
             rows: list[Row] = [
                 *(_node_row(n, merged.paths.get(i)) for i, n in merged.nodes.items()),
                 *(_edge_row(e) for e in merged.edges.values()),
             ]
-            return _rows_to_result(rows, clock, policy, merged.truncated, readable)
+            return _rows_to_result(rows, clock, policy, merged.truncated, narrowed)
         if query.operation != "list":
             raise _refuse("operation is not supported by this tool", "unsupported_operation")
         if _entity_name(query) != "grounding_source":

@@ -183,7 +183,13 @@ def test_every_allow_list_entry_has_a_reason_and_an_owning_prp() -> None:
 
 
 def _status(**states: str) -> dict[str, Any]:
-    names = {"admin_producers": "ok", "mcp_server": "ok", "scan": "ok", "copilot": "disabled"}
+    names = {
+        "admin_producers": "ok",
+        "mcp_server": "ok",
+        "scan": "ok",
+        "copilot": "disabled",
+        "agent_matcher": "ok",
+    }
     names.update(states)
     return {
         "ready": True,
@@ -316,6 +322,21 @@ def test_recorded_copilot_fails_unless_ready_and_synthetic(status: Any) -> None:
 def test_recorded_copilot_needs_a_done_terminal_with_a_citation(events: list[str]) -> None:
     copilot, _ = _recorded(READY, events)
     assert (copilot.state, copilot.ok) == (check.UNEXPECTED, False)
+
+
+@pytest.mark.parametrize("state", ["disabled", "failed", "absent"])
+def test_recorded_copilot_fails_without_the_agent_matcher(state: str) -> None:
+    """No matcher means no ``recommend_agent``: the summarize-a-ticket question cannot answer."""
+    status = _status(copilot="ok", agent_matcher=state)
+    if state == "absent":
+        status["components"] = [c for c in status["components"] if c["name"] != "agent_matcher"]
+    answers = {check.STATUS_PATH: status, check.COPILOT_STATUS_PATH: READY}
+    answers[check.LIFECYCLE_PATH] = {"mode": "dry_run"}
+    client = AskingClient(answers, ["citation", "done"])
+    found = {f.name: f for f in check.check_features(client, "recorded")}
+    assert (found["copilot"].state, found["copilot"].ok) == (check.DISABLED, False)
+    assert "agent_matcher" in found["copilot"].detail
+    assert client.asked == []
 
 
 def test_recorded_copilot_fails_when_the_question_is_refused() -> None:
