@@ -23,8 +23,8 @@ MAKEFILE = ROOT / "Makefile"
 # Same marker list as tests/unit/hosted_data_path/test_profile_parity.py.
 SECRET_NAME = re.compile(r"KEY|SECRET|PASSWORD|TOKEN|CONNECTION_?STRING|CREDENTIAL", re.IGNORECASE)
 
-# Read by no source file yet: the single copilot switch, consumed by compose (default path of
-# NS_COPILOT_MODE) and by the demo check of a later item. PRP-78 flips its value.
+# Read by no API source file: the single copilot switch, consumed by compose (default path of
+# NS_COPILOT_MODE), the demo check and the demo settings seed. PRP-78 set it to recorded.
 UNREAD_BY_CODE = {
     "NS_DEMO_COPILOT_MODE": "consumed by compose and the demo check only (PRP-71/PRP-78)"
 }
@@ -119,8 +119,8 @@ def test_env_file_names_are_the_expected_set(env_values: dict[str, str]) -> None
     assert set(env_values) == set(EXPECTED_SERVICES)
 
 
-def test_copilot_stays_disabled_and_scan_lifecycle_values(env_values: dict[str, str]) -> None:
-    assert env_values["NS_DEMO_COPILOT_MODE"] == "disabled"
+def test_copilot_is_recorded_and_scan_lifecycle_values(env_values: dict[str, str]) -> None:
+    assert env_values["NS_DEMO_COPILOT_MODE"] == "recorded"
     assert env_values["NS_LIFECYCLE_MODE"] == "dry_run"
     assert env_values["NS_SCAN_ENABLED"] == "true"
     assert env_values["NS_WORKER_REC_SOURCE"] == "archive"
