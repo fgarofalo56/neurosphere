@@ -54,6 +54,7 @@ EXPECTED_AREAS = {
     "errors",
     "evaluation",
     "interactions",
+    "policy",
     "map",
     "query",
     "recommendations",

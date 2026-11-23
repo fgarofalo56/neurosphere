@@ -1,0 +1,517 @@
+{
+  "schema_version": "1.2.0",
+  "policy_id": "support-governance",
+  "policy_version": 2,
+  "previous_version": 1,
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "display_name": "Support governance",
+  "document_url": null,
+  "status": "published",
+  "mode": "audit",
+  "severity": "medium",
+  "content_sha256": "sha256:abababababababababababababababababababababababababababababababab",
+  "created_by": "commercial:acme:entra:person:p-1111111111111111111111111111111111111111111111111111111111111111",
+  "created_at": "2026-11-01T10:00:00Z",
+  "published_at": "2026-11-02T10:00:00Z",
+  "published_intent_id": "00000001-0000-4000-8000-000000000001",
+  "published_audit_id": "00000002-0000-4000-8000-000000000002",
+  "rules": [
+    {
+      "rule_id": "r0",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r1",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r2",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r3",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r4",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r5",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r6",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r7",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r8",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r9",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r10",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r11",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r12",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r13",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r14",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r15",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r16",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r17",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r18",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r19",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r20",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r21",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r22",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r23",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r24",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r25",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r26",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r27",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r28",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r29",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r30",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r31",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "r32",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    }
+  ]
+}

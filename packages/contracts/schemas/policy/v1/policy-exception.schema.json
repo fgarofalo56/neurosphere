@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/policy/v1/policy-exception.schema.json",
+  "title": "PolicyException",
+  "description": "A time-boxed exception to one rule for one subject (PRP-99; container policy_exceptions). expires_at is required and at most 365 days after requested_at (Python validator check_policy_exception_window in tests/contracts/validators.py).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "exception_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "policy_id",
+    "rule_id",
+    "subject",
+    "status",
+    "reason_code",
+    "requested_by",
+    "requested_at",
+    "expires_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "exception_id": {
+      "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+    },
+    "cloud": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "policy_id": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "rule_id": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "subject": {
+      "description": "The entity excepted.",
+      "$ref": "../../actions/v1/target-ref.schema.json"
+    },
+    "violation_id": {
+      "description": "Violation it answers. Null when requested ahead of one.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "approved",
+        "rejected",
+        "expired",
+        "revoked"
+      ]
+    },
+    "reason_code": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/reason_code"
+    },
+    "requested_by": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/principal_id"
+    },
+    "requested_at": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "review_item_id": {
+      "description": "HITL review item that decides it.",
+      "anyOf": [
+        {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/record_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "decided_by": {
+      "description": "Reviewer.",
+      "anyOf": [
+        {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/principal_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "decided_at": {
+      "description": "When decided.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expires_at": {
+      "description": "When the exception ends. Required.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "audit_id": {
+      "description": "Audit record of the decision.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  }
+}

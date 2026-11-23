@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.2.0",
+  "exception_id": "00000004-0000-4000-8000-000000000004",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "policy_id": "support-governance",
+  "rule_id": "owner-needed",
+  "subject": {
+    "canonical_id": "commercial:acme:neurosphere:agent:support-bot",
+    "entity_type": "agent"
+  },
+  "violation_id": "00000003-0000-4000-8000-000000000003",
+  "status": "approved",
+  "reason_code": "migration_in_progress",
+  "requested_by": "commercial:acme:entra:person:p-1111111111111111111111111111111111111111111111111111111111111111",
+  "requested_at": "2026-11-13T10:00:00Z",
+  "review_item_id": "hitl-item-17",
+  "decided_by": "commercial:acme:entra:person:p-2222222222222222222222222222222222222222222222222222222222222222",
+  "decided_at": "2026-11-14T10:00:00Z",
+  "audit_id": "00000005-0000-4000-8000-000000000005"
+}
