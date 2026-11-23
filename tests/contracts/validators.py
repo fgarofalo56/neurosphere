@@ -22,7 +22,7 @@ import math
 import re
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import urlsplit
@@ -1419,6 +1419,8 @@ def single_document_validators(
             ),
             "connectors/v1/connector-manifest.schema.json": (check_connector_manifest,),
             "telemetry/v1/content-envelope.schema.json": (check_content_envelope_parts,),
+            "policy/v1/policy-exception.schema.json": (check_policy_exception_window,),
+            "policy/v1/policy-decision-request.schema.json": (check_decision_request_subject,),
         }
     )
     return table
@@ -1488,3 +1490,29 @@ def check_kek_uri_cloud(kek_uri: object, cloud: str) -> Problems:
     if not host.endswith(suffix):
         return [f"kek_uri host {host!r} is not a {cloud} Key Vault ({suffix})"]
     return []
+
+
+# ------------------------------------------------------------------------ policy (PRP-99)
+
+_DECISION_SUBJECT_FIELDS = ("agent_id", "agent_version_id", "tool_id", "mcp_server_id", "model")
+
+
+def check_policy_exception_window(doc: Doc) -> Problems:
+    """A PolicyException ends after it was requested and at most 365 days later."""
+    try:
+        requested = datetime.fromisoformat(str(doc.get("requested_at")).replace("Z", "+00:00"))
+        expires = datetime.fromisoformat(str(doc.get("expires_at")).replace("Z", "+00:00"))
+    except ValueError:
+        return []
+    if expires <= requested:
+        return ["expires_at is not after requested_at"]
+    if expires - requested > timedelta(days=365):
+        return ["expires_at is more than 365 days after requested_at"]
+    return []
+
+
+def check_decision_request_subject(doc: Doc) -> Problems:
+    """A PolicyDecisionRequest names at least one subject (JSON Schema cannot express it)."""
+    if any(doc.get(name) for name in _DECISION_SUBJECT_FIELDS) or doc.get("data_asset_ids"):
+        return []
+    return ["request names no subject: set an agent, tool, MCP server, model or data asset"]

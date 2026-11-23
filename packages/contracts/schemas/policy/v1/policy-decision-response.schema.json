@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/policy/v1/policy-decision-response.schema.json",
+  "title": "PolicyDecisionResponse",
+  "description": "The answer to a PolicyDecisionRequest (PRP-99). cache_ttl_seconds is 0 to 3600: how long the caller may reuse it. degraded is true when the engine answered from a stale or partial policy set.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "decided_at",
+    "effect",
+    "mode",
+    "matches",
+    "reason_codes",
+    "cache_ttl_seconds",
+    "policy_set_digest",
+    "degraded"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "decision_id": {
+      "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+    },
+    "decided_at": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "effect": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny",
+        "audit"
+      ]
+    },
+    "mode": {
+      "$ref": "policy-definition.schema.json#/$defs/enforcement_mode"
+    },
+    "matches": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/match"
+      }
+    },
+    "reason_codes": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "../../admin/v1/common.schema.json#/$defs/reason_code"
+      }
+    },
+    "cache_ttl_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3600
+    },
+    "policy_set_digest": {
+      "description": "Digest of the policy set evaluated.",
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "degraded": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "match": {
+      "title": "PolicyDecisionMatch",
+      "description": "One rule that matched the request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "policy_version",
+        "rule_id",
+        "rule_kind",
+        "effect"
+      ],
+      "properties": {
+        "policy_id": {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+        },
+        "policy_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rule_id": {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+        },
+        "rule_kind": {
+          "$ref": "policy-definition.schema.json#/$defs/rule_kind"
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "deny",
+            "audit"
+          ]
+        }
+      }
+    }
+  }
+}

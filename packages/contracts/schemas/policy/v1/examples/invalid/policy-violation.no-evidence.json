@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.2.0",
+  "violation_id": "00000003-0000-4000-8000-000000000003",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "policy_id": "support-governance",
+  "policy_version": 2,
+  "rule_id": "owner-needed",
+  "rule_kind": "required_owner",
+  "severity": "medium",
+  "subject": {
+    "canonical_id": "commercial:acme:neurosphere:agent:support-bot",
+    "entity_type": "agent"
+  },
+  "status": "open",
+  "dedup_key": "sha256:abababababababababababababababababababababababababababababababab",
+  "first_seen_at": "2026-11-10T10:00:00Z",
+  "last_seen_at": "2026-11-12T10:00:00Z",
+  "occurrence_count": 3,
+  "evidence": [],
+  "exception_id": null,
+  "resolution": null,
+  "correlation_id": "corr-0001",
+  "evaluator_version": "1.0.0"
+}

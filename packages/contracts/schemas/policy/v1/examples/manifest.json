@@ -1,0 +1,101 @@
+{
+  "description": "Examples for policy v1 (PRP-99). Each invalid example is a valid example with exactly one mutation (derived_from). Kind/params mismatch, a request naming no subject and a published definition without publish evidence are if/then or validator rules that the Pydantic projection drops, so tests/contracts/test_governance_a_policy.py pins them inline.",
+  "examples": [
+    {
+      "file": "valid/policy-definition.all-kinds.json",
+      "schema": "policy-definition.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/policy-violation.open.json",
+      "schema": "policy-violation.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/policy-exception.approved.json",
+      "schema": "policy-exception.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/policy-decision-request.model-call.json",
+      "schema": "policy-decision-request.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/policy-decision-response.audit.json",
+      "schema": "policy-decision-response.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/enforcement-binding.gateway.json",
+      "schema": "enforcement-binding.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/policy-definition.33-rules.json",
+      "schema": "policy-definition.schema.json",
+      "valid": false,
+      "derived_from": "valid/policy-definition.all-kinds.json",
+      "expected_error": {
+        "instance_path": "/rules",
+        "keyword": "maxItems"
+      },
+      "reason": "at most 32 rules"
+    },
+    {
+      "file": "invalid/policy-decision-request.domain-id.json",
+      "schema": "policy-decision-request.schema.json",
+      "valid": false,
+      "derived_from": "valid/policy-decision-request.model-call.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "scope comes from the identity, never the request"
+    },
+    {
+      "file": "invalid/policy-exception.missing-expires-at.json",
+      "schema": "policy-exception.schema.json",
+      "valid": false,
+      "derived_from": "valid/policy-exception.approved.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "an exception always expires"
+    },
+    {
+      "file": "invalid/policy-violation.no-evidence.json",
+      "schema": "policy-violation.schema.json",
+      "valid": false,
+      "derived_from": "valid/policy-violation.open.json",
+      "expected_error": {
+        "instance_path": "/evidence",
+        "keyword": "minItems"
+      },
+      "reason": "a violation cites at least one piece of evidence"
+    },
+    {
+      "file": "invalid/policy-decision-response.ttl-too-long.json",
+      "schema": "policy-decision-response.schema.json",
+      "valid": false,
+      "derived_from": "valid/policy-decision-response.audit.json",
+      "expected_error": {
+        "instance_path": "/cache_ttl_seconds",
+        "keyword": "maximum"
+      },
+      "reason": "cache lifetime is at most one hour"
+    },
+    {
+      "file": "invalid/enforcement-binding.unknown-mode.json",
+      "schema": "enforcement-binding.schema.json",
+      "valid": false,
+      "derived_from": "valid/enforcement-binding.gateway.json",
+      "expected_error": {
+        "instance_path": "/mode",
+        "keyword": "enum"
+      },
+      "reason": "mode is off, audit or enforce"
+    }
+  ]
+}

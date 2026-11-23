@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.2.0",
+  "binding_id": "support-gateway",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "policy_id": "support-governance",
+  "point": "gateway",
+  "target": null,
+  "mode": "audit",
+  "state": "applied",
+  "last_intent_id": "00000007-0000-4000-8000-000000000007",
+  "last_audit_id": "00000008-0000-4000-8000-000000000008",
+  "last_verified_at": "2026-11-16T10:00:00Z"
+}
