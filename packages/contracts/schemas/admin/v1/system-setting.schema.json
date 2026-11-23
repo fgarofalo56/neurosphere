@@ -10,7 +10,18 @@
     "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
     "setting_key": {
       "type": "string",
-      "enum": ["copilot", "judge", "search", "scan", "mcp_server", "write_target"]
+      "enum": [
+        "copilot",
+        "judge",
+        "search",
+        "scan",
+        "mcp_server",
+        "write_target",
+        "interaction_capture",
+        "notifications",
+        "enforcement"
+      ],
+      "description": "Open-ended: readers must tolerate unknown values."
     },
     "enabled": { "type": "boolean" },
     "copilot": { "$ref": "#/$defs/model_endpoint" },
@@ -18,7 +29,10 @@
     "search": { "$ref": "#/$defs/search" },
     "scan": { "$ref": "#/$defs/scan" },
     "mcp_server": { "$ref": "#/$defs/mcp_server" },
-    "write_target": { "$ref": "#/$defs/write_target" }
+    "write_target": { "$ref": "#/$defs/write_target" },
+    "interaction_capture": { "$ref": "#/$defs/interaction_capture" },
+    "notifications": { "$ref": "#/$defs/notifications" },
+    "enforcement": { "$ref": "#/$defs/enforcement" }
   },
   "allOf": [
     {
@@ -67,6 +81,81 @@
       "then": {
         "required": ["write_target"],
         "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "write_target"] }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "setting_key": {
+            "const": "interaction_capture"
+          }
+        },
+        "required": [
+          "setting_key"
+        ]
+      },
+      "then": {
+        "required": [
+          "interaction_capture"
+        ],
+        "propertyNames": {
+          "enum": [
+            "schema_version",
+            "setting_key",
+            "enabled",
+            "interaction_capture"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "setting_key": {
+            "const": "notifications"
+          }
+        },
+        "required": [
+          "setting_key"
+        ]
+      },
+      "then": {
+        "required": [
+          "notifications"
+        ],
+        "propertyNames": {
+          "enum": [
+            "schema_version",
+            "setting_key",
+            "enabled",
+            "notifications"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "setting_key": {
+            "const": "enforcement"
+          }
+        },
+        "required": [
+          "setting_key"
+        ]
+      },
+      "then": {
+        "required": [
+          "enforcement"
+        ],
+        "propertyNames": {
+          "enum": [
+            "schema_version",
+            "setting_key",
+            "enabled",
+            "enforcement"
+          ]
+        }
       }
     }
   ],
@@ -156,6 +245,158 @@
         "target_kind": { "type": "string", "enum": ["apim", "foundry"] },
         "resource_id": { "$ref": "common.schema.json#/$defs/azure_resource_id" },
         "credential": { "$ref": "credential-reference.schema.json" }
+      }
+    },
+    "interaction_capture": {
+      "title": "InteractionCaptureSetting",
+      "description": "Where captured interaction content is stored and how it is encrypted (PRP-99). kek_uri is a Key Vault key identifier only (https://<vault>.vault.azure.net or usgovcloudapi.net /keys/<name>[/<32 hex version>]); it is null only when kek_provider is local_development and is required when it is key_vault_key. The vault suffix must match the cloud of the deployment (tests/contracts/validators.py::check_kek_uri_cloud). Capture itself stays off until an approved capture_policy_change.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kek_provider",
+        "kek_uri",
+        "content_storage_account_resource_id",
+        "content_container",
+        "credential"
+      ],
+      "properties": {
+        "kek_provider": {
+          "description": "Where the key-encryption key lives. Open-ended: readers must tolerate unknown values.",
+          "type": "string",
+          "enum": [
+            "key_vault_key",
+            "local_development"
+          ]
+        },
+        "kek_uri": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^https://[a-z0-9-]{3,24}\\.vault\\.(azure\\.net|usgovcloudapi\\.net)/keys/[A-Za-z0-9-]{1,127}(/[0-9a-f]{32})?$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Key Vault key identifier of the key-encryption key; null only for local_development."
+        },
+        "content_storage_account_resource_id": {
+          "$ref": "common.schema.json#/$defs/azure_resource_id"
+        },
+        "content_container": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$"
+        },
+        "credential": {
+          "$ref": "credential-reference.schema.json"
+        },
+        "max_content_chars_per_interaction": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 163840,
+          "default": 65536
+        },
+        "shed_capture_at_queue_percent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 80
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kek_provider": {
+                "const": "key_vault_key"
+              }
+            },
+            "required": [
+              "kek_provider"
+            ]
+          },
+          "then": {
+            "required": [
+              "kek_uri"
+            ],
+            "properties": {
+              "kek_uri": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "notifications": {
+      "title": "NotificationsSetting",
+      "description": "Notification sender limits and the egress allow-list (PRP-99). Hostnames only; every channel's allowed_host must be on this list at send time.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "egress_allowed_hosts"
+      ],
+      "properties": {
+        "egress_allowed_hosts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$"
+          }
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 8
+        },
+        "retry_base_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 30
+        },
+        "dedup_window_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400,
+          "default": 900
+        }
+      }
+    },
+    "enforcement": {
+      "title": "EnforcementSetting",
+      "description": "Policy decision service limits (PRP-99). The SDK guard fails open by default (owner decision GD-8); enforcement modes live on EnforcementBinding and default to audit.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "decision_cache_ttl_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600,
+          "default": 60
+        },
+        "sdk_failure_mode": {
+          "description": "Open-ended: readers must tolerate unknown values.",
+          "type": "string",
+          "enum": [
+            "fail_open",
+            "fail_closed"
+          ],
+          "default": "fail_open"
+        },
+        "decide_rate_limit_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000,
+          "default": 600
+        }
       }
     }
   }

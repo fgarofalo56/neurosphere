@@ -42,6 +42,11 @@ export type Tags1 = string[];
  */
 export type Capabilities1 = string[];
 /**
+ * Approval state of an agent version. Open-ended: readers must tolerate unknown values.
+ */
+export type AgentVersionApprovalState =
+  "not_required" | "pending" | "approved" | "rejected" | "suspended";
+/**
  * Free-form lowercase labels; at most 32, no duplicates.
  *
  * @maxItems 32
@@ -419,6 +424,36 @@ export interface AgentVersion {
    * Declared Semantic Version of this release; null when not declared (version_label stays the free-form label).
    */
   semver?: string | null;
+  /**
+   * Approval record; null when no approval was recorded.
+   */
+  approval?: AgentVersionApproval | null;
+}
+/**
+ * Approval record of one agent version (PRP-99). Null on AgentVersion means no approval was recorded.
+ */
+export interface AgentVersionApproval {
+  state: AgentVersionApprovalState;
+  requested_at?: string | null;
+  decided_at?: string | null;
+  decided_by?: string | null;
+  /**
+   * Action intent that made the decision (lowercase UUID).
+   */
+  intent_id?: string | null;
+  /**
+   * Audit record of the decision (lowercase UUID).
+   */
+  audit_id?: string | null;
+  /**
+   * Governance policy that required the approval.
+   */
+  policy_id?: string | null;
+  policy_version?: number | null;
+  /**
+   * Machine reason code in snake_case, never free text.
+   */
+  reason_code?: string | null;
 }
 /**
  * Deployed model endpoint with version, modality, context, tool capability and price reference. Unknown capabilities are null, never 0. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).

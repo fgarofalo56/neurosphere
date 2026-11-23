@@ -669,6 +669,47 @@
         "keyword": "required"
       },
       "reason": "the body is the document of the named kind"
+    },
+    {
+      "file": "valid/role-assignment-change.assign-interaction-investigator.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/connector-config.generic.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/system-setting.interaction-capture.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/system-setting.notifications.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/system-setting.enforcement.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/system-setting.kek-uri-secrets-path.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.interaction-capture.json",
+      "expected_error": {
+        "instance_path": "/interaction_capture/kek_uri",
+        "keyword": "pattern"
+      },
+      "reason": "kek_uri is a Key Vault key identifier, never a secret path"
+    },
+    {
+      "file": "valid/admin-config-document.enforcement-binding.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": true
     }
   ]
 }

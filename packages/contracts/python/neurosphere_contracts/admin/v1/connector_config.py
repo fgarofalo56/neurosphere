@@ -40,8 +40,26 @@ class ConnectorConfig(BaseModel):
     Operator-chosen id of this connector instance, unique per customer.
     """
     connector_kind: Literal[
-        "gateway_poll", "foundry_discovery", "billing_export", "otel", "azure_monitor_ai"
+        "gateway_poll",
+        "foundry_discovery",
+        "billing_export",
+        "otel",
+        "azure_monitor_ai",
+        "generic",
+        "entra_identity",
+        "purview",
+        "unity_catalog",
+        "m365_copilot",
+        "github_copilot",
+        "cursor",
+        "openai_enterprise",
+        "anthropic_claude",
+        "entra_shadow_ai",
+        "github_issues",
     ]
+    """
+    Open-ended: readers must tolerate unknown values.
+    """
     domain_ids: Annotated[list[common.DomainId], Field(max_length=64, min_length=1)]
     """
     Domains the connector's data is attributed to. At least one; no wildcard.

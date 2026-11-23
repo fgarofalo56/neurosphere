@@ -78,3 +78,7 @@ class AgentVersion(BaseModel):
     """
     Declared Semantic Version of this release; null when not declared (version_label stays the free-form label).
     """
+    approval: common.AgentVersionApproval | None = None
+    """
+    Approval record; null when no approval was recorded.
+    """

@@ -76,9 +76,9 @@
       "properties": {
         "self_approval_forbidden": { "type": "boolean" },
         "approver_permission": {
-          "description": "Permission the reviewer needs on the item's domain.",
+          "description": "Permission the reviewer needs on the item's domain. Open-ended: readers must tolerate unknown values.",
           "type": "string",
-          "enum": ["action.approve", "catalog.curate"]
+          "enum": ["action.approve", "catalog.curate", "config.manage", "govpolicy.manage"]
         },
         "assignment_timeout_seconds": { "$ref": "#/$defs/duration_seconds" },
         "sla_seconds": { "$ref": "#/$defs/duration_seconds" },

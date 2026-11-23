@@ -132,7 +132,7 @@ export interface CredentialRef {
 export interface WriteSupport {
   supported: boolean;
   /**
-   * Action kinds the connector can execute through the shared action executor. Empty when supported is false.
+   * Action kinds the connector can execute through the shared action executor. Empty when supported is false. Open-ended: readers must tolerate unknown values.
    */
   actions: (
     | "model_deployment_swap"
@@ -149,5 +149,11 @@ export interface WriteSupport {
     | "gateway_mode_change"
     | "deploy_plan_apply"
     | "deploy_uninstall"
+    | "agent_version_approve"
+    | "agent_version_suspend"
+    | "capture_policy_change"
+    | "governance_policy_publish"
+    | "enforcement_mode_change"
+    | "gateway_policy_apply"
   )[];
 }

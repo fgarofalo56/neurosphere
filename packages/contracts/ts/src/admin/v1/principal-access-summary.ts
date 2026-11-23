@@ -77,9 +77,15 @@ export interface AccessSummaryAssignment {
    */
   assignment_id: string;
   /**
-   * Platform role (NS-08). admin and security_auditor are privileged and always time-bound.
+   * Platform role (NS-08). admin, security_auditor and interaction_investigator are privileged and always time-bound. Open-ended: readers must tolerate unknown values.
    */
-  role: "viewer" | "analyst" | "domain_steward" | "admin" | "security_auditor";
+  role:
+    | "viewer"
+    | "analyst"
+    | "domain_steward"
+    | "admin"
+    | "security_auditor"
+    | "interaction_investigator";
   /**
    * @minItems 1
    * @maxItems 1024

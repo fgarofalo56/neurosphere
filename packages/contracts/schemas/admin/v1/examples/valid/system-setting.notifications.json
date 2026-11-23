@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "setting_key": "notifications",
+  "enabled": true,
+  "notifications": {
+    "egress_allowed_hosts": [
+      "contoso.webhook.office.com"
+    ],
+    "max_attempts": 8,
+    "retry_base_seconds": 30,
+    "dedup_window_seconds": 900
+  }
+}

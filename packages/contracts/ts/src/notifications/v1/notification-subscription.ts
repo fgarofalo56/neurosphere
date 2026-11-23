@@ -72,11 +72,25 @@ export interface NotificationSubscription {
    * @minItems 1
    * @maxItems 6
    *
-   * Items: Platform role (NS-08). admin and security_auditor are privileged and always time-bound.
+   * Items: Platform role (NS-08). admin, security_auditor and interaction_investigator are privileged and always time-bound. Open-ended: readers must tolerate unknown values.
    */
   audience_roles: [
-    "viewer" | "analyst" | "domain_steward" | "admin" | "security_auditor",
-    ...("viewer" | "analyst" | "domain_steward" | "admin" | "security_auditor")[],
+    (
+      | "viewer"
+      | "analyst"
+      | "domain_steward"
+      | "admin"
+      | "security_auditor"
+      | "interaction_investigator"
+    ),
+    ...(
+      | "viewer"
+      | "analyst"
+      | "domain_steward"
+      | "admin"
+      | "security_auditor"
+      | "interaction_investigator"
+    )[],
   ];
   min_severity?: PolicySeverity;
   enabled: boolean;

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "op": "assign",
+  "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "assignment_id": "ra-finance-investigator",
+  "role": "interaction_investigator",
+  "domain_ids": [
+    "commercial:contoso:neurosphere:domain:finance"
+  ],
+  "expires_at": "2027-02-14T00:00:00Z",
+  "reason": "incident_investigation"
+}
