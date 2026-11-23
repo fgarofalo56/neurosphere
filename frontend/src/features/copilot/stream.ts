@@ -218,6 +218,16 @@ export function parseEvent(raw: RawSseEvent): CopilotEvent | null {
       const data = asTool(payload);
       return data === null ? null : { name: "tool", data };
     }
+    case "progress": {
+      const phase = payload["phase"];
+      const iteration = payload["iteration"];
+      return (phase === "model" || phase === "tools" || phase === "checking") &&
+        typeof iteration === "number" &&
+        Number.isInteger(iteration) &&
+        iteration >= 1
+        ? { name: "progress", data: { phase, iteration } }
+        : null;
+    }
     case "token":
       return typeof payload["text"] === "string"
         ? { name: "token", data: { text: payload["text"] } }

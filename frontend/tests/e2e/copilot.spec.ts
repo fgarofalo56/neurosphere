@@ -98,6 +98,36 @@ test.describe("copilot dock", () => {
     expect(await axeViolationsIgnoringTabster(page)).toEqual([]);
   });
 
+  test("progress events do not leak into the final state and no demo label by default", async ({
+    page,
+  }) => {
+    await openDock(page);
+    await ask(page, "fixture:answered how much did we spend?");
+    await expect(page.getByTestId("assistant-turn")).toHaveAttribute("data-status", "answered");
+    await expect(page.getByTestId("turn-progress")).toHaveCount(0);
+    await expect(page.getByTestId("synthetic-label")).toHaveCount(0);
+    await expect(page.getByText("Recorded demo model, not AI")).toHaveCount(0);
+  });
+
+  test("a synthetic status labels the header and every answer as a recorded demo model", async ({
+    page,
+  }) => {
+    await page.route("**/api/v1/copilot/status", async (route) => {
+      const response = await route.fetch({ url: `${route.request().url()}?synthetic=1` });
+      await route.fulfill({ response });
+    });
+    await openDock(page);
+    const header = page.getByTestId("synthetic-label");
+    await expect(header).toHaveText("Recorded demo model, not AI");
+    await expect(header).toHaveAttribute("role", "status");
+    await ask(page, "fixture:answered how much did we spend?");
+    await expect(page.getByTestId("assistant-turn")).toHaveAttribute("data-status", "answered");
+    await expect(page.getByTestId("synthetic-answer-label")).toHaveText(
+      "Recorded demo model, not AI",
+    );
+    expect(await axeViolationsIgnoringTabster(page)).toEqual([]);
+  });
+
   test("an abstention replaces the streamed text and gives the reason", async ({ page }) => {
     await openDock(page);
     await ask(page, "fixture:abstain what is the meaning of life?");
