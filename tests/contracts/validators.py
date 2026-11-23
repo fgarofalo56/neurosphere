@@ -660,7 +660,8 @@ _RESTORED_TAGGED = ("agent", "agent_version", "tool", "service", "mcp_server", "
 _RESTORED_FIELDS: Mapping[str, frozenset[str]] = {
     **{entity: frozenset({"tag"}) for entity in _RESTORED_TAGGED},
     "agent": frozenset({"tag", "capability"}),
-    "agent_version": frozenset({"tag", "capability"}),
+    # PRP-99 item 5: approval_state applies to agent_version only.
+    "agent_version": frozenset({"tag", "capability", "approval_state"}),
     "tool": frozenset({"tag", "capability"}),
     "grounding_source": frozenset(
         {
@@ -1384,6 +1385,7 @@ def single_document_validators(
                 lambda doc: validate_audit_chain([doc], require_head=False),
             ),
             "admin/v1/connector-config.schema.json": (check_connector_config_cloud,),
+            "admin/v1/system-setting.schema.json": (check_system_setting_cloud,),
             "admin/v1/producer-record.schema.json": (check_producer_sources_unique,),
             "admin/v1/budget.schema.json": (check_budget_thresholds_ascending,),
             "admin/v1/price-sheet-upload.schema.json": (check_price_sheet_upload,),
@@ -1490,6 +1492,28 @@ def check_kek_uri_cloud(kek_uri: object, cloud: str) -> Problems:
     if not host.endswith(suffix):
         return [f"kek_uri host {host!r} is not a {cloud} Key Vault ({suffix})"]
     return []
+
+
+def check_system_setting_cloud(setting: Doc) -> Problems:
+    """SystemSetting ``interaction_capture``: the ``kek_uri`` vault is on the same cloud as the
+    member's own Key Vault credential.
+
+    A SystemSetting carries no cloud field, so the cloud is read from the credential's vault
+    host when it is a ``key_vault_secret``; a managed-identity credential names no cloud and
+    the cloud is then checked by the caller through ``check_kek_uri_cloud`` with the
+    deployment's cloud.
+    """
+    member = setting.get("interaction_capture")
+    if not isinstance(member, Mapping) or member.get("kek_uri") is None:
+        return []
+    credential = member.get("credential")
+    if not isinstance(credential, Mapping) or credential.get("kind") != "key_vault_secret":
+        return []
+    host = urlsplit(str(credential.get("secret_uri", ""))).hostname or ""
+    for cloud, suffix in _VAULT_SUFFIX_BY_CLOUD.items():
+        if host.endswith(suffix):
+            return check_kek_uri_cloud(member["kek_uri"], cloud)
+    return [f"credential secret_uri host {host!r} is not a Key Vault host"]
 
 
 # ------------------------------------------------------------------------ policy (PRP-99)

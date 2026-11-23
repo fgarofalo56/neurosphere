@@ -76,6 +76,7 @@ class Role(StrEnum):
     DOMAIN_STEWARD = "domain_steward"
     ADMIN = "admin"
     SECURITY_AUDITOR = "security_auditor"
+    INTERACTION_INVESTIGATOR = "interaction_investigator"
 
 
 class Permission(StrEnum):
@@ -125,6 +126,7 @@ ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType
         Role.DOMAIN_STEWARD: _STEWARD,
         Role.ADMIN: _ADMIN,
         Role.SECURITY_AUDITOR: _AUDITOR,
+        Role.INTERACTION_INVESTIGATOR: frozenset(),
     }
 )
 
@@ -140,7 +142,9 @@ GRANT_PERMISSIONS: Final[Mapping[GrantPermission, Permission]] = MappingProxyTyp
 )
 
 #: Roles whose assignments must be time-bound (contract RoleAssignment rule; C7).
-PRIVILEGED_ROLES: Final = frozenset({Role.ADMIN, Role.SECURITY_AUDITOR})
+PRIVILEGED_ROLES: Final = frozenset(
+    {Role.ADMIN, Role.SECURITY_AUDITOR, Role.INTERACTION_INVESTIGATOR}
+)
 
 #: Source and id segments of the reserved per-customer control domain (#114). Same values as
 #: ``neurosphere_api.actions.customer_control`` (kill switch), which keeps its own copy until

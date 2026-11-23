@@ -92,7 +92,16 @@ export interface Principal {
  * via the `definition` "role_assignment".
  */
 export interface RoleAssignment {
-  role: "viewer" | "analyst" | "domain_steward" | "admin" | "security_auditor";
+  /**
+   * Open-ended: readers must tolerate unknown values. interaction_investigator is privileged and time-bound like admin and security_auditor.
+   */
+  role:
+    | "viewer"
+    | "analyst"
+    | "domain_steward"
+    | "admin"
+    | "security_auditor"
+    | "interaction_investigator";
   /**
    * Domains this role applies to. At least one; there is no tenant-wide form.
    *

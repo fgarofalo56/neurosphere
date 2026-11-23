@@ -62,7 +62,7 @@ export type IdField =
  */
 export type CanonicalId = string;
 /**
- * Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them.
+ * Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them. approval_state applies to agent_version only.
  *
  * This interface was referenced by `StructuredQuery`'s JSON-Schema
  * via the `definition` "keyword_field".
@@ -86,7 +86,8 @@ export type KeywordField =
   | "capability"
   | "sensitivity_category"
   | "residency_region"
-  | "residency_geography";
+  | "residency_geography"
+  | "approval_state";
 /**
  * Enumerated-style value: no whitespace, quotes, brackets, operators or control characters, so it cannot carry query text.
  *

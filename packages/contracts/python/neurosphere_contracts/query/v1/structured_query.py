@@ -168,6 +168,7 @@ class KeywordField(
             "sensitivity_category",
             "residency_region",
             "residency_geography",
+            "approval_state",
         ]
     ]
 ):
@@ -191,9 +192,10 @@ class KeywordField(
         "sensitivity_category",
         "residency_region",
         "residency_geography",
+        "approval_state",
     ]
     """
-    Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them.
+    Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them. approval_state applies to agent_version only.
     """
 
 

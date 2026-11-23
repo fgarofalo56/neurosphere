@@ -843,6 +843,20 @@
       "instance_path": "/changes",
       "reason": "201 changes exceed the cap of 200",
       "derived_from": "valid/entity_revision_diff.agent-capabilities.json"
+    },
+    {
+      "file": "valid/agent_version.approved.json",
+      "schema": "agent_version.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/agent_version.unknown-approval-state.json",
+      "schema": "agent_version.schema.json",
+      "expect": "invalid",
+      "keyword": "enum",
+      "instance_path": "/approval/state",
+      "reason": "approval state is a closed enum at v1.x",
+      "derived_from": "valid/agent_version.approved.json"
     }
   ]
 }

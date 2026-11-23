@@ -53,9 +53,11 @@ class ReviewPolicySettings(BaseModel):
         extra="forbid",
     )
     self_approval_forbidden: StrictBool
-    approver_permission: Literal["action.approve", "catalog.curate"]
+    approver_permission: Literal[
+        "action.approve", "catalog.curate", "config.manage", "govpolicy.manage"
+    ]
     """
-    Permission the reviewer needs on the item's domain.
+    Permission the reviewer needs on the item's domain. Open-ended: readers must tolerate unknown values.
     """
     assignment_timeout_seconds: DurationSeconds
     sla_seconds: DurationSeconds
