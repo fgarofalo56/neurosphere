@@ -174,7 +174,9 @@ export function AssistantTurnView({
   turn,
   echo,
   onNavigate,
+  synthetic = false,
 }: {
+  readonly synthetic?: boolean;
   readonly turn: AssistantTurn;
   readonly echo: ContextEcho | null;
   readonly onNavigate: () => void;
@@ -210,7 +212,20 @@ export function AssistantTurnView({
             ))}
           </ul>
         ) : null}
-        {emptyStreaming ? <Text size={200}>{STRINGS.working}</Text> : null}
+        {turn.status === "streaming" ? (
+          <div role="status" aria-live="polite" data-testid="turn-progress">
+            {turn.phase !== null ? (
+              <Text size={200}>{STRINGS.progress[turn.phase]}</Text>
+            ) : emptyStreaming ? (
+              <Text size={200}>{STRINGS.working}</Text>
+            ) : null}
+          </div>
+        ) : null}
+        {synthetic && (turn.status === "answered" || turn.text !== "") ? (
+          <Text size={200} weight="semibold" data-testid="synthetic-answer-label">
+            {STRINGS.syntheticLabel}
+          </Text>
+        ) : null}
         {turn.text !== "" ? <p data-testid="answer-text">{displayText(turn.text)}</p> : null}
         {turn.status === "abstain" || turn.status === "denied" ? (
           <div className={styles.notice} data-testid={turn.status}>

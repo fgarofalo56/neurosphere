@@ -11,6 +11,12 @@ export const STRINGS = {
   logLabel: "Conversation",
   empty: "Ask a question. Answers cite their sources and can propose actions for you to review.",
   working: "Working on it...",
+  progress: {
+    model: "Thinking…",
+    tools: "Looking up data…",
+    checking: "Checking the answer…",
+  },
+  syntheticLabel: "Recorded demo model, not AI",
   you: "You",
   assistant: "Assistant",
   cancelled: "Stopped because you sent a new message.",

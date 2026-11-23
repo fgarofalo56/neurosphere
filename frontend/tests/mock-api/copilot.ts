@@ -414,12 +414,16 @@ async function streamFixture(
     return;
   }
   // answered (`chart_saveable` is the same answer whose chart carries the server's query_spec)
+  sse(res, "progress", { phase: "model", iteration: 1 });
+  sse(res, "progress", { phase: "tools", iteration: 1 });
   sse(res, "tool", { name: "get_cost_summary", status: "started" });
   sse(res, "tool", { name: "get_cost_summary", status: "ok" });
+  sse(res, "progress", { phase: "model", iteration: 2 });
   for (const [i, part] of ANSWER_TOKENS.entries()) {
     if (i > 0) await sleep(TOKEN_PACE_MS);
     sse(res, "token", { text: part });
   }
+  sse(res, "progress", { phase: "checking", iteration: 2 });
   const citations = [
     { record_id: "r1", kind: "cost_record", source: "aggregates", as_of: NOW, freshness: "fresh" },
     {
@@ -473,7 +477,11 @@ export function copilotHandler(
     } else if (wanted === "failed") {
       json(ctx, 200, { state: "failed", reason_code: "copilot_endpoint_invalid" });
     } else {
-      json(ctx, 200, { state: "ready", reason_code: null });
+      // `?synthetic=1` (or NS_MOCK_COPILOT_SYNTHETIC=1) serves the recorded-demo-model flag.
+      const synthetic =
+        ctx.url.searchParams.get("synthetic") === "1" ||
+        process.env["NS_MOCK_COPILOT_SYNTHETIC"] === "1";
+      json(ctx, 200, { state: "ready", reason_code: null, synthetic });
     }
     return;
   }

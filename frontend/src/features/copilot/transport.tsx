@@ -82,7 +82,11 @@ export async function fetchCopilotStatus(
     const state = record["state"];
     const reason = record["reason_code"];
     if (state === "ready" || state === "disabled" || state === "failed") {
-      return { state, reason_code: typeof reason === "string" ? reason : null };
+      return {
+        state,
+        reason_code: typeof reason === "string" ? reason : null,
+        synthetic: record["synthetic"] === true,
+      };
     }
   }
   throw new Error("The copilot status response was not understood");
