@@ -201,7 +201,15 @@ def test_link_is_application_relative() -> None:
         doc["link"] = good
         assert _ok(DELIVERY, doc), good
     absolute = "https" + "://example.com/governance"
-    for bad in (absolute, "governance/violations", "javascript:alert(1)", "/" + "a" * 512):
+    protocol_relative = "//" + "example.com/governance"
+    bad_links = (
+        absolute,
+        protocol_relative,
+        "governance/violations",
+        "javascript:alert(1)",
+        "/" + "a" * 512,
+    )
+    for bad in bad_links:
         doc["link"] = bad
         assert not _ok(DELIVERY, doc), bad
 

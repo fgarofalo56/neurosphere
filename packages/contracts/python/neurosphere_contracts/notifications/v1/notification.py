@@ -43,9 +43,11 @@ class NotificationDelivery(BaseModel):
     """
     Short headline, 1 to 160 characters, no control characters.
     """
-    link: Annotated[StrictStr, Field(pattern="^/[A-Za-z0-9/_.=?&%:-]{0,511}$")]
+    link: Annotated[
+        StrictStr, Field(pattern="^/([A-Za-z0-9_.=?&%:-][A-Za-z0-9/_.=?&%:-]{0,510})?$")
+    ]
     """
-    Application-relative path to the item in the console, never an absolute URL.
+    Application-relative path to the item in the console, never an absolute or protocol-relative (`//host`) URL.
     """
     correlation_id: Annotated[StrictStr, Field(pattern="^[A-Za-z0-9._-]{1,128}$")]
     dedup_key: Annotated[StrictStr, Field(pattern="^sha256:[a-f0-9]{64}$")]

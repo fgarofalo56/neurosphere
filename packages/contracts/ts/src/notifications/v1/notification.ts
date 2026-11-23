@@ -67,7 +67,7 @@ export interface NotificationDelivery {
    */
   title: string;
   /**
-   * Application-relative path to the item in the console, never an absolute URL.
+   * Application-relative path to the item in the console, never an absolute or protocol-relative (`//host`) URL.
    */
   link: string;
   correlation_id: string;
