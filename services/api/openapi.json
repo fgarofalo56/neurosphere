@@ -4730,6 +4730,11 @@
             ],
             "title": "State",
             "type": "string"
+          },
+          "synthetic": {
+            "default": false,
+            "title": "Synthetic",
+            "type": "boolean"
           }
         },
         "required": [
