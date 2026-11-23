@@ -344,6 +344,18 @@
       "default": []
     }
   },
+  "allOf": [
+    {
+      "description": "A failed redaction stores nothing: content_ref must be null.",
+      "if": {
+        "required": ["redaction_state"],
+        "properties": { "redaction_state": { "const": "redaction_failed" } }
+      },
+      "then": {
+        "properties": { "content_ref": { "type": "null" } }
+      }
+    }
+  ],
   "$defs": {
     "encrypted_object_ref": {
       "title": "EncryptedObjectRef",

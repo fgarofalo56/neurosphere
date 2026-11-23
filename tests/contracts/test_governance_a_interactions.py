@@ -17,7 +17,7 @@ import pytest
 from contract_support import SCHEMA_ROOT, load_json, load_schema, schema_errors
 from neurosphere_core.audit.content_guard import FORBIDDEN_KEYS
 from neurosphere_core.payload.guard import is_body_field
-from validators import check_kek_uri_cloud
+from validators import check_encrypted_ref_cloud, check_kek_uri_cloud
 
 RECORD = "interactions/v1/interaction-record.schema.json"
 POLICY = "interactions/v1/capture-policy.schema.json"
@@ -49,6 +49,32 @@ def _property_names(rel: str) -> set[str]:
 
 def _doc(name: str) -> dict[str, Any]:
     return load_json(VALID / name)
+
+
+def test_failed_redaction_stores_nothing() -> None:
+    failed = _doc("interaction-record.redaction-failed.json")
+    assert failed["content_ref"] is None
+    assert schema_errors(RECORD, failed) == []
+    stored = _doc("interaction-record.findings-content-ref.json")
+    failed["content_ref"] = copy.deepcopy(stored["content_ref"])
+    assert schema_errors(RECORD, failed) != []
+    assert schema_errors(RECORD, stored) == []
+
+
+@pytest.mark.parametrize(
+    ("name", "field"),
+    [
+        ("interaction-record.findings-content-ref.json", "content_ref"),
+        ("interaction-export-manifest.incident.json", "bundle"),
+    ],
+)
+def test_encrypted_ref_key_vault_is_on_the_document_cloud(name: str, field: str) -> None:
+    doc = _doc(name)
+    assert check_encrypted_ref_cloud(doc) == []
+    doc["cloud"] = "government" if doc["cloud"] == "commercial" else "commercial"
+    problems = check_encrypted_ref_cloud(doc)
+    assert problems
+    assert problems[0].startswith(f"{field}: ")
 
 
 def _policy() -> dict[str, Any]:

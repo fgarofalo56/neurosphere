@@ -696,7 +696,7 @@ export interface NotificationChannel {
    */
   kind: "webhook" | "teams_webhook" | "email";
   /**
-   * The one host this channel may call: a lowercase bare hostname (no scheme, port or path), checked against the egress allow-list at send time.
+   * The one host this channel may call: a lowercase bare DNS hostname (no scheme, port, path or IP literal; the last label starts with a letter), checked against the egress allow-list at send time.
    */
   allowed_host: string;
   /**
