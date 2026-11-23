@@ -273,8 +273,8 @@ Stores, containers, routes, workers, detectors, encryption, UI, permissions in c
 | 3 | merged | worktree-agent-a7b9c79d0077137b5 (sonnet) | 9d61b57e merged 8cb9239c; gen --check OK, 3707 passed (contracts+sdk+payload+audit+openapi drift), ruff/format/pyright clean; additions: published status requires published_* ids (if/then), evidence ref pattern, sha256:-prefixed content_sha256; 2026-11-23 |
 | 4 | merged | worktree-agent-a5c6f6ba4beeed7a5 (sonnet) + orchestrator fix f44f2628 | 6a10d004 merged 957671ba; gen --check OK, 3933 passed (contracts+sdk+payload+audit+hitl+openapi drift), ruff/format/pyright/ts clean; deviations: link regex tightened to reject protocol-relative //host (criterion 9), dedup_key exempted from the PRP-37 walker in its own test only when sha256-pattern-bound (pending owner decision for item 6); 2026-11-23 |
 | 5 | merged | worktree-agent-aadebe8d3d32a6d05 + fix worktree-agent-a9313012d04a7736f (sonnet) | adb6e696 + fix 3ece74fc merged 86c3f2b4; gen --check OK, pyright 0, 5502 passed (contracts+sdk+core admin/admin_platform/admin_runtime/auth.scope/payload+authz+admin api), ruff/format/contracts ts/frontend typecheck clean; one fix round for core admin parity (clarification 20); openapi drift expected, regenerated in item 8; follow-up: services admin identity PRIVILEGED_ROLES lacks interaction_investigator (PRP-104); 2026-11-23 |
-| 6 | in-progress | worktree (implementer, sonnet) | dispatched 2026-11-23 |
-| 7 | todo | | |
+| 6 | merged | worktree-agent-a3cf1ba207855954f (sonnet) | 635a21d0 merged d35955af; 209 guard tests with planted-violation self-tests; 4175 passed (contracts + six guard suites unedited), ruff/format/pyright clean; deviation: criterion 4 literal fails on 14 pre-PRP strings >1024 and chart-plan text (approval reason, catalog, problem-details, agent-match task_text...); pinned as an exact grandfather set (new or stale entries fail, governance areas never grandfathered) since shortening them would be non-additive; 2026-11-23 |
+| 7 | in-progress | orchestrator sweep | started 2026-11-23 |
 | 8 | todo | | |
 
 ## Owner decisions for the governance core (decided 2026-11-16)
