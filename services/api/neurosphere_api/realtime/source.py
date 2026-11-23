@@ -164,7 +164,9 @@ class AggregateDeltaSource:
             logger.warning("subject read failed; delta carries the domain node only")
             return None
 
-    def _subject_node(self, point: SubjectPoint) -> DeltaNode:
+    def _subject_node(self, point: SubjectPoint) -> DeltaNode | None:
+        if point.subject_kind not in ("agent", "model"):
+            return None  # tool/service subjects are not map delta nodes (PRP-100)
         tokens = [t for t in (point.input_tokens, point.output_tokens) if t is not None]
         raw = point.series_key.split(":", 1)[1]
         # Agents: label is the last segment of the canonical id. Models: the model name.
@@ -225,7 +227,7 @@ class AggregateDeltaSource:
             as_of=status.watermark if status is not None else None,
         )
         extra = (
-            tuple(self._subject_node(p) for _, p in sorted(subjects.points.items()))
+            tuple(n for _, p in sorted(subjects.points.items()) if (n := self._subject_node(p)))
             if subjects is not None
             else ()
         )

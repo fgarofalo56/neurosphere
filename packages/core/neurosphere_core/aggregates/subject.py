@@ -1,7 +1,8 @@
-"""Per-agent and per-model aggregate series (PRP-49).
+"""Per-agent, per-model, per-tool and per-service aggregate series (PRP-49, PRP-100).
 
 The ``subject`` metric holds one :class:`SubjectPoint` per (domain, grain, bucket, subject).
-Series keys are ``agent:<canonical id>`` and ``model:<provider>/<model>`` (model keys are lower
+Series keys are ``agent:<id>``, ``tool:<id>``, ``service:<id>`` (canonical ids) and
+``model:<provider>/<model>`` (model keys are lower
 case so catalog labels can be matched case-insensitively). Unknown stays ``None``, never 0.
 
 :class:`SubjectMetricsReader` is a separate, runtime-checkable capability: the existing
@@ -32,7 +33,7 @@ __all__ = [
     "subject_series_key",
 ]
 
-SubjectKind = Literal["agent", "model"]
+SubjectKind = Literal["agent", "model", "tool", "service"]
 Health = Literal["ok", "degraded", "failing", "unknown"]
 
 MAX_SUBJECT_SERIES_PER_BUCKET: Final = 5000
@@ -46,9 +47,10 @@ HEALTH_FAILING_ERROR_RATE: Final = 0.25
 
 
 def subject_series_key(kind: SubjectKind, first: str, second: str | None = None) -> str:
-    """``agent:<id>`` for an agent; ``model:<provider>/<model>`` (lower case) for a model."""
-    if kind == "agent":
-        return f"agent:{first}"
+    """``agent:<id>``, ``tool:<id>``, ``service:<id>`` (canonical ids); ``model:<provider>/<model>``
+    (lower case) for a model."""
+    if kind in ("agent", "tool", "service"):
+        return f"{kind}:{first}"
     if second is None:
         raise ValueError("a model key needs provider and model")
     return f"model:{first.strip().lower()}/{second.strip().lower()}"
@@ -92,5 +94,5 @@ class SubjectMetricsReader(Protocol):
     async def newest_subject_points(
         self, customer_id: str, domain_id: str, window: AggregateWindow, limit: int
     ) -> SubjectLookup:
-        """The ``limit`` subjects (agents and models) with the newest hour-grain points."""
+        """The ``limit`` subjects (agents and models only) with the newest hour-grain points."""
         raise NotImplementedError
