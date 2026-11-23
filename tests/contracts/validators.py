@@ -1473,3 +1473,18 @@ def run_single_document_validators(
         if isinstance(document, Mapping) or validator is validate_canonical_id_fullmatch:
             problems += validator(document)
     return problems
+
+
+def check_kek_uri_cloud(kek_uri: object, cloud: str) -> Problems:
+    """A Key Vault key identifier (`kek_uri`) names a vault on the owning document's cloud.
+
+    Commercial uses ``vault.azure.net``, Government ``vault.usgovcloudapi.net``. Used for
+    ``content_ref`` and ``bundle`` in the interactions area and the interaction_capture setting.
+    """
+    suffix = _VAULT_SUFFIX_BY_CLOUD.get(cloud)
+    if suffix is None:
+        return [f"unknown cloud {cloud!r}"]
+    host = urlsplit(str(kek_uri)).hostname or ""
+    if not host.endswith(suffix):
+        return [f"kek_uri host {host!r} is not a {cloud} Key Vault ({suffix})"]
+    return []

@@ -1,0 +1,389 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/interactions/v1/interaction-record.schema.json",
+  "title": "InteractionRecord",
+  "description": "Index document of one captured interaction (PRP-99; container interaction_index, declared by PRP-102). Metadata only: it has no content-bearing property, no string over 1024 characters, no hash of plaintext and references neither ContentEnvelope nor RedactedContent. The content lives encrypted behind content_ref (null when nothing was stored).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "interaction_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "source_id",
+    "event_id",
+    "correlation_id",
+    "capture_source",
+    "occurred_at",
+    "captured_at",
+    "capture_policy_id",
+    "capture_policy_version",
+    "detector_set_version",
+    "redaction_state",
+    "parts",
+    "content_ref",
+    "expires_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document, major 1 with additive minor revisions.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "interaction_id": {
+      "description": "Interaction identifier (lowercase UUID); joins payload_ref.interaction_id.",
+      "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+    },
+    "cloud": {
+      "description": "Sovereign cloud boundary.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "description": "Customer segment.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "description": "Owning domain; authorization scope anchor.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "source_id": {
+      "description": "Connector or producer that emitted the event.",
+      "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/identifier"
+    },
+    "event_id": {
+      "description": "Source-assigned event id; with source_id it joins the TelemetryEvent.",
+      "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/identifier"
+    },
+    "trace_id": {
+      "description": "W3C trace id. Null when not traced.",
+      "anyOf": [
+        {
+          "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/trace_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "span_id": {
+      "description": "Span id. Null when not reported.",
+      "anyOf": [
+        {
+          "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/span_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "correlation_id": {
+      "description": "Correlation id shared with the audit and policy trail.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,128}$"
+    },
+    "capture_source": {
+      "description": "How the interaction was captured: `edge_push`, `otlp_attributes`, `gateway_log` or `connector`. Open-ended: readers must tolerate unknown values.",
+      "type": "string",
+      "enum": [
+        "edge_push",
+        "otlp_attributes",
+        "gateway_log",
+        "connector"
+      ]
+    },
+    "occurred_at": {
+      "description": "When the interaction happened.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "captured_at": {
+      "description": "When it was captured.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "agent_id": {
+      "description": "Agent canonical id. Null when not applicable.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "agent_version_id": {
+      "description": "Agent version canonical id. Null when not applicable.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tool_id": {
+      "description": "Tool canonical id. Null when not applicable.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "service_id": {
+      "description": "Service canonical id. Null when not applicable.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "mcp_server_id": {
+      "description": "MCP server canonical id. Null when not applicable.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "model": {
+      "description": "Model that served the interaction. Null when unknown.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provider",
+            "model_name",
+            "model_version",
+            "deployment_id"
+          ],
+          "properties": {
+            "provider": {
+              "description": "Provider token.",
+              "anyOf": [
+                {
+                  "$ref": "../../catalog/v1/common.schema.json#/$defs/token"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "model_name": {
+              "description": "Model name as reported.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null
+            },
+            "model_version": {
+              "description": "Model version as reported.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null
+            },
+            "deployment_id": {
+              "description": "Model deployment canonical id.",
+              "anyOf": [
+                {
+                  "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "principal_id": {
+      "description": "Pseudonymous principal. Null when unknown.",
+      "anyOf": [
+        {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/principal_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "capture_policy_id": {
+      "description": "Capture policy that allowed the capture.",
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "capture_policy_version": {
+      "description": "Version of that capture policy.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "detector_set_version": {
+      "description": "Version of the deterministic detector set.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "redaction_state": {
+      "description": "`redacted`: detections replaced. `not_required`: nothing to replace. `redaction_failed`: nothing was stored (content_ref is null).",
+      "type": "string",
+      "enum": [
+        "redacted",
+        "not_required",
+        "redaction_failed"
+      ]
+    },
+    "parts": {
+      "description": "Which parts were captured and their sizes; sizes only, never text.",
+      "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/payload_ref/properties/content_parts"
+    },
+    "content_ref": {
+      "description": "Encrypted content object. Null when nothing was stored.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/encrypted_object_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "findings_summary": {
+      "description": "Per category counts of detector findings; category names and counts only.",
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "category",
+          "count",
+          "action"
+        ],
+        "properties": {
+          "category": {
+            "description": "Detected category.",
+            "$ref": "detection-finding.schema.json#/$defs/detected_category"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "replaced",
+              "kept"
+            ]
+          }
+        }
+      },
+      "default": []
+    },
+    "sensitivity_categories": {
+      "description": "Sensitivity categories the interaction touched.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/sensitivity_categories"
+    },
+    "data_asset_ids": {
+      "description": "Data assets the interaction touched.",
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+      },
+      "default": []
+    },
+    "retention_class": {
+      "description": "Retention class (slug).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "default": "interaction_default"
+    },
+    "expires_at": {
+      "description": "When the content expires (legal hold overrides).",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "legal_hold_ids": {
+      "description": "Legal holds on this interaction.",
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "../../admin/v1/common.schema.json#/$defs/record_id"
+      },
+      "default": []
+    }
+  },
+  "$defs": {
+    "encrypted_object_ref": {
+      "title": "EncryptedObjectRef",
+      "description": "Reference to an AES-256-GCM encrypted object in content storage. The pointer is opaque and never fetched by schema validation; the wrapped data key lives in the blob header (PRP-102 decides). Only ciphertext is identified: no hash of plaintext.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pointer",
+        "kek_uri",
+        "algorithm",
+        "ciphertext_sha256",
+        "byte_length"
+      ],
+      "properties": {
+        "pointer": {
+          "description": "Opaque storage pointer (blob path).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "kek_uri": {
+          "description": "Key Vault key identifier of the key-encryption key that wraps the data key (https://<vault>.vault.azure.net or usgovcloudapi.net /keys/<name>[/<32 hex version>]). A key identifier only; the vault suffix must match the document's cloud (tests/contracts/validators.py check_kek_uri_cloud).",
+          "type": "string",
+          "pattern": "^https://[a-z0-9-]{3,24}\\.vault\\.(azure\\.net|usgovcloudapi\\.net)/keys/[A-Za-z0-9-]{1,127}(/[0-9a-f]{32})?$"
+        },
+        "algorithm": {
+          "description": "Content encryption algorithm.",
+          "const": "aes_256_gcm"
+        },
+        "ciphertext_sha256": {
+          "description": "SHA-256 of the ciphertext (lowercase hex), never of the plaintext.",
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "byte_length": {
+          "description": "Size of the encrypted object in bytes.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
