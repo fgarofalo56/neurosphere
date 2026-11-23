@@ -1,6 +1,7 @@
 ---
 name: PRP-100-telemetry-tool-service-identity-and-aggregates
-status: backlog
+status: active
+started: 2026-11-23
 priority: P0
 order: 100
 review: required
@@ -101,7 +102,7 @@ owns:
   - services/workers/neurosphere_workers/ingestion/resolve_subjects.py
   - packages/core/tests/aggregates_subjects/**
   - services/api/tests/ingest_tool_service/**
-  - tests/integration/ingestion/test_tool_service_subjects.py
+  - tests/integration/tool_service_subjects/**
   - docs/connectors/verification/otel-genai-tool-service.md
 tier1: []
 tier2_appends: []
@@ -145,11 +146,11 @@ Tests: `services/workers/neurosphere_workers/aggregates/tests/test_tool_service_
 Pattern references: `rollups.py:197-259`.
 
 ### Item 5 - End-to-end check on the seeded incident
-Deliverable: an integration test that posts the PRP-71 seeded telemetry through OTLP mapping to aggregates in memory and asserts the failing service and a failing tool point, reading ids from `incident-manifest.json`.
-Owned files: `tests/integration/ingestion/test_tool_service_subjects.py`.
+Deliverable: an integration test that aggregates the PRP-71 seeded telemetry (stored `TelemetryEvent` documents, which already carry F1 identity) in memory and asserts the failing service and a failing tool point, reading ids from `incident-manifest.json`; the failing tool is the one whose seeded spans call the outage service (the manifest names no tool). The OTLP leg is covered by item 3's tests.
+Owned files: `tests/integration/tool_service_subjects/**` (new directory; decided 2026-11-23 because every module in `tests/integration/ingestion/` starts the compose emulators through an autouse fixture and the python CI job deselects them).
 Must NOT touch: sandbox generator (PRP-71). Depends on: items 3, 4; PRP-71.
 Acceptance criteria: incident criterion. Tests: itself (runs under the python job with in-memory stores).
-Pattern references: `tests/integration/ingestion/support.py`.
+Pattern references: `tests/integration/ingestion/support.py` (style only; never import that package's conftest).
 
 ### Item 6 - Integration and close-out
 Deliverable: Tier-3 regeneration if needed (`openapi.json` only on route-model change), changelog fragment `changelog.d/PRP-100-telemetry-tool-service-identity-and-aggregates.md`, completion note, a hand-off line for PRP-74's last item.
@@ -158,7 +159,7 @@ Acceptance criteria: reference section 6 satisfied. Tests: the gate commands.
 
 ## Validation gates
 ```bash
-uv run pytest -q packages/core/tests/aggregates_subjects services/workers/neurosphere_workers/aggregates services/api/tests/ingest services/api/tests/ingest_tool_service tests/integration/ingestion/test_tool_service_subjects.py
+uv run pytest -q packages/core/tests/aggregates_subjects services/workers/neurosphere_workers/aggregates services/api/tests/ingest services/api/tests/ingest_tool_service tests/integration/tool_service_subjects
 uv run ruff check packages services tests
 uv run pyright
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
