@@ -252,10 +252,10 @@ The first real-model turn with the new tools (`NS_LIVE_APPROVED=1`, an operator-
 | 1 | merged | prp-78-item-1 | review pass 1 (items 1-3) APPROVED 2026-11-22, no blockers; follow-up: explicit node field allowlist in `_node_row`; | sonnet; 33d2bdbf verify PASS (pytest 273); merged a57c3d84 2026-11-22; `grants_access_to` excluded from copilot relations |
 | 2 | merged | prp-78-item-2 | review pass 1 APPROVED; | sonnet; 4e4f2463 verify PASS (pytest 248); merged bd73ba9d 2026-11-22 (ports.py tail conflict resolved, both kept); audit.read-only caller is denied, not partial (item 4 fixes) |
 | 3 | merged | prp-78-item-3 | review pass 1 APPROVED; | sonnet; 215f638b verify PASS (pytest 242); merged 3ebfe791 2026-11-22; post-merge wave A: ruff, pyright 0, pytest 311 passed |
-| 4 | review | prp-78-item-4 | sonnet; 3e7c9846 verify PASS (ruff, pyright 0, pytest core+mcp 538 passed); merged 157a7cfe 2026-11-22 (post-merge core 333 passed); timeline partial fix + review follow-ups 2, 4 folded in; `ToolResult.domain_ids` excluded from dumps (MCP shape unchanged) |
-| 5 | in-progress | prp-78-item-5 | sonnet; 1c1ae24a: new suites 62 passed, corpus 78/78, pyright 0; 13 pre-existing pinned tests red (progress, synthetic, get_timeline offer) -> clarification 11, fix round 1 on prp-78-item-5-fix1 |
-| 6 | todo | | |
-| 7 | verifying | prp-78-item-7 | sonnet; dispatched against item 5's committed wire shape; 9a89f7bb verify PASS 2026-11-22 (eslint 0, tsc 0, vitest copilot 40 passed, e2e catalog+copilot 32 passed; agent's 3 catalog axe failures were full-suite load flakes, pass in isolation on both branches); merges after 5 |
+| 4 | merged | prp-78-item-4 | review pass 2 (items 4-5) APPROVED 2026-11-22; | sonnet; 3e7c9846 verify PASS (ruff, pyright 0, pytest core+mcp 538 passed); merged 157a7cfe 2026-11-22 (post-merge core 333 passed); timeline partial fix + review follow-ups 2, 4 folded in; `ToolResult.domain_ids` excluded from dumps (MCP shape unchanged) |
+| 5 | merged | prp-78-item-5 + prp-78-item-5-fix1 | sonnet; 1c1ae24a + fix 5cf77e5e (13 pinned tests updated, clarification 11); verify PASS 2026-11-22 (ruff, pyright 0, corpus 78/78, pytest 2623 passed); merged 120325ac; review pass 2 APPROVED; follow-ups: builtin tools populate domain_ids, share `_subject_target`, change-log 5-page cap should flag truncation, document `synthetic=false` when not ready |
+| 6 | in-progress | prp-78-item-6 | sonnet; dispatched 2026-11-22 |
+| 7 | review | prp-78-item-7 | merged 1bc823d0 2026-11-22 (review in pass 3); | sonnet; dispatched against item 5's committed wire shape; 9a89f7bb verify PASS 2026-11-22 (eslint 0, tsc 0, vitest copilot 40 passed, e2e catalog+copilot 32 passed; agent's 3 catalog axe failures were full-suite load flakes, pass in isolation on both branches); merges after 5 |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
