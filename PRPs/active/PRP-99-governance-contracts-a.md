@@ -1,6 +1,7 @@
 ---
 name: PRP-99-governance-contracts-a
-status: backlog
+status: active
+started: 2026-11-22
 priority: P0
 order: 99
 review: required
@@ -51,11 +52,11 @@ Out of scope: every store, container, route, worker, detector, encryption helper
 |---|----------|-----------------|----------|
 | 1 | Where content travels | field on `telemetry-event`; separate channel | Separate: a transient `ContentEnvelope` accepted only at the edge, never persisted or published; events carry only `payload_ref` metadata (design 2.1) |
 | 2 | How "secrets cannot be stored" is expressed | detector only; detector plus contract | Both: PRP-101 redacts; the stored form `RedactedContent` additionally rejects known credential formats by JSON Schema `not` patterns, and credential findings must be `replaced` |
-| 3 | Where capture policies, channels, subscriptions and bindings are stored | new containers; `admin_config` kinds | ASSUMPTION: channels, subscriptions and enforcement bindings are `admin_config` documents (PRP-65 store: versioned, etag, retire, audited) with three new `admin_kind` values, as PRP-107 plans; capture policies are NOT an `admin_kind`: they live in PRP-102's own container `interaction_capture_policies` (PRP-102 clarification 5), so `CapturePolicy` carries its own `version`, PRP-103 builds `CapturePolicyStore` over that container and does not edit `admin/models.py`, and PRP-108 changes them only through PRP-103's functions |
+| 3 | Where capture policies, channels, subscriptions and bindings are stored | new containers; `admin_config` kinds | Decided by the owner 2026-11-22 (plan approval): channels, subscriptions and enforcement bindings are `admin_config` documents (PRP-65 store: versioned, etag, retire, audited) with three new `admin_kind` values, as PRP-107 plans; capture policies are NOT an `admin_kind`: they live in PRP-102's own container `interaction_capture_policies` (PRP-102 clarification 5), so `CapturePolicy` carries its own `version`, PRP-103 builds `CapturePolicyStore` over that container and does not edit `admin/models.py`, and PRP-108 changes them only through PRP-103's functions |
 | 4 | Policy rule language | expressions; closed typed kinds | Closed typed kinds with parameter objects, no expression or code field (design 2.3; `CLAUDE.md` no generated code) |
 | 5 | New values on closed enums | `v2`; additive with open-ended wording | Additive (PRP-70 clarification 9 precedent): `admin_kind`, `role`, `connector_kind`, `setting_key`, `approver_permission`, manifest `actions` descriptions now say "open-ended: readers must tolerate unknown values" |
 | 6 | Catalog `Policy` link to definitions | new field; projection by id | No catalog change: PRP-105 projects to `...:neurosphere:policy:<policy_id>` and maps mode `enforce`/`audit`/`off` to `enforced`/`advisory`/`disabled` |
-| 7 | Access purpose on content reads | free text; code | ASSUMPTION: `InteractionAccessPurpose` code plus optional case reference (audit `content_guard` forbids prose); added beyond the design list because PRP-104 needs one shape for reads and exports |
+| 7 | Access purpose on content reads | free text; code | Decided by the owner 2026-11-22 (plan approval): `InteractionAccessPurpose` code plus optional case reference (audit `content_guard` forbids prose); added beyond the design list because PRP-104 needs one shape for reads and exports |
 | 8 | Capture default and who approves a `capture_policy_change` | (a) a second steward approves; (b) the maker-checker approver rule is relaxed for the governance action kinds so an admin approves | Decided by the owner 2026-11-16 (GD-1): capture is off everywhere and turned on per domain and source only by an approved `capture_policy_change`, proposed by a domain steward and never self-approved. Core requires a maker-checker approver to hold `action.approve` (`packages/core/neurosphere_core/admin/platform/review_policy.py:88-93`), which admin does not hold; decided: a second steward approves; no change to who holds `action.approve`. Admins do not approve these. Here: `CapturePolicy.state` starts `proposed`; `approver_permission` gains `config.manage` and `govpolicy.manage` (additive only, unused because option (b) was not chosen; see GD-20) |
 | 9 | Who may read content | as design | Decided by the owner 2026-11-16 (GD-2): new privileged, time-bound role `interaction_investigator`; admin does not hold `interaction.read`; purpose required on every read. Here: role added to the contract role enums with the privileged `expires_at` rule; permissions are core names owned by PRP-104 |
 | 10 | Content to the copilot or MCP | as design | Decided by the owner 2026-11-16 (GD-3): captured content is not shown to the copilot or MCP; tools see metadata and findings only; revisit after the north star. Here: no copilot or MCP contract references `ContentEnvelope` or `RedactedContent` (criterion 4) |
@@ -260,12 +261,12 @@ Stores, containers, routes, workers, detectors, encryption, UI, permissions in c
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 3 and 7 are ASSUMPTIONS for plan approval; the GD rows were decided 2026-11-16)
+- [x] All clarification questions are decided, not guessed (rows 3 and 7 approved by the owner at plan approval 2026-11-22; the GD rows were decided 2026-11-16)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | in-progress | worktree (implementer, sonnet) | dispatched 2026-11-23 |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
