@@ -56,6 +56,7 @@ EXPECTED_AREAS = {
     "interactions",
     "policy",
     "map",
+    "notifications",
     "query",
     "recommendations",
     "scope",

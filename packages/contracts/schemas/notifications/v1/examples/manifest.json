@@ -1,0 +1,74 @@
+{
+  "description": "Examples for notifications v1 (PRP-99). Each invalid example is a valid example with exactly one mutation (derived_from). The if/then rules (local_sink and local_sink_url pair, endpoint_credential null only with local_sink, webhook needs hmac_credential, endpoint credential must be key_vault_secret) are dropped by the Pydantic projection, so tests/contracts/test_governance_a_notifications.py pins them inline.",
+  "examples": [
+    {
+      "file": "valid/notification-channel.webhook-hmac.json",
+      "schema": "notification-channel.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/notification-channel.teams.json",
+      "schema": "notification-channel.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/notification-channel.local-sink.json",
+      "schema": "notification-channel.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/notification-subscription.by-role.json",
+      "schema": "notification-subscription.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/notification.delivered.json",
+      "schema": "notification.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/notification-channel.url-property.json",
+      "schema": "notification-channel.schema.json",
+      "valid": false,
+      "derived_from": "valid/notification-channel.webhook-hmac.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "a channel stores no endpoint URL property"
+    },
+    {
+      "file": "invalid/notification.recipient-field.json",
+      "schema": "notification.schema.json",
+      "valid": false,
+      "derived_from": "valid/notification.delivered.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "a delivery stores no recipient"
+    },
+    {
+      "file": "invalid/notification-subscription.no-audience-roles.json",
+      "schema": "notification-subscription.schema.json",
+      "valid": false,
+      "derived_from": "valid/notification-subscription.by-role.json",
+      "expected_error": {
+        "instance_path": "/audience_roles",
+        "keyword": "minItems"
+      },
+      "reason": "a subscription names at least one audience role"
+    },
+    {
+      "file": "invalid/notification.title-161-chars.json",
+      "schema": "notification.schema.json",
+      "valid": false,
+      "derived_from": "valid/notification.delivered.json",
+      "expected_error": {
+        "instance_path": "/title",
+        "keyword": "maxLength"
+      },
+      "reason": "title is at most 160 characters"
+    }
+  ]
+}
