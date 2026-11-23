@@ -95,6 +95,10 @@ gets a fixed abstention with no citations.
 - The demo profile turns it on: `infra/dev/demo-profile.env` sets `NS_DEMO_COPILOT_MODE=recorded`,
   which compose maps to `NS_COPILOT_MODE`. The demo settings seed does not store a `copilot` row in
   this mode (a stored row beats the environment and a disabled placeholder would keep it off).
+  The demo copilot depends on no stored `copilot` or `search` rows (a disabled `search` row leaves
+  the agent matcher without search, so `recommend_agent` disappears); a database seeded before this
+  fix keeps them, so reseed it (`make demo-down`, then `make demo-up`). `make demo-check` also
+  requires the `agent_matcher` component to be `ok`.
   `make demo-check` requires the status to be `ready` and `synthetic`, then posts one demo question
   and requires a `done` event with a citation.
 - Switch to a real endpoint: set `NS_DEMO_COPILOT_MODE=disabled` (or unset `NS_COPILOT_MODE`
