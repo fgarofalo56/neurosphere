@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.2.0",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "subscription_id": "ops-violations",
+  "channel_id": "ops-webhook",
+  "event_classes": [
+    "policy_violation_opened",
+    "policy_violation_escalated",
+    "action_failed"
+  ],
+  "audience_roles": [],
+  "min_severity": "high",
+  "enabled": true
+}

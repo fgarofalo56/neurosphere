@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.2.0",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "channel_id": "ops-webhook",
+  "display_name": "Operations webhook",
+  "kind": "webhook",
+  "allowed_host": "hooks.example.com",
+  "endpoint_credential": {
+    "kind": "key_vault_secret",
+    "secret_uri": "https://acme-kv.vault.azure.net/secrets/ops-webhook-endpoint"
+  },
+  "hmac_credential": {
+    "kind": "key_vault_secret",
+    "secret_uri": "https://acme-kv.vault.azure.net/secrets/ops-webhook-hmac"
+  },
+  "local_sink": false,
+  "local_sink_url": null,
+  "enabled": true,
+  "url": "https://hooks.example.com/services/abc"
+}

@@ -1,0 +1,144 @@
+{
+  "description": "Examples for interactions v1 (PRP-99). Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error that must appear in the validation error tree. Rules JSON Schema expresses with if/then or not (credential finding kept; secret-bearing text) are tested inline in tests/contracts/test_governance_a_content.py because the Pydantic projection drops those keywords.",
+  "examples": [
+    {
+      "file": "valid/redacted-content.jwt-placeholder.json",
+      "schema": "redacted-content.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/redacted-content.state-pending.json",
+      "schema": "redacted-content.schema.json",
+      "valid": false,
+      "derived_from": "valid/redacted-content.jwt-placeholder.json",
+      "expected_error": {
+        "instance_path": "/redaction_state",
+        "keyword": "enum"
+      },
+      "reason": "pending redaction is not storable"
+    },
+    {
+      "file": "valid/detection-finding.jwt-replaced.json",
+      "schema": "detection-finding.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/detection-finding.unknown-confidence.json",
+      "schema": "detection-finding.schema.json",
+      "valid": false,
+      "derived_from": "valid/detection-finding.jwt-replaced.json",
+      "expected_error": {
+        "instance_path": "/confidence",
+        "keyword": "enum"
+      },
+      "reason": "confidence is high, medium or low"
+    },
+    {
+      "file": "valid/interaction-record.findings-content-ref.json",
+      "schema": "interaction-record.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/interaction-record.redaction-failed.json",
+      "schema": "interaction-record.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/interaction-record.prompt-property.json",
+      "schema": "interaction-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/interaction-record.findings-content-ref.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "a record carries no content property"
+    },
+    {
+      "file": "invalid/interaction-record.content-ref-algorithm.json",
+      "schema": "interaction-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/interaction-record.findings-content-ref.json",
+      "expected_error": {
+        "instance_path": "/content_ref/algorithm",
+        "keyword": "const"
+      },
+      "reason": "only aes_256_gcm"
+    },
+    {
+      "file": "invalid/interaction-record.kek-uri-not-vault.json",
+      "schema": "interaction-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/interaction-record.findings-content-ref.json",
+      "expected_error": {
+        "instance_path": "/content_ref/kek_uri",
+        "keyword": "pattern"
+      },
+      "reason": "kek_uri is a Key Vault key identifier"
+    },
+    {
+      "file": "valid/capture-policy.active-v2.json",
+      "schema": "capture-policy.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/capture-policy.proposed.json",
+      "schema": "capture-policy.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/capture-policy.retention-days-too-long.json",
+      "schema": "capture-policy.schema.json",
+      "valid": false,
+      "derived_from": "valid/capture-policy.active-v2.json",
+      "expected_error": {
+        "instance_path": "/retention_days",
+        "keyword": "maximum"
+      },
+      "reason": "retention is 1 to 365 days"
+    },
+    {
+      "file": "invalid/capture-policy.sampling-rate-over-one.json",
+      "schema": "capture-policy.schema.json",
+      "valid": false,
+      "derived_from": "valid/capture-policy.active-v2.json",
+      "expected_error": {
+        "instance_path": "/sampling/rate",
+        "keyword": "maximum"
+      },
+      "reason": "rate is above 0 up to 1"
+    },
+    {
+      "file": "valid/interaction-access-purpose.incident.json",
+      "schema": "interaction-access-purpose.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/interaction-access-purpose.extra-key.json",
+      "schema": "interaction-access-purpose.schema.json",
+      "valid": false,
+      "derived_from": "valid/interaction-access-purpose.incident.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no free text"
+    },
+    {
+      "file": "valid/interaction-export-manifest.incident.json",
+      "schema": "interaction-export-manifest.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/interaction-export-manifest.missing-audit-id.json",
+      "schema": "interaction-export-manifest.schema.json",
+      "valid": false,
+      "derived_from": "valid/interaction-export-manifest.incident.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "export must name its audit record"
+    }
+  ]
+}

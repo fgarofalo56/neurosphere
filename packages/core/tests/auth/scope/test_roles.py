@@ -64,6 +64,8 @@ EXPECTED = {
         P.AUDIT_EXPORT,  # PRP-65 clarification 8: auditor only, Admin never reads audit
         P.EVIDENCE_READ,
     },
+    # PRP-99 item 5: inert until PRP-104 assigns interaction.read and interaction.export.
+    Role.INTERACTION_INVESTIGATOR: set(),
 }
 # Held by Admin and Domain Steward alike (PRP-33 item 5), so not an admin-only permission.
 SHARED_ADMIN_STEWARD = {P.GRANT_WRITE}
@@ -80,7 +82,7 @@ def test_role_set_is_closed_and_matches_contract() -> None:
         typing.get_args(RoleAssignment.model_fields["role"].annotation)  # Literal members
     )
     assert {r.value for r in Role} == contract_roles
-    assert len(Role) == 5
+    assert len(Role) == 6
     for not_a_role in ("pro", "analyst_pro", "superuser", "owner", "god"):
         with pytest.raises(ValueError):
             role_permissions(not_a_role)

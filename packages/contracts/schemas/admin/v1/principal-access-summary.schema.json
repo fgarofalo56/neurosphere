@@ -88,6 +88,13 @@
             "required": ["role"]
           },
           "then": { "properties": { "expires_at": { "type": "string" } } }
+        },
+        {
+          "if": {
+            "properties": { "role": { "const": "interaction_investigator" } },
+            "required": ["role"]
+          },
+          "then": { "properties": { "expires_at": { "type": "string" } } }
         }
       ]
     },

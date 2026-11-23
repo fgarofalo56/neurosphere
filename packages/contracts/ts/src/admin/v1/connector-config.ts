@@ -17,8 +17,26 @@ export interface ConnectorConfig {
    * Operator-chosen id of this connector instance, unique per customer.
    */
   connector_id: string;
+  /**
+   * Open-ended: readers must tolerate unknown values.
+   */
   connector_kind:
-    "gateway_poll" | "foundry_discovery" | "billing_export" | "otel" | "azure_monitor_ai";
+    | "gateway_poll"
+    | "foundry_discovery"
+    | "billing_export"
+    | "otel"
+    | "azure_monitor_ai"
+    | "generic"
+    | "entra_identity"
+    | "purview"
+    | "unity_catalog"
+    | "m365_copilot"
+    | "github_copilot"
+    | "cursor"
+    | "openai_enterprise"
+    | "anthropic_claude"
+    | "entra_shadow_ai"
+    | "github_issues";
   /**
    * Domains the connector's data is attributed to. At least one; no wildcard.
    *

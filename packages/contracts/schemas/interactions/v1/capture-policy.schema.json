@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/interactions/v1/capture-policy.schema.json",
+  "title": "CapturePolicy",
+  "description": "Opt-in capture policy per domain and source (PRP-99; container interaction_capture_policies, declared by PRP-102). Capture is off unless an active policy exists. kept_categories can never hold a credential category and an active policy requires approved_intent_id and approved_audit_id; both rules are JSON Schema (`not`, if/then) that Pydantic ignores (ADR-0004), so consumers validate against the JSON Schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "capture_policy_id",
+    "version",
+    "display_name",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "source_ids",
+    "parts",
+    "detector_set_version",
+    "sampling",
+    "retention_class",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document, major 1 with additive minor revisions.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "capture_policy_id": {
+      "description": "Capture policy id (slug).",
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "version": {
+      "description": "Policy version, increments on every change.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "previous_version": {
+      "description": "Version this one replaces. Null for the first.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "default": null
+    },
+    "display_name": {
+      "description": "Console label.",
+      "$ref": "../../admin/v1/common.schema.json#/$defs/display_name"
+    },
+    "cloud": {
+      "description": "Sovereign cloud boundary.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "description": "Customer segment.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "description": "Domain the policy applies to.",
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "source_ids": {
+      "description": "Sources capture is turned on for.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "../../catalog/v1/common.schema.json#/$defs/token"
+      }
+    },
+    "parts": {
+      "description": "Parts that may be captured.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "detection-finding.schema.json#/$defs/part_kind"
+      }
+    },
+    "detector_set_version": {
+      "description": "Deterministic detector set that redacts.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "customer_dictionary_ids": {
+      "description": "Customer dictionaries applied.",
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+      },
+      "default": []
+    },
+    "redaction_mode": {
+      "description": "`redact_all_detections` (default, GD-4) or `redact_listed`.",
+      "type": "string",
+      "enum": [
+        "redact_all_detections",
+        "redact_listed"
+      ],
+      "default": "redact_all_detections"
+    },
+    "kept_categories": {
+      "description": "Non-credential categories kept as written. Never a credential category (CredentialCategory): credentials are always redacted.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "detection-finding.schema.json#/$defs/detected_category",
+        "not": {
+          "$ref": "detection-finding.schema.json#/$defs/credential_category"
+        }
+      },
+      "default": []
+    },
+    "sampling": {
+      "description": "Sampling limits.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rate",
+        "max_per_minute"
+      ],
+      "properties": {
+        "rate": {
+          "description": "Fraction of interactions captured, above 0 up to 1.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "max_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6000
+        }
+      }
+    },
+    "max_part_chars": {
+      "description": "Characters kept per part; the rest is truncated.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32768,
+      "default": 8192
+    },
+    "retention_class": {
+      "description": "Retention class (slug).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "retention_days": {
+      "description": "Days captured content is kept (GD-5); legal hold overrides.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "default": 90
+    },
+    "state": {
+      "description": "`proposed` until an approved capture_policy_change activates it.",
+      "type": "string",
+      "enum": [
+        "proposed",
+        "active",
+        "suspended",
+        "retired"
+      ]
+    },
+    "approved_intent_id": {
+      "description": "Approved action intent. Required (non-null) when active.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "approved_audit_id": {
+      "description": "Audit record of the approval. Required (non-null) when active.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "effective_from": {
+      "description": "When the policy took effect. Null until activated.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "allOf": [
+    {
+      "description": "An active policy carries the approval that activated it.",
+      "if": {
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "const": "active"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "approved_intent_id",
+          "approved_audit_id"
+        ],
+        "properties": {
+          "approved_intent_id": {
+            "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+          },
+          "approved_audit_id": {
+            "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+          }
+        }
+      }
+    }
+  ]
+}

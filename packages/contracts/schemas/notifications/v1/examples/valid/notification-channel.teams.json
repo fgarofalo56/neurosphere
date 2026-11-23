@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.2.0",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "channel_id": "ops-teams",
+  "display_name": "Operations Teams channel",
+  "kind": "teams_webhook",
+  "allowed_host": "contoso.webhook.office.com",
+  "endpoint_credential": {
+    "kind": "key_vault_secret",
+    "secret_uri": "https://acme-kv.vault.azure.net/secrets/ops-teams-endpoint"
+  },
+  "hmac_credential": null,
+  "local_sink": false,
+  "local_sink_url": null,
+  "enabled": true
+}

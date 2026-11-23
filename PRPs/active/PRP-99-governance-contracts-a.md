@@ -1,6 +1,7 @@
 ---
 name: PRP-99-governance-contracts-a
-status: backlog
+status: active
+started: 2026-11-22
 priority: P0
 order: 99
 review: required
@@ -51,11 +52,11 @@ Out of scope: every store, container, route, worker, detector, encryption helper
 |---|----------|-----------------|----------|
 | 1 | Where content travels | field on `telemetry-event`; separate channel | Separate: a transient `ContentEnvelope` accepted only at the edge, never persisted or published; events carry only `payload_ref` metadata (design 2.1) |
 | 2 | How "secrets cannot be stored" is expressed | detector only; detector plus contract | Both: PRP-101 redacts; the stored form `RedactedContent` additionally rejects known credential formats by JSON Schema `not` patterns, and credential findings must be `replaced` |
-| 3 | Where capture policies, channels, subscriptions and bindings are stored | new containers; `admin_config` kinds | ASSUMPTION: channels, subscriptions and enforcement bindings are `admin_config` documents (PRP-65 store: versioned, etag, retire, audited) with three new `admin_kind` values, as PRP-107 plans; capture policies are NOT an `admin_kind`: they live in PRP-102's own container `interaction_capture_policies` (PRP-102 clarification 5), so `CapturePolicy` carries its own `version`, PRP-103 builds `CapturePolicyStore` over that container and does not edit `admin/models.py`, and PRP-108 changes them only through PRP-103's functions |
+| 3 | Where capture policies, channels, subscriptions and bindings are stored | new containers; `admin_config` kinds | Decided by the owner 2026-11-22 (plan approval): channels, subscriptions and enforcement bindings are `admin_config` documents (PRP-65 store: versioned, etag, retire, audited) with three new `admin_kind` values, as PRP-107 plans; capture policies are NOT an `admin_kind`: they live in PRP-102's own container `interaction_capture_policies` (PRP-102 clarification 5), so `CapturePolicy` carries its own `version`, PRP-103 builds `CapturePolicyStore` over that container and does not edit `admin/models.py`, and PRP-108 changes them only through PRP-103's functions |
 | 4 | Policy rule language | expressions; closed typed kinds | Closed typed kinds with parameter objects, no expression or code field (design 2.3; `CLAUDE.md` no generated code) |
 | 5 | New values on closed enums | `v2`; additive with open-ended wording | Additive (PRP-70 clarification 9 precedent): `admin_kind`, `role`, `connector_kind`, `setting_key`, `approver_permission`, manifest `actions` descriptions now say "open-ended: readers must tolerate unknown values" |
 | 6 | Catalog `Policy` link to definitions | new field; projection by id | No catalog change: PRP-105 projects to `...:neurosphere:policy:<policy_id>` and maps mode `enforce`/`audit`/`off` to `enforced`/`advisory`/`disabled` |
-| 7 | Access purpose on content reads | free text; code | ASSUMPTION: `InteractionAccessPurpose` code plus optional case reference (audit `content_guard` forbids prose); added beyond the design list because PRP-104 needs one shape for reads and exports |
+| 7 | Access purpose on content reads | free text; code | Decided by the owner 2026-11-22 (plan approval): `InteractionAccessPurpose` code plus optional case reference (audit `content_guard` forbids prose); added beyond the design list because PRP-104 needs one shape for reads and exports |
 | 8 | Capture default and who approves a `capture_policy_change` | (a) a second steward approves; (b) the maker-checker approver rule is relaxed for the governance action kinds so an admin approves | Decided by the owner 2026-11-16 (GD-1): capture is off everywhere and turned on per domain and source only by an approved `capture_policy_change`, proposed by a domain steward and never self-approved. Core requires a maker-checker approver to hold `action.approve` (`packages/core/neurosphere_core/admin/platform/review_policy.py:88-93`), which admin does not hold; decided: a second steward approves; no change to who holds `action.approve`. Admins do not approve these. Here: `CapturePolicy.state` starts `proposed`; `approver_permission` gains `config.manage` and `govpolicy.manage` (additive only, unused because option (b) was not chosen; see GD-20) |
 | 9 | Who may read content | as design | Decided by the owner 2026-11-16 (GD-2): new privileged, time-bound role `interaction_investigator`; admin does not hold `interaction.read`; purpose required on every read. Here: role added to the contract role enums with the privileged `expires_at` rule; permissions are core names owned by PRP-104 |
 | 10 | Content to the copilot or MCP | as design | Decided by the owner 2026-11-16 (GD-3): captured content is not shown to the copilot or MCP; tools see metadata and findings only; revisit after the north star. Here: no copilot or MCP contract references `ContentEnvelope` or `RedactedContent` (criterion 4) |
@@ -67,6 +68,8 @@ Out of scope: every store, container, route, worker, detector, encryption helper
 | 16 | Notification channels first | as design | Decided by the owner 2026-11-16 (GD-10): generic webhook and Teams webhook first; email after the transport is verified. Here: `email` is a declared channel kind; PRP-107 may ship it `not_built` |
 | 17 | Reverse the metadata-only decision | approved in principle 2026-11-16 | Decided by the owner 2026-11-16 (GD-14): the 2026-11-06 metadata-only decision is reversed for opt-in capture only; capture stays OFF by default and "bodies disabled by default" stays true; the orchestrator records it in the decision log |
 | 18 | Decisions raised while planning PRP-100 to PRP-137 | ask in each PRP; one list | One list, decided 2026-11-16: "Owner decisions for the governance core" at the end of this file numbers them GD-16 onward; other PRPs cite the number |
+| 19 | `dedup_key` (mandated on `PolicyViolation` and `NotificationDelivery`) trips the PRP-37 walker's `key` segment, contradicting criterion 6's "finds nothing" | shape-bound exemption; rename to `dedup_digest` | Decided by the owner 2026-11-23 (raised in execution): shape-bound exemption. The walker run over `interactions/v1`, `policy/v1` and `notifications/v1` skips `dedup_key` only while it is pinned to `^sha256:[a-f0-9]{64}$` (the `secret_sha256` precedent); `test_admin_no_credential_values.py` and its `ALLOWED` stay unchanged. Also in execution: the `NotificationDelivery.link` regex was tightened to reject protocol-relative `//host` links (criterion 9: application-relative only) |
+| 20 | The three new `admin_kind` bodies widen the generated `AdminConfigDocument.body` union, which breaks pyright at `packages/core/neurosphere_core/admin/store.py:339` and core parity tests (`packages/core/tests/admin/test_config_store.py`, `packages/core/tests/admin_platform/test_review_policy.py`) | one-line cast plus test updates; widen `AdminBody` in `admin/models.py`; pause | Decided by the owner 2026-11-23 (raised in execution): ownership exception for exactly these files. `store.py` `retire()` gets one `cast(AdminBody, current.body)` (the kind already passed `validate_kind`); the core tests assert registered models are a subset of the contract union and that the three pending kinds and three new setting keys are still refused, and use an unknown approver permission instead of `config.manage`. No behaviour change: core still refuses the new kinds and keys until PRP-105/107 register them |
 
 ## Context manifest
 
@@ -260,19 +263,19 @@ Stores, containers, routes, workers, detectors, encryption, UI, permissions in c
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 3 and 7 are ASSUMPTIONS for plan approval; the GD rows were decided 2026-11-16)
+- [x] All clarification questions are decided, not guessed (rows 3 and 7 approved by the owner at plan approval 2026-11-22; the GD rows were decided 2026-11-16)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | merged | worktree-agent-a96adb3e589139b84 (sonnet) | 76e2976b merged c041412b; gen --check OK, 3614 passed (contracts+sdk+payload+audit+ingest+archive+quarantine), ruff/format/pyright clean, openapi drift 3 passed; deviation: PRP-70 test_payload_ref_untouched relaxed to pin original members (baseline-diff trap); 2026-11-23 |
+| 2 | merged | worktree-agent-a6ddddb4e1b70a52f (sonnet) | 9173fe86 merged bb2e0bcb; gen --check OK, 3691 passed (contracts+sdk+payload+audit+ingest+ingestion+openapi drift), ruff/format/pyright clean; deviations: parts $refs telemetry payload_ref/properties/content_parts (generator adds ContentParts RootModel, additive), check_kek_uri_cloud added here for item 5 reuse, EncryptedObjectRef shared $def; 2026-11-23 |
+| 3 | merged | worktree-agent-a7b9c79d0077137b5 (sonnet) | 9d61b57e merged 8cb9239c; gen --check OK, 3707 passed (contracts+sdk+payload+audit+openapi drift), ruff/format/pyright clean; additions: published status requires published_* ids (if/then), evidence ref pattern, sha256:-prefixed content_sha256; 2026-11-23 |
+| 4 | merged | worktree-agent-a5c6f6ba4beeed7a5 (sonnet) + orchestrator fix f44f2628 | 6a10d004 merged 957671ba; gen --check OK, 3933 passed (contracts+sdk+payload+audit+hitl+openapi drift), ruff/format/pyright/ts clean; deviations: link regex tightened to reject protocol-relative //host (criterion 9), dedup_key exempted from the PRP-37 walker in its own test only when sha256-pattern-bound (pending owner decision for item 6); 2026-11-23 |
+| 5 | merged | worktree-agent-aadebe8d3d32a6d05 + fix worktree-agent-a9313012d04a7736f (sonnet) | adb6e696 + fix 3ece74fc merged 86c3f2b4; gen --check OK, pyright 0, 5502 passed (contracts+sdk+core admin/admin_platform/admin_runtime/auth.scope/payload+authz+admin api), ruff/format/contracts ts/frontend typecheck clean; one fix round for core admin parity (clarification 20); openapi drift expected, regenerated in item 8; follow-up: services admin identity PRIVILEGED_ROLES lacks interaction_investigator (PRP-104); 2026-11-23 |
+| 6 | merged | worktree-agent-a3cf1ba207855954f (sonnet) | 635a21d0 merged d35955af; 209 guard tests with planted-violation self-tests; 4175 passed (contracts + six guard suites unedited), ruff/format/pyright clean; deviation: criterion 4 literal fails on 14 pre-PRP strings >1024 and chart-plan text (approval reason, catalog, problem-details, agent-match task_text...); pinned as an exact grandfather set (new or stale entries fail, governance areas never grandfathered) since shortening them would be non-additive; 2026-11-23 |
+| 7 | merged | orchestrator sweep on integration branch | full Validation-gates set at d35955af: ruff/format clean, pyright 0, gen --check OK, gate pytest line 4911 passed + 1 expected fail (openapi drift, regenerated in item 8), contracts ts 215 passed, contracts ts + frontend typecheck ok, validate_planning PASS; independent review (opus): APPROVE, 0 blocking, 6 non-blocking; 3 applied pre-baseline in fc1f11e9 (merge 902dc8cf: redaction_failed forces null content_ref, kek_uri cloud check on record/export, hmac_credential Key Vault only, allowed_host refuses IP literals); 2026-11-23 |
+| 8 | in-progress | prp-99-governance-contracts-a | ADR-0004 amendment, baseline refreshed (ALLOWED_TIGHTENINGS empty), openapi.json + docs/reference + EXECUTION-PLAN regenerated, changelog fragment; 3761 contracts+drift passed, tests/docs+release 204 passed; PR 387 open, follow-ups 388 389; 2026-11-23 |
 
 ## Owner decisions for the governance core (decided 2026-11-16)
 Decided by the owner on 2026-11-16 (decision D19 in docs/DECISIONS-LOG.md): the recommended defaults were accepted, except GD-5, where the owner chose 90 days.
@@ -336,11 +339,18 @@ Decisions raised while planning (GD-16 onward), all decided:
 | GD-49 | Without a field-level lock in the contracts, GD-11's "steward-curated value (locked)" is implemented as: the asset's own declared sensitivity wins whole. | A lock field from the next contracts owner | 120, 121 |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Provided names (for PRP-100 to PRP-136 authors):
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator: none expected.
-- Follow-up issues:
+- Date and PR: 2026-11-23, PR 387 (integration branch `prp-99-governance-contracts-a`).
+- Provided names (for PRP-100 to PRP-136 authors), all as listed in "Interfaces provided", with these exact titles:
+  - Telemetry: `PayloadRef` members `interaction_id`, `capture_policy_id`, `capture_policy_version`, `detector_set_version`, `detected_categories`, `content_parts` (`schema_version` 1.2.0); `ContentEnvelope`, `ContentPart` (`telemetry/v1/content-envelope.schema.json`).
+  - Interactions: `DetectionFinding`, `DetectedCategory`, `CredentialCategory`, `ContentPartKind`, `RedactedContent`, `RedactedPart`, `$defs/secret_free_text`, `InteractionRecord`, `EncryptedObjectRef` (shared by `content_ref` and the export `bundle`), `CapturePolicy`, `InteractionAccessPurpose`, `InteractionExportManifest`.
+  - Policy: `PolicyDefinition`, `EnforcementMode`, `PolicySeverity`, `PolicyRuleKind`, `PolicyAppliesTo`, `PolicyRule`, `ModelAllowListParams`, `DataSensitivityAccessParams`, `ResidencyParams`, `BudgetRuleParams`, `RequiredOwnerParams`, `RequiredAttestationParams`, `RequiredApprovalParams`, `ContentRuleParams`, `RegistrationRequiredParams`, `PolicyViolation`, `PolicyViolationEvidence`, `PolicyException`, `PolicyDecisionRequest`, `PolicyDecisionResponse`, `PolicyDecisionMatch`, `EnforcementBinding`, `EnforcementPoint`.
+  - Notifications: `NotificationChannel`, `NotificationSubscription`, `NotificationEventClass`, `NotificationDelivery` (file `notification.schema.json`).
+  - Catalog/query/connectors/admin/scope: `AgentVersionApproval`, `AgentVersionApprovalState`, `AgentVersion.approval`; query `approval_state` (agent_version only); manifest actions `agent_version_approve`, `agent_version_suspend`, `capture_policy_change`, `governance_policy_publish`, `enforcement_mode_change`, `gateway_policy_apply`; the eleven `connector_kind` values; `admin_kind` `notification_channel`, `notification_subscription`, `enforcement_binding`; role `interaction_investigator` (core `Role.INTERACTION_INVESTIGATOR`, empty permissions, privileged); `approver_permission` `config.manage`, `govpolicy.manage`; `setting_key` `interaction_capture`, `notifications`, `enforcement` with `InteractionCaptureSetting`, `NotificationsSetting`, `EnforcementSetting`.
+  - Python validators in `tests/contracts/validators.py`: `check_content_envelope_parts`, `check_secret_free_text` (PRP-101 keeps it a subset of its credential detectors), `check_kek_uri_cloud`, `check_encrypted_ref_cloud`, `check_system_setting_cloud`, `check_policy_exception_window`, `check_decision_request_subject`.
+  - Still refused by core until registered: the three `admin_kind` values (PRP-105 `enforcement_binding`, PRP-107 the two notification kinds) and the three setting keys (`PENDING_ADMIN_KINDS` / `PENDING_SETTING_KEYS` in `packages/core/tests/admin/test_config_store.py` list them; the consuming PRP removes its entry when it registers one).
+- Deviations: clarification 19 (`dedup_key` walker exemption bound to the sha256 pattern); clarification 20 (core admin parity: one `cast` in `admin/store.py`, core test expectation updates); `NotificationDelivery.link` rejects protocol-relative `//host`; criterion 4 is enforced with an exact grandfather set of 14 pre-PRP strings over 1024 characters and the pre-PRP `chart-plan` `text` (shortening them would be non-additive); `InteractionRecord.parts` `$ref`s `telemetry-event.schema.json#/$defs/payload_ref/properties/content_parts` (the generator emits a `ContentParts` model in `telemetry_event.py`); additions beyond the PRP text: a published `PolicyDefinition` requires its `published_*` ids, `PolicyViolationEvidence.ref` has a pattern, `content_sha256` uses the `sha256:` prefix, and review-driven tightenings before the baseline froze (`redaction_failed` forces null `content_ref`, `hmac_credential` Key Vault secrets only, `allowed_host` refuses IP literals, `kek_uri` cloud check on record and export).
+- Descoped items: none (the cut line was not used; criterion 9 met).
+- OPEN gates: none (contract work is offline-provable; the `verify-gates.ps1` runner was not run separately, its gates were run individually as listed in the Execution state).
+- Env vars for the operator: none.
+- Follow-up issues: 388 (API admin identity `PRIVILEGED_ROLES` lacks `interaction_investigator`; PRP-104), 389 (`secret_free_text` pattern variants and regex time budget; PRP-101/102).
 - Product check (can an operator use it without editing files): no, by design; contracts only.

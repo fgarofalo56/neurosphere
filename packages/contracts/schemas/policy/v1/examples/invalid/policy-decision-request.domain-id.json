@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.2.0",
+  "decision_point": "gateway",
+  "operation": "model_call",
+  "agent_id": "commercial:acme:neurosphere:agent:support-bot",
+  "agent_version_id": null,
+  "tool_id": null,
+  "mcp_server_id": null,
+  "model": {
+    "model_name": "gpt-4o",
+    "model_version": "2024-08-06",
+    "deployment_id": null
+  },
+  "data_asset_ids": [],
+  "access": null,
+  "environment": "production",
+  "request_ref": "req-42",
+  "domain_id": "commercial:acme:neurosphere:domain:support"
+}

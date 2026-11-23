@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.2.0",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "channel_id": "local-sink",
+  "display_name": "Local sink",
+  "kind": "webhook",
+  "allowed_host": "notify-sink",
+  "endpoint_credential": null,
+  "hmac_credential": null,
+  "local_sink": true,
+  "local_sink_url": "http://notify-sink:8080/hook",
+  "enabled": true
+}

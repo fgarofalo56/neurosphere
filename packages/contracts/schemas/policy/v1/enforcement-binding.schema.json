@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/policy/v1/enforcement-binding.schema.json",
+  "title": "EnforcementBinding",
+  "description": "Binds a policy to an enforcement point and a mode (PRP-99; body of admin_kind enforcement_binding). mode defaults to audit (GD-7); enforce is set only by an approved enforcement_mode_change action. A null target means every target of that point in the domain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "binding_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "policy_id",
+    "point",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "binding_id": {
+      "description": "Binding id (slug).",
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "cloud": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "policy_id": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "point": {
+      "$ref": "#/$defs/enforcement_point"
+    },
+    "target": {
+      "description": "Specific target; null = every target of the point in the domain.",
+      "anyOf": [
+        {
+          "$ref": "../../actions/v1/target-ref.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "mode": {
+      "$ref": "policy-definition.schema.json#/$defs/enforcement_mode",
+      "default": "audit"
+    },
+    "state": {
+      "description": "pending: not yet applied. applied: verified. failed: apply failed. drifted: verified state changed. not_supported: the point cannot enforce here.",
+      "type": "string",
+      "enum": [
+        "pending",
+        "applied",
+        "failed",
+        "drifted",
+        "not_supported"
+      ]
+    },
+    "last_intent_id": {
+      "description": "Last action intent that changed this binding.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "last_audit_id": {
+      "description": "Audit record of that change.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "last_verified_at": {
+      "description": "When the applied state was last read back.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "$defs": {
+    "enforcement_point": {
+      "title": "EnforcementPoint",
+      "description": "Where a decision is enforced; open-ended: readers must tolerate unknown values.",
+      "type": "string",
+      "enum": [
+        "gateway",
+        "tool_call",
+        "mcp_server",
+        "mcp_client",
+        "sdk",
+        "budget",
+        "registration"
+      ]
+    }
+  }
+}

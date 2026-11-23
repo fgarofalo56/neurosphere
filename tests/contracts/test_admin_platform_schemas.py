@@ -53,6 +53,12 @@ KIND_SCHEMAS = {
     "review_policy": REVIEW,
     "system_setting": SETTING,
 }
+# PRP-99 item 5: bodies owned by other areas; pinned in tests/contracts/test_governance_a_enums.py.
+CROSS_AREA_KIND_SCHEMAS = {
+    "notification_channel": "../../notifications/v1/notification-channel.schema.json",
+    "notification_subscription": "../../notifications/v1/notification-subscription.schema.json",
+    "enforcement_binding": "../../policy/v1/enforcement-binding.schema.json",
+}
 
 
 def _ex(name: str) -> dict[str, Any]:
@@ -182,7 +188,11 @@ def test_review_policy_document_maps_to_registry_without_loss() -> None:
 
 def test_review_permissions_exist_in_core() -> None:
     enum = load_schema(REVIEW)["$defs"]["policy"]["properties"]["approver_permission"]["enum"]
-    assert {Permission(p) for p in enum} == {Permission.ACTION_APPROVE, Permission.CATALOG_CURATE}
+    # PRP-99 item 5 added config.manage and govpolicy.manage (open-ended, unused by core yet).
+    assert set(enum) == {"action.approve", "catalog.curate", "config.manage", "govpolicy.manage"}
+    assert {Permission.ACTION_APPROVE, Permission.CATALOG_CURATE} <= {
+        Permission(p) for p in enum if p in {x.value for x in Permission}
+    }
 
 
 def test_check_review_policy_document() -> None:
@@ -303,6 +313,10 @@ def test_validate_cost_tags() -> None:
 def test_system_setting_members_hold_references_only() -> None:
     defs = load_schema(SETTING)["$defs"]
     for name, body in defs.items():
+        if "credential" not in body["properties"]:
+            # PRP-99 item 5: notifications and enforcement settings hold no credential at all.
+            assert name in {"notifications", "enforcement"}, name
+            continue
         credential = body["properties"]["credential"]
         refs = [credential.get("$ref")] + [b.get("$ref") for b in credential.get("anyOf", [])]
         assert "credential-reference.schema.json" in refs, name
@@ -353,6 +367,8 @@ def test_admin_config_body_is_pinned_to_its_kind(kind: str) -> None:
 
 def test_admin_kinds_cover_every_body_schema() -> None:
     kinds = load_schema("admin/v1/common.schema.json")["$defs"]["admin_kind"]["enum"]
-    assert set(kinds) == set(KIND_SCHEMAS)
+    assert set(kinds) == set(KIND_SCHEMAS) | set(CROSS_AREA_KIND_SCHEMAS)
     body = load_schema(DOCUMENT)["properties"]["body"]["anyOf"]
-    assert {b["$ref"] for b in body} == {r.rsplit("/", 1)[-1] for r in KIND_SCHEMAS.values()}
+    assert {b["$ref"] for b in body} == {r.rsplit("/", 1)[-1] for r in KIND_SCHEMAS.values()} | set(
+        CROSS_AREA_KIND_SCHEMAS.values()
+    )

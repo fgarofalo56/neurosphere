@@ -6,6 +6,46 @@
  */
 
 /**
+ * What happened; open-ended: readers must tolerate unknown values.
+ *
+ * This interface was referenced by `NotificationSubscription`'s JSON-Schema
+ * via the `definition` "event_class".
+ */
+export type NotificationEventClass =
+  | "policy_violation_opened"
+  | "policy_violation_escalated"
+  | "policy_violation_resolved"
+  | "policy_exception_requested"
+  | "policy_exception_decided"
+  | "hitl_item_assigned"
+  | "hitl_item_escalated"
+  | "hitl_item_expiring"
+  | "approval_requested"
+  | "approval_decided"
+  | "action_executed"
+  | "action_failed"
+  | "capture_policy_changed"
+  | "enforcement_mode_changed"
+  | "budget_threshold_crossed"
+  | "channel_delivery_failed";
+/**
+ * Lowest severity delivered.
+ */
+export type PolicySeverity = "low" | "medium" | "high" | "critical";
+/**
+ * Where a decision is enforced; open-ended: readers must tolerate unknown values.
+ *
+ * This interface was referenced by `EnforcementBinding`'s JSON-Schema
+ * via the `definition` "enforcement_point".
+ */
+export type EnforcementPoint =
+  "gateway" | "tool_call" | "mcp_server" | "mcp_client" | "sdk" | "budget" | "registration";
+/**
+ * How a policy or enforcement point acts: off (not evaluated), audit (evaluated and recorded, never blocks; the default, GD-7) or enforce (blocks). Enforce is set only by an approved action.
+ */
+export type EnforcementMode = "off" | "audit" | "enforce";
+
+/**
  * Envelope of one versioned operator configuration document in the admin_config store (PRP-65). Partitioned by customer_id; one document per (kind, id), every accepted write increments version and replaces etag. A retired document is kept for audit and is never applied. body holds the kind's own contract document; JSON Schema validates it per kind (allOf below) and core validates it again through ADMIN_KIND_MODELS (PRP-65) because the generated Pydantic model cannot express the per-kind rule (ADR-0004 shape projection).
  */
 export interface AdminConfigDocument {
@@ -22,7 +62,7 @@ export interface AdminConfigDocument {
    */
   customer_id: string;
   /**
-   * Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65).
+   * Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65). Open-ended: readers must tolerate unknown values.
    */
   kind:
     | "producer"
@@ -31,7 +71,10 @@ export interface AdminConfigDocument {
     | "budget"
     | "price_sheet"
     | "review_policy"
-    | "system_setting";
+    | "system_setting"
+    | "notification_channel"
+    | "notification_subscription"
+    | "enforcement_binding";
   /**
    * Monotonic version of an operator configuration document, incremented on every accepted write.
    */
@@ -62,7 +105,10 @@ export interface AdminConfigDocument {
     | SpendBudget
     | PriceSheetUpload
     | ReviewPolicyDocument
-    | SystemSetting;
+    | SystemSetting
+    | NotificationChannel
+    | NotificationSubscription
+    | EnforcementBinding;
 }
 /**
  * One registered ingest producer (PRP-41). Carries every field of the ingest edge's ProducerRegistration (services/api ingest/auth.py) so the registry can be loaded from the admin_config store: the producer authenticates with Authorization: Bearer <producer_id>.<secret> and the edge compares SHA-256(secret) with secret_sha256 in constant time. Only the hash is stored; the secret is returned once, in ProducerSecretIssued. A disabled producer is refused at the edge. Rules JSON Schema cannot express (source_id values are unique) are checked by tests/contracts/validators.py::check_producer_sources_unique.
@@ -124,8 +170,26 @@ export interface ConnectorConfig {
    * Operator-chosen id of this connector instance, unique per customer.
    */
   connector_id: string;
+  /**
+   * Open-ended: readers must tolerate unknown values.
+   */
   connector_kind:
-    "gateway_poll" | "foundry_discovery" | "billing_export" | "otel" | "azure_monitor_ai";
+    | "gateway_poll"
+    | "foundry_discovery"
+    | "billing_export"
+    | "otel"
+    | "azure_monitor_ai"
+    | "generic"
+    | "entra_identity"
+    | "purview"
+    | "unity_catalog"
+    | "m365_copilot"
+    | "github_copilot"
+    | "cursor"
+    | "openai_enterprise"
+    | "anthropic_claude"
+    | "entra_shadow_ai"
+    | "github_issues";
   /**
    * Domains the connector's data is attributed to. At least one; no wildcard.
    *
@@ -386,9 +450,9 @@ export interface ReviewKindDefault {
 export interface ReviewPolicySettings {
   self_approval_forbidden: boolean;
   /**
-   * Permission the reviewer needs on the item's domain.
+   * Permission the reviewer needs on the item's domain. Open-ended: readers must tolerate unknown values.
    */
-  approver_permission: "action.approve" | "catalog.curate";
+  approver_permission: "action.approve" | "catalog.curate" | "config.manage" | "govpolicy.manage";
   /**
    * Positive duration in whole seconds, at most 90 days.
    *
@@ -444,7 +508,19 @@ export interface SystemSetting {
    * Contract version of the document, major 1 with additive minor revisions (ADR-0004).
    */
   schema_version: string;
-  setting_key: "copilot" | "judge" | "search" | "scan" | "mcp_server" | "write_target";
+  /**
+   * Open-ended: readers must tolerate unknown values.
+   */
+  setting_key:
+    | "copilot"
+    | "judge"
+    | "search"
+    | "scan"
+    | "mcp_server"
+    | "write_target"
+    | "interaction_capture"
+    | "notifications"
+    | "enforcement";
   enabled: boolean;
   copilot?: ModelEndpointSetting;
   judge?: ModelEndpointSetting;
@@ -452,6 +528,9 @@ export interface SystemSetting {
   scan?: ScanSetting;
   mcp_server?: McpServerSetting;
   write_target?: WriteTargetSetting;
+  interaction_capture?: InteractionCaptureSetting;
+  notifications?: NotificationsSetting;
+  enforcement?: EnforcementSetting;
 }
 /**
  * An Azure OpenAI / Foundry model deployment used by the copilot or the evaluation judge.
@@ -529,4 +608,238 @@ export interface WriteTargetSetting {
    */
   resource_id: string;
   credential: CredentialReference;
+}
+/**
+ * Where captured interaction content is stored and how it is encrypted (PRP-99). kek_uri is a Key Vault key identifier only (https://<vault>.vault.azure.net or usgovcloudapi.net /keys/<name>[/<32 hex version>]); it is null only when kek_provider is local_development and is required when it is key_vault_key. The vault suffix must match the cloud of the deployment (tests/contracts/validators.py::check_kek_uri_cloud). Capture itself stays off until an approved capture_policy_change.
+ *
+ * This interface was referenced by `SystemSetting`'s JSON-Schema
+ * via the `definition` "interaction_capture".
+ */
+export interface InteractionCaptureSetting {
+  /**
+   * Where the key-encryption key lives. Open-ended: readers must tolerate unknown values.
+   */
+  kek_provider: "key_vault_key" | "local_development";
+  /**
+   * Key Vault key identifier of the key-encryption key; null only for local_development.
+   */
+  kek_uri: string | null;
+  /**
+   * Azure Resource Manager resource id (/subscriptions/<guid>/resourceGroups/<name>/providers/<namespace>/<type>/<name>...).
+   */
+  content_storage_account_resource_id: string;
+  content_container: string;
+  credential: CredentialReference;
+  max_content_chars_per_interaction?: number;
+  shed_capture_at_queue_percent?: number;
+}
+/**
+ * Notification sender limits and the egress allow-list (PRP-99). Hostnames only; every channel's allowed_host must be on this list at send time.
+ *
+ * This interface was referenced by `SystemSetting`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface NotificationsSetting {
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  egress_allowed_hosts: [string, ...string[]];
+  max_attempts?: number;
+  retry_base_seconds?: number;
+  dedup_window_seconds?: number;
+}
+/**
+ * Policy decision service limits (PRP-99). The SDK guard fails open by default (owner decision GD-8); enforcement modes live on EnforcementBinding and default to audit.
+ *
+ * This interface was referenced by `SystemSetting`'s JSON-Schema
+ * via the `definition` "enforcement".
+ */
+export interface EnforcementSetting {
+  decision_cache_ttl_seconds?: number;
+  /**
+   * Open-ended: readers must tolerate unknown values.
+   */
+  sdk_failure_mode?: "fail_open" | "fail_closed";
+  decide_rate_limit_per_minute?: number;
+}
+/**
+ * A notification channel (PRP-99; body of admin_kind notification_channel). The endpoint is never a property of this document: it lives in Key Vault and is referenced by endpoint_credential (key_vault_secret only). The one exception is local_sink_url, a plain-HTTP loopback or compose-service URL for local development (core refuses local_sink unless NS_ENV=local). Rules the Pydantic projection drops (if/then) are pinned by tests/contracts/test_governance_a_notifications.py: local_sink requires local_sink_url and local_sink_url requires local_sink; endpoint_credential is null only with local_sink; a webhook channel needs hmac_credential unless local_sink.
+ */
+export interface NotificationChannel {
+  /**
+   * Contract version of the document; major 1 for every catalog v1 schema.
+   */
+  schema_version: string;
+  /**
+   * Lowercase operator-chosen identifier.
+   */
+  channel_id: string;
+  /**
+   * Sovereign cloud boundary. Government data is never bridged to Commercial.
+   */
+  cloud: "commercial" | "government";
+  /**
+   * Customer segment of the canonical ID grammar.
+   */
+  customer_id: string;
+  /**
+   * Owning domain; authorization scope anchor. Canonical ID (canonical_id.schema.json) whose type segment is 'domain'.
+   */
+  domain_id: string;
+  /**
+   * Human-readable label shown in the console. Not an identity attribute: never a person's name, UPN or email.
+   */
+  display_name: string;
+  /**
+   * Transport. Open-ended: readers must tolerate unknown values. email is declared; PRP-107 may ship it not_built.
+   */
+  kind: "webhook" | "teams_webhook" | "email";
+  /**
+   * The one host this channel may call: a lowercase bare DNS hostname (no scheme, port, path or IP literal; the last label starts with a letter), checked against the egress allow-list at send time.
+   */
+  allowed_host: string;
+  /**
+   * Key Vault secret holding the endpoint URL or transport settings. Null only when local_sink is true.
+   */
+  endpoint_credential?: CredentialReference | null;
+  /**
+   * Key Vault secret holding the webhook signing material. Required (non-null) for kind webhook unless local_sink.
+   */
+  hmac_credential?: CredentialReference | null;
+  /**
+   * Deliver to local_sink_url instead of the vaulted endpoint. Core refuses it unless NS_ENV=local (PRP-107 clarification 7).
+   */
+  local_sink?: boolean;
+  /**
+   * Plain-HTTP loopback or compose-service URL with no query string or userinfo. Present when and only when local_sink is true.
+   */
+  local_sink_url?: string | null;
+  enabled: boolean;
+}
+/**
+ * Which event classes reach which channel and for which audience roles (PRP-99; body of admin_kind notification_subscription). Recipients are resolved inside the sender from the roles and are never stored.
+ */
+export interface NotificationSubscription {
+  /**
+   * Contract version of the document; major 1 for every catalog v1 schema.
+   */
+  schema_version: string;
+  /**
+   * Lowercase operator-chosen identifier.
+   */
+  subscription_id: string;
+  /**
+   * Sovereign cloud boundary. Government data is never bridged to Commercial.
+   */
+  cloud: "commercial" | "government";
+  /**
+   * Customer segment of the canonical ID grammar.
+   */
+  customer_id: string;
+  /**
+   * Owning domain; authorization scope anchor. Canonical ID (canonical_id.schema.json) whose type segment is 'domain'.
+   */
+  domain_id: string;
+  /**
+   * Lowercase operator-chosen identifier.
+   */
+  channel_id: string;
+  /**
+   * @minItems 1
+   * @maxItems 16
+   */
+  event_classes: [NotificationEventClass, ...NotificationEventClass[]];
+  /**
+   * Roles whose members receive the notification.
+   *
+   * @minItems 1
+   * @maxItems 6
+   *
+   * Items: Platform role (NS-08). admin, security_auditor and interaction_investigator are privileged and always time-bound. Open-ended: readers must tolerate unknown values.
+   */
+  audience_roles: [
+    (
+      | "viewer"
+      | "analyst"
+      | "domain_steward"
+      | "admin"
+      | "security_auditor"
+      | "interaction_investigator"
+    ),
+    ...(
+      | "viewer"
+      | "analyst"
+      | "domain_steward"
+      | "admin"
+      | "security_auditor"
+      | "interaction_investigator"
+    )[],
+  ];
+  min_severity?: PolicySeverity;
+  enabled: boolean;
+}
+/**
+ * Binds a policy to an enforcement point and a mode (PRP-99; body of admin_kind enforcement_binding). mode defaults to audit (GD-7); enforce is set only by an approved enforcement_mode_change action. A null target means every target of that point in the domain.
+ */
+export interface EnforcementBinding {
+  /**
+   * Contract version of the document; major 1 for every catalog v1 schema.
+   */
+  schema_version: string;
+  /**
+   * Lowercase operator-chosen identifier.
+   */
+  binding_id: string;
+  /**
+   * Sovereign cloud boundary. Government data is never bridged to Commercial.
+   */
+  cloud: "commercial" | "government";
+  /**
+   * Customer segment of the canonical ID grammar.
+   */
+  customer_id: string;
+  /**
+   * Owning domain; authorization scope anchor. Canonical ID (canonical_id.schema.json) whose type segment is 'domain'.
+   */
+  domain_id: string;
+  /**
+   * Lowercase operator-chosen identifier.
+   */
+  policy_id: string;
+  point: EnforcementPoint;
+  /**
+   * Specific target; null = every target of the point in the domain.
+   */
+  target?: TargetRef | null;
+  mode?: EnforcementMode;
+  /**
+   * pending: not yet applied. applied: verified. failed: apply failed. drifted: verified state changed. not_supported: the point cannot enforce here.
+   */
+  state: "pending" | "applied" | "failed" | "drifted" | "not_supported";
+  /**
+   * Last action intent that changed this binding.
+   */
+  last_intent_id?: string | null;
+  /**
+   * Audit record of that change.
+   */
+  last_audit_id?: string | null;
+  /**
+   * When the applied state was last read back.
+   */
+  last_verified_at?: string | null;
+}
+/**
+ * Reference to the resource an action changes or an audit record concerns. `canonical_id` uses the catalog grammar `cloud:customer:source:type:id` (Clarification 7); the pattern here mirrors it and the catalog/v1 grammar is authoritative. Python validator `validate_target_ref_matches_catalog_grammar` in tests/contracts/test_canonical_ids.py checks this pattern against the catalog ID corpus so the two cannot drift. The version being acted on is carried beside this object (ActionIntent.target_version), not inside it, so it is hashed as its own field.
+ */
+export interface TargetRef {
+  /**
+   * Cloud/customer/source qualified canonical ID of the target.
+   */
+  canonical_id: string;
+  /**
+   * Catalog entity type of the target, lowercase snake_case (for example `model_deployment`, `agent_version`).
+   */
+  entity_type: string;
 }

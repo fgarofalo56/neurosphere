@@ -434,6 +434,87 @@ class SensitivityCategory(
     """
 
 
+class AgentVersionApprovalState(
+    RootModel[Literal["not_required", "pending", "approved", "rejected", "suspended"]]
+):
+    root: Annotated[
+        Literal["not_required", "pending", "approved", "rejected", "suspended"],
+        Field(title="AgentVersionApprovalState"),
+    ]
+    """
+    Approval state of an agent version. Open-ended: readers must tolerate unknown values.
+    """
+
+
+class IntentId(RootModel[StrictStr]):
+    root: Annotated[
+        StrictStr,
+        Field(pattern="^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+    ] = None
+    """
+    Action intent that made the decision (lowercase UUID).
+    """
+
+
+class AuditId(RootModel[StrictStr]):
+    root: Annotated[
+        StrictStr,
+        Field(pattern="^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+    ] = None
+    """
+    Audit record of the decision (lowercase UUID).
+    """
+
+
+class PolicyId(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(pattern="^[a-z0-9][a-z0-9._-]{0,63}$")] = None
+    """
+    Governance policy that required the approval.
+    """
+
+
+class PolicyVersion(RootModel[StrictInt]):
+    root: Annotated[StrictInt, Field(ge=1)] = None
+
+
+class ReasonCode(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(pattern="^[a-z][a-z0-9_]{0,63}$")] = None
+    """
+    Machine reason code in snake_case, never free text.
+    """
+
+
+class AgentVersionApproval(BaseModel):
+    """
+    Approval record of one agent version (PRP-99). Null on AgentVersion means no approval was recorded.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    state: AgentVersionApprovalState
+    requested_at: Timestamp | None = None
+    decided_at: Timestamp | None = None
+    decided_by: PersonId | None = None
+    intent_id: IntentId | None = None
+    """
+    Action intent that made the decision (lowercase UUID).
+    """
+    audit_id: AuditId | None = None
+    """
+    Audit record of the decision (lowercase UUID).
+    """
+    policy_id: PolicyId | None = None
+    """
+    Governance policy that required the approval.
+    """
+    policy_version: PolicyVersion | None = None
+    reason_code: ReasonCode | None = None
+    """
+    Machine reason code in snake_case, never free text.
+    """
+
+
 class SensitivityCategories(RootModel[list[SensitivityCategory]]):
     """
     Sensitivity categories of a data asset; empty when none are declared or not yet assessed.

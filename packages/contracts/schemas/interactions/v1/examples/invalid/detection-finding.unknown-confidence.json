@@ -1,0 +1,15 @@
+{
+  "category": "jwt",
+  "part": "prompt",
+  "detector_id": "jwt-detector",
+  "detector_version": "1.0.0",
+  "count": 1,
+  "action": "replaced",
+  "confidence": "certain",
+  "spans": [
+    {
+      "start": 24,
+      "end": 43
+    }
+  ]
+}

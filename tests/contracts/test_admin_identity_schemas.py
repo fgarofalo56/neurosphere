@@ -62,6 +62,10 @@ def test_common_patterns_match_core() -> None:
         "price_sheet",
         "review_policy",
         "system_setting",
+        # PRP-99 item 5: additive, open-ended.
+        "notification_channel",
+        "notification_subscription",
+        "enforcement_binding",
     ]
 
 

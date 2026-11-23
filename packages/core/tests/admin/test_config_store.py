@@ -33,6 +33,7 @@ from neurosphere_core.admin import (
     admin_config_chain_id,
     cosmos_item_id,
     validate_admin_body,
+    validate_kind,
 )
 from neurosphere_core.admin.store import AdminConfigStoreBase
 from neurosphere_core.errors import (
@@ -62,13 +63,29 @@ ACTOR = "commercial:contoso:entra:person:p-" + "0c" * 32
 OTHER_ACTOR = "commercial:contoso:entra:person:p-" + "1d" * 32
 
 
-def _examples(kind_dir: str) -> list[tuple[str, str, str, dict[str, Any]]]:
+# Setting keys the contract declares but core deliberately still refuses (fail closed) until
+# PRP-103/105/107 register their members; these examples are asserted refused separately.
+PENDING_SETTING_KEYS = frozenset({"interaction_capture", "notifications", "enforcement"})
+PENDING_ADMIN_KINDS = frozenset(
+    {"notification_channel", "notification_subscription", "enforcement_binding"}
+)
+
+
+def _examples(
+    kind_dir: str, *, pending: bool = False
+) -> list[tuple[str, str, str, dict[str, Any]]]:
     out = []
     for path in sorted((EXAMPLES / kind_dir).glob("*.json")):
         stem = path.name.split(".")[0]
         if stem in KIND_BY_STEM:
             cloud = "government" if "government" in path.name else "commercial"
             body = json.loads(path.read_text(encoding="utf-8"))
+            is_pending = (
+                KIND_BY_STEM[stem] == "system_setting"
+                and body.get("setting_key") in PENDING_SETTING_KEYS
+            )
+            if is_pending != pending:
+                continue
             out.append((path.name, KIND_BY_STEM[stem], cloud, body))
     return out
 
@@ -95,7 +112,34 @@ class Clock:
 def test_every_admin_kind_has_exactly_one_model() -> None:
     assert set(ADMIN_KIND_MODELS) == ADMIN_KINDS
     union = AdminConfigDocument.model_fields["body"].annotation
-    assert set(ADMIN_KIND_MODELS.values()) == set(union.__args__)  # type: ignore[union-attr]
+    assert set(ADMIN_KIND_MODELS.values()) <= set(union.__args__)  # type: ignore[union-attr]
+
+
+def test_pending_governance_kinds_are_declared_but_refused() -> None:
+    schema_path = EXAMPLES.parent / "common.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    declared = set(schema["$defs"]["admin_kind"]["enum"])
+    assert PENDING_ADMIN_KINDS <= declared
+    assert not PENDING_ADMIN_KINDS & ADMIN_KINDS
+    for kind in PENDING_ADMIN_KINDS:
+        with pytest.raises(InvalidSchemaError):
+            validate_kind(kind)
+
+
+@pytest.mark.parametrize(
+    ("name", "kind", "cloud", "body"), _examples("valid", pending=True), ids=lambda v: str(v)[:60]
+)
+def test_pending_setting_keys_are_refused(
+    name: str, kind: str, cloud: str, body: dict[str, Any]
+) -> None:
+    assert body["setting_key"] in PENDING_SETTING_KEYS, name
+    with pytest.raises(InvalidSchemaError):
+        validate_admin_body(kind, body, customer_id=CUSTOMER, cloud="commercial")
+
+
+def test_all_pending_setting_key_examples_exist() -> None:
+    keys = {body["setting_key"] for _, _, _, body in _examples("valid", pending=True)}
+    assert keys == PENDING_SETTING_KEYS
 
 
 @pytest.mark.parametrize(

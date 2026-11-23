@@ -75,7 +75,7 @@ def test_sla_under_a_minute_is_refused_and_contract_bounds_hold() -> None:
         policy_settings(expiry_seconds=7776001),
         policy_settings(max_escalations=11),
         policy_settings(sla_seconds=0),
-        policy_settings(approver_permission="config.manage"),
+        policy_settings(approver_permission="not.a.permission"),
     ):
         with pytest.raises(ValidationError):
             _doc(maker_checker=bad)

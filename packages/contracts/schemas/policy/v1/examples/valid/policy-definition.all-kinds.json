@@ -1,0 +1,182 @@
+{
+  "schema_version": "1.2.0",
+  "policy_id": "support-governance",
+  "policy_version": 2,
+  "previous_version": 1,
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "display_name": "Support governance",
+  "document_url": null,
+  "status": "published",
+  "mode": "audit",
+  "severity": "medium",
+  "content_sha256": "sha256:abababababababababababababababababababababababababababababababab",
+  "created_by": "commercial:acme:entra:person:p-1111111111111111111111111111111111111111111111111111111111111111",
+  "created_at": "2026-11-01T10:00:00Z",
+  "published_at": "2026-11-02T10:00:00Z",
+  "published_intent_id": "00000001-0000-4000-8000-000000000001",
+  "published_audit_id": "00000002-0000-4000-8000-000000000002",
+  "rules": [
+    {
+      "rule_id": "model-allow",
+      "kind": "model_allow_list",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "allowed_models": [
+          {
+            "model_name": "gpt-4o",
+            "model_version": null
+          }
+        ],
+        "allowed_deployment_ids": []
+      }
+    },
+    {
+      "rule_id": "pii-access",
+      "kind": "data_sensitivity_access",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "sensitivity_categories": [
+          "pii",
+          "phi"
+        ],
+        "access": "read_or_write",
+        "allowed_when": "agent_version_approved"
+      }
+    },
+    {
+      "rule_id": "eu-residency",
+      "kind": "residency",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "allowed_geographies": [
+          "eu_eea"
+        ],
+        "allowed_regions": [
+          "westeurope"
+        ]
+      }
+    },
+    {
+      "rule_id": "monthly-budget",
+      "kind": "budget",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "budget_record_id": "budget-support-monthly",
+        "threshold_percent": 100,
+        "on_breach": "alert"
+      }
+    },
+    {
+      "rule_id": "owner-needed",
+      "kind": "required_owner",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "min_owners": 1,
+        "require_active_owner": true
+      }
+    },
+    {
+      "rule_id": "recertify",
+      "kind": "required_attestation",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "attestation_kind": "owner_recertification",
+        "max_age_days": 180
+      }
+    },
+    {
+      "rule_id": "approve-agents",
+      "kind": "required_approval",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "entity_types": [
+          "agent_version"
+        ],
+        "block_activation": true
+      }
+    },
+    {
+      "rule_id": "no-card-numbers",
+      "kind": "content_rule",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "detected_categories": [
+          "payment_card"
+        ],
+        "min_count": 1,
+        "parts": [
+          "prompt"
+        ],
+        "window_minutes": 60
+      }
+    },
+    {
+      "rule_id": "register-all",
+      "kind": "registration_required",
+      "severity": null,
+      "applies_to": {
+        "entity_types": [],
+        "tags": [],
+        "environments": [],
+        "entity_ids": []
+      },
+      "params": {
+        "entity_types": [
+          "agent",
+          "tool"
+        ],
+        "grace_period_hours": 24
+      }
+    }
+  ]
+}

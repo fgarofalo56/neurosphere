@@ -28,7 +28,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from itertools import count
-from typing import Any, Final, Literal, Protocol, runtime_checkable
+from typing import Any, Final, Literal, Protocol, cast, runtime_checkable
 
 from neurosphere_contracts.admin.v1.admin_config_document import AdminConfigDocument
 from neurosphere_contracts.admin.v1.common import PrincipalId
@@ -336,7 +336,8 @@ class AdminConfigStoreBase(ABC):
             customer_id,
             kind,
             config_id,
-            current.body,
+            # The kind already passed validate_kind, so the body is one of the registered models.
+            cast(AdminBody, current.body),
             version=current.version.root + 1,
             status="retired",
             updated_by=actor,

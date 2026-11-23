@@ -22,7 +22,7 @@ import math
 import re
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import urlsplit
@@ -660,7 +660,8 @@ _RESTORED_TAGGED = ("agent", "agent_version", "tool", "service", "mcp_server", "
 _RESTORED_FIELDS: Mapping[str, frozenset[str]] = {
     **{entity: frozenset({"tag"}) for entity in _RESTORED_TAGGED},
     "agent": frozenset({"tag", "capability"}),
-    "agent_version": frozenset({"tag", "capability"}),
+    # PRP-99 item 5: approval_state applies to agent_version only.
+    "agent_version": frozenset({"tag", "capability", "approval_state"}),
     "tool": frozenset({"tag", "capability"}),
     "grounding_source": frozenset(
         {
@@ -1384,6 +1385,7 @@ def single_document_validators(
                 lambda doc: validate_audit_chain([doc], require_head=False),
             ),
             "admin/v1/connector-config.schema.json": (check_connector_config_cloud,),
+            "admin/v1/system-setting.schema.json": (check_system_setting_cloud,),
             "admin/v1/producer-record.schema.json": (check_producer_sources_unique,),
             "admin/v1/budget.schema.json": (check_budget_thresholds_ascending,),
             "admin/v1/price-sheet-upload.schema.json": (check_price_sheet_upload,),
@@ -1418,9 +1420,55 @@ def single_document_validators(
                 lambda doc: check_capability_matrix([doc]),
             ),
             "connectors/v1/connector-manifest.schema.json": (check_connector_manifest,),
+            "telemetry/v1/content-envelope.schema.json": (check_content_envelope_parts,),
+            "interactions/v1/interaction-record.schema.json": (check_encrypted_ref_cloud,),
+            "interactions/v1/interaction-export-manifest.schema.json": (check_encrypted_ref_cloud,),
+            "policy/v1/policy-exception.schema.json": (check_policy_exception_window,),
+            "policy/v1/policy-decision-request.schema.json": (check_decision_request_subject,),
         }
     )
     return table
+
+
+# ----------------------------------------------------------------- content channel (PRP-99)
+
+
+def check_content_envelope_parts(doc: Doc) -> Problems:
+    """ContentEnvelope carries at most one part per kind (JSON Schema cannot express it)."""
+    parts = doc.get("parts")
+    if not isinstance(parts, list):
+        return []
+    kinds = [p.get("part") for p in parts if isinstance(p, Mapping)]
+    return [f"duplicate content part kind {k!r}" for k, n in Counter(kinds).items() if n > 1]
+
+
+# Python mirror of the `not` patterns in interactions/v1/redacted-content.schema.json
+# `$defs/secret_free_text` (a test keeps the two identical). PRP-101's credential detectors
+# must cover at least these formats.
+SECRET_TEXT_PATTERNS: dict[str, str] = {
+    "private key block": r"-----BEGIN [A-Z ]{0,30}PRIVATE KEY-----",
+    "JWT": r"eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*",
+    "bearer token": r"[Bb][Ee][Aa][Rr][Ee][Rr][ \t]+[A-Za-z0-9._~+/=-]{8,}",
+    "AWS access key id": r"(AKIA|ASIA)[A-Z0-9]{16}",
+    "GitHub token": r"(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})",
+    "sk- key": r"sk-[A-Za-z0-9_-]{20,}",
+    "Azure storage or Service Bus key assignment": (
+        r"(AccountKey|SharedAccessKey)=[A-Za-z0-9+/]{8,}"
+    ),
+    "SAS signature": r"sig=[A-Za-z0-9%+/=]{20,}",
+    "URL with userinfo": r"[A-Za-z][A-Za-z0-9+.-]*://[^\s/@:]+:[^\s/@]+@",
+}
+
+
+def check_secret_free_text(text: object) -> Problems:
+    """Return one problem per credential format found in `text` (empty means secret-free)."""
+    if not isinstance(text, str):
+        return []
+    return [
+        f"text contains a {name}"
+        for name, pattern in SECRET_TEXT_PATTERNS.items()
+        if re.search(pattern, text) is not None
+    ]
 
 
 def run_single_document_validators(
@@ -1431,3 +1479,80 @@ def run_single_document_validators(
         if isinstance(document, Mapping) or validator is validate_canonical_id_fullmatch:
             problems += validator(document)
     return problems
+
+
+def check_kek_uri_cloud(kek_uri: object, cloud: str) -> Problems:
+    """A Key Vault key identifier (`kek_uri`) names a vault on the owning document's cloud.
+
+    Commercial uses ``vault.azure.net``, Government ``vault.usgovcloudapi.net``. Used for
+    ``content_ref`` and ``bundle`` in the interactions area and the interaction_capture setting.
+    """
+    suffix = _VAULT_SUFFIX_BY_CLOUD.get(cloud)
+    if suffix is None:
+        return [f"unknown cloud {cloud!r}"]
+    host = urlsplit(str(kek_uri)).hostname or ""
+    if not host.endswith(suffix):
+        return [f"kek_uri host {host!r} is not a {cloud} Key Vault ({suffix})"]
+    return []
+
+
+def check_encrypted_ref_cloud(doc: Doc) -> Problems:
+    """InteractionRecord ``content_ref`` and InteractionExportManifest ``bundle``: the key
+    encryption key lives in a vault on the document's own cloud (no cross-cloud key wrap)."""
+    cloud = doc.get("cloud")
+    if not isinstance(cloud, str):
+        return []
+    problems: Problems = []
+    for field in ("content_ref", "bundle"):
+        ref = doc.get(field)
+        if isinstance(ref, Mapping) and "kek_uri" in ref:
+            problems.extend(f"{field}: {p}" for p in check_kek_uri_cloud(ref["kek_uri"], cloud))
+    return problems
+
+
+def check_system_setting_cloud(setting: Doc) -> Problems:
+    """SystemSetting ``interaction_capture``: the ``kek_uri`` vault is on the same cloud as the
+    member's own Key Vault credential.
+
+    A SystemSetting carries no cloud field, so the cloud is read from the credential's vault
+    host when it is a ``key_vault_secret``; a managed-identity credential names no cloud and
+    the cloud is then checked by the caller through ``check_kek_uri_cloud`` with the
+    deployment's cloud.
+    """
+    member = setting.get("interaction_capture")
+    if not isinstance(member, Mapping) or member.get("kek_uri") is None:
+        return []
+    credential = member.get("credential")
+    if not isinstance(credential, Mapping) or credential.get("kind") != "key_vault_secret":
+        return []
+    host = urlsplit(str(credential.get("secret_uri", ""))).hostname or ""
+    for cloud, suffix in _VAULT_SUFFIX_BY_CLOUD.items():
+        if host.endswith(suffix):
+            return check_kek_uri_cloud(member["kek_uri"], cloud)
+    return [f"credential secret_uri host {host!r} is not a Key Vault host"]
+
+
+# ------------------------------------------------------------------------ policy (PRP-99)
+
+_DECISION_SUBJECT_FIELDS = ("agent_id", "agent_version_id", "tool_id", "mcp_server_id", "model")
+
+
+def check_policy_exception_window(doc: Doc) -> Problems:
+    """A PolicyException ends after it was requested and at most 365 days later."""
+    try:
+        requested = datetime.fromisoformat(str(doc.get("requested_at")).replace("Z", "+00:00"))
+        expires = datetime.fromisoformat(str(doc.get("expires_at")).replace("Z", "+00:00"))
+    except ValueError:
+        return []
+    if expires <= requested:
+        return ["expires_at is not after requested_at"]
+    if expires - requested > timedelta(days=365):
+        return ["expires_at is more than 365 days after requested_at"]
+    return []
+
+
+def check_decision_request_subject(doc: Doc) -> Problems:
+    """A PolicyDecisionRequest names at least one subject (JSON Schema cannot express it)."""
+    if any(doc.get(name) for name in _DECISION_SUBJECT_FIELDS) or doc.get("data_asset_ids"):
+        return []
+    return ["request names no subject: set an agent, tool, MCP server, model or data asset"]

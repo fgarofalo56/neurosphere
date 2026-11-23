@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/notifications/v1/notification-channel.schema.json",
+  "title": "NotificationChannel",
+  "description": "A notification channel (PRP-99; body of admin_kind notification_channel). The endpoint is never a property of this document: it lives in Key Vault and is referenced by endpoint_credential (key_vault_secret only). The one exception is local_sink_url, a plain-HTTP loopback or compose-service URL for local development (core refuses local_sink unless NS_ENV=local). Rules the Pydantic projection drops (if/then) are pinned by tests/contracts/test_governance_a_notifications.py: local_sink requires local_sink_url and local_sink_url requires local_sink; endpoint_credential is null only with local_sink; a webhook channel needs hmac_credential unless local_sink.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "channel_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "display_name",
+    "kind",
+    "allowed_host",
+    "enabled"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "channel_id": {
+      "description": "Channel id (slug).",
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "cloud": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "display_name": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/display_name"
+    },
+    "kind": {
+      "description": "Transport. Open-ended: readers must tolerate unknown values. email is declared; PRP-107 may ship it not_built.",
+      "type": "string",
+      "enum": ["webhook", "teams_webhook", "email"]
+    },
+    "allowed_host": {
+      "description": "The one host this channel may call: a lowercase bare DNS hostname (no scheme, port, path or IP literal; the last label starts with a letter), checked against the egress allow-list at send time.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253,
+      "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)*[a-z]([a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "endpoint_credential": {
+      "description": "Key Vault secret holding the endpoint URL or transport settings. Null only when local_sink is true.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/key_vault_secret_reference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "hmac_credential": {
+      "description": "Key Vault secret holding the webhook signing material. Required (non-null) for kind webhook unless local_sink.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/key_vault_secret_reference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "local_sink": {
+      "description": "Deliver to local_sink_url instead of the vaulted endpoint. Core refuses it unless NS_ENV=local (PRP-107 clarification 7).",
+      "type": "boolean",
+      "default": false
+    },
+    "local_sink_url": {
+      "description": "Plain-HTTP loopback or compose-service URL with no query string or userinfo. Present when and only when local_sink is true.",
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^http://(127\\.0\\.0\\.1|localhost|[a-z][a-z0-9-]{0,62})(:[0-9]{1,5})?(/[A-Za-z0-9._~%-]{1,128})*/?$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["local_sink"],
+        "properties": { "local_sink": { "const": true } }
+      },
+      "then": {
+        "required": ["local_sink_url"],
+        "properties": { "local_sink_url": { "type": "string" } }
+      },
+      "else": {
+        "required": ["endpoint_credential"],
+        "properties": {
+          "endpoint_credential": { "type": "object" },
+          "local_sink_url": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["kind"],
+        "properties": { "kind": { "const": "webhook" } }
+      },
+      "then": {
+        "if": {
+          "required": ["local_sink"],
+          "properties": { "local_sink": { "const": true } }
+        },
+        "else": {
+          "required": ["hmac_credential"],
+          "properties": { "hmac_credential": { "type": "object" } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "key_vault_secret_reference": {
+      "description": "A CredentialReference narrowed to a Key Vault secret (a managed identity alone cannot hold an endpoint).",
+      "allOf": [
+        {
+          "$ref": "../../admin/v1/credential-reference.schema.json"
+        },
+        {
+          "properties": { "kind": { "const": "key_vault_secret" } }
+        }
+      ]
+    }
+  }
+}

@@ -436,6 +436,76 @@
       ],
       "description": "Kind of sensitive data a data asset holds; sits beside classification, not instead of it. Open-ended: readers must tolerate unknown values."
     },
+    "approval_state": {
+      "title": "AgentVersionApprovalState",
+      "type": "string",
+      "enum": ["not_required", "pending", "approved", "rejected", "suspended"],
+      "description": "Approval state of an agent version. Open-ended: readers must tolerate unknown values."
+    },
+    "agent_version_approval": {
+      "title": "AgentVersionApproval",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": { "$ref": "#/$defs/approval_state" },
+        "requested_at": {
+          "anyOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }],
+          "default": null
+        },
+        "decided_at": {
+          "anyOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }],
+          "default": null
+        },
+        "decided_by": {
+          "anyOf": [{ "$ref": "#/$defs/person_id" }, { "type": "null" }],
+          "default": null
+        },
+        "intent_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            { "type": "null" }
+          ],
+          "default": null,
+          "description": "Action intent that made the decision (lowercase UUID)."
+        },
+        "audit_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            { "type": "null" }
+          ],
+          "default": null,
+          "description": "Audit record of the decision (lowercase UUID)."
+        },
+        "policy_id": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "description": "Governance policy that required the approval."
+        },
+        "policy_version": {
+          "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }],
+          "default": null
+        },
+        "reason_code": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "description": "Machine reason code in snake_case, never free text."
+        }
+      },
+      "description": "Approval record of one agent version (PRP-99). Null on AgentVersion means no approval was recorded."
+    },
     "sensitivity_categories": {
       "type": "array",
       "items": {

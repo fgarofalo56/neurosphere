@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/policy/v1/policy-decision-request.schema.json",
+  "title": "PolicyDecisionRequest",
+  "description": "Ask whether an operation is allowed (PRP-99). Carries no scope field: cloud, customer and domain come from the server-derived identity, so domain_id and customer_id are rejected as unknown keys, and no prompt or content field exists. At least one subject must be named (Python validator check_decision_request_subject in tests/contracts/validators.py). Nullable fields are optional and default to null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_point",
+    "operation"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "decision_point": {
+      "$ref": "enforcement-binding.schema.json#/$defs/enforcement_point"
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "model_call",
+        "tool_invoke",
+        "mcp_call",
+        "data_access",
+        "register"
+      ]
+    },
+    "agent_id": {
+      "description": "Agent canonical id.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "agent_version_id": {
+      "description": "Agent version canonical id.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tool_id": {
+      "description": "Tool canonical id.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "mcp_server_id": {
+      "description": "MCP server canonical id.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "model": {
+      "description": "Model about to be called.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model_name",
+            "model_version",
+            "deployment_id"
+          ],
+          "properties": {
+            "model_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null
+            },
+            "model_version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null
+            },
+            "deployment_id": {
+              "description": "Deployment canonical id.",
+              "anyOf": [
+                {
+                  "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "data_asset_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+      },
+      "maxItems": 20,
+      "uniqueItems": true,
+      "default": [],
+      "description": "Data assets touched."
+    },
+    "access": {
+      "description": "Kind of data access.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "read",
+        "write",
+        null
+      ],
+      "default": null
+    },
+    "environment": {
+      "description": "Deployment environment.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/environment"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "request_ref": {
+      "description": "Caller's opaque request id for correlation.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]{1,128}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  }
+}
