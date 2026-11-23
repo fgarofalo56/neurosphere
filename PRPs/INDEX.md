@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-100-telemetry-tool-service-identity-and-aggregates](active/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | P0 | 4/6 (66%) | todo 1, in-progress 1, merged 4 | sonnet / sonnet | required |
+| [PRP-100-telemetry-tool-service-identity-and-aggregates](active/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | P0 | 5/6 (83%) | in-progress 1, merged 5 | sonnet / sonnet | required |
 
 ## Backlog
 
