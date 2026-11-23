@@ -233,6 +233,12 @@ def test_stack_up_order_grants_only_then_app_then_full_seed() -> None:
     # The catalog seed container seeds the SAME profile: at its default (small) it replaced the
     # demo-world grants and the evaluation role lost its pilot domain.
     assert "seed python scripts/sandbox/sbx_seed_catalog.py --profile $(SEED_PROFILE)" in recipe
-    # Env file applies to the compose app and seed lines only; a plain stack-up has none.
-    assert recipe.count("$(STACK_ENV_LOAD)") == 2
+    # Env file applies to the compose app and seed lines and the host-side FULL seed; a plain
+    # stack-up has none. The full seed reads NS_DEMO_COPILOT_MODE: without the profile it stored
+    # the disabled copilot/search rows, which beat the environment after an API restart.
+    assert recipe.count("$(STACK_ENV_LOAD)") == 3
+    full_line = next(ln for ln in recipe.splitlines() if ln.endswith("$(MAKE) seed-stack"))
+    assert full_line.lstrip().startswith("$(STACK_ENV_LOAD)")
+    grants_line = next(ln for ln in recipe.splitlines() if "SEED_ARGS=--grants-only" in ln)
+    assert "$(STACK_ENV_LOAD)" not in grants_line
     assert re.search(r"^STACK_ENV_FILE \?=\s*$", MAKEFILE.read_text(encoding="utf-8"), re.MULTILINE)

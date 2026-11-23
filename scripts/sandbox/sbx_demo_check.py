@@ -451,7 +451,14 @@ def check_features(client: Client, copilot_mode: str) -> list[FeatureResult]:
             f"invalid_keys: {len(stored.get('invalid_keys') or [])}",
         )
     )
-    results.append(_copilot(client, copilot_mode, components.get("copilot", "absent")))
+    results.append(
+        _copilot(
+            client,
+            copilot_mode,
+            components.get("copilot", "absent"),
+            components.get("agent_matcher", "absent"),
+        )
+    )
     return results
 
 
@@ -466,9 +473,9 @@ def _lifecycle(client: Client) -> FeatureResult:
     return FeatureResult("lifecycle", DISABLED, f"{LIFECYCLE_PATH}: HTTP {reply.status}")
 
 
-def _copilot(client: Client, mode: str, component: str) -> FeatureResult:
+def _copilot(client: Client, mode: str, component: str, matcher: str = "absent") -> FeatureResult:
     if mode == "recorded":
-        return _recorded_copilot(client)
+        return _recorded_copilot(client, matcher)
     if mode != "disabled":
         state = ENABLED if component == "ok" else DISABLED
         return FeatureResult("copilot", state, f"mode {mode}; component copilot: {component}")
@@ -491,8 +498,17 @@ def _copilot(client: Client, mode: str, component: str) -> FeatureResult:
     )
 
 
-def _recorded_copilot(client: Client) -> FeatureResult:
-    """Recorded mode: the status must be ready and synthetic, and one demo question must answer."""
+def _recorded_copilot(client: Client, matcher: str = "ok") -> FeatureResult:
+    """Recorded mode: status ready and synthetic, the agent matcher composed (the copilot offers
+    ``recommend_agent`` only with it), and one demo question must answer."""
+    if matcher != "ok":
+        return FeatureResult(
+            "copilot",
+            DISABLED,
+            f"recorded mode needs component agent_matcher ok (recommend_agent is not offered "
+            f"without it); got {matcher}. A stored disabled search row causes this: reseed a "
+            "fresh database",
+        )
     reply = client.get(COPILOT_STATUS_PATH)
     body = reply.body if isinstance(reply.body, dict) else {}
     if reply.status != 200 or body.get("state") != "ready" or body.get("synthetic") is not True:

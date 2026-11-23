@@ -301,6 +301,84 @@ async def test_unsupported_clauses_are_refused_not_dropped(extra: dict[str, Any]
         )
 
 
+def _domain_filter(op: str, *domains: str) -> list[dict[str, Any]]:
+    if op == "eq":
+        return [{"field": "domain_id", "op": "eq", "value": domains[0]}]
+    return [{"field": "domain_id", "op": "in", "values": list(domains)}]
+
+
+@pytest.mark.parametrize("operation", ["neighbors", "impact_paths"])
+@pytest.mark.parametrize("op", ["eq", "in"])
+async def test_domain_filter_narrows_a_traversal(operation: str, op: str) -> None:
+    rig = await _rig()
+    result = await rig.registry().invoke(
+        TOOL_NAME,
+        {"query": _query(operation, 3, ["a1"], filters=_domain_filter(op, DOM_A))},
+        SEED,
+    )
+    assert result.domain_ids == (DOM_A,)
+    assert _ids(result) == {_aid("a1"), _aid("d"), _aid("d2")} | {
+        f"commercial:{NS}:neurosphere:invokes:a1-d",
+        f"commercial:{NS}:neurosphere:invokes:a1-d2",
+    }
+    # Without the filter the other readable domain is walked.
+    wide = await rig.registry().invoke(TOOL_NAME, {"query": _query(operation, 3, ["a1"])}, SEED)
+    assert _aid("m") in _ids(wide)
+
+
+async def test_domain_filter_cannot_widen_beyond_the_readable_domains() -> None:
+    rig = await _rig()
+    result = await rig.registry(leaky=True).invoke(
+        TOOL_NAME,
+        {"query": _query("neighbors", 3, ["a1"], filters=_domain_filter("in", DOM_A, DOM_B))},
+        STEWARD_A,
+    )
+    assert result.domain_ids == (DOM_A,)
+    assert _aid("m") not in _ids(result)
+    assert _aid("c") not in _ids(result)
+
+
+async def test_domain_filter_start_outside_the_narrowed_set_yields_nothing() -> None:
+    rig = await _rig()
+    result = await rig.registry().invoke(
+        TOOL_NAME,
+        {"query": _query("neighbors", 2, ["m"], filters=_domain_filter("eq", DOM_A))},
+        SEED,
+    )
+    assert result.records == ()
+
+
+async def test_empty_domain_intersection_is_an_empty_result_not_an_error() -> None:
+    rig = await _rig()
+    other = f"commercial:{NS}:neurosphere:domain:zzz"
+    result = await rig.registry().invoke(
+        TOOL_NAME,
+        {"query": _query("neighbors", 1, ["a1"], filters=_domain_filter("eq", other))},
+        STEWARD_A,
+    )
+    assert result.records == ()
+    assert result.domain_ids == ()
+
+
+@pytest.mark.parametrize(
+    "flt",
+    [
+        [{"field": "lifecycle_status", "op": "eq", "value": "active"}],
+        [{"field": "domain_id", "op": "neq", "value": DOM_A}],
+        [
+            {"field": "domain_id", "op": "eq", "value": DOM_A},
+            {"field": "lifecycle_status", "op": "eq", "value": "active"},
+        ],
+    ],
+)
+async def test_non_domain_filters_on_a_traversal_stay_refused(flt: list[dict[str, Any]]) -> None:
+    rig = await _rig()
+    with pytest.raises((ToolBudgetError, InvalidSchemaError)):
+        await rig.registry().invoke(
+            TOOL_NAME, {"query": _query("neighbors", 1, ["a1"], filters=flt)}, SEED
+        )
+
+
 async def test_unknown_keys_are_refused() -> None:
     rig = await _rig()
     registry = rig.registry()
