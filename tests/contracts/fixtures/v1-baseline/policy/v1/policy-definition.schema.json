@@ -1,0 +1,794 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/policy/v1/policy-definition.schema.json",
+  "title": "PolicyDefinition",
+  "description": "A governance policy as typed rules (PRP-99; container policy_definitions, declared by PRP-102). Rules are closed typed kinds with parameter objects: no expression, code, query or free-text condition exists, by decision (PRP-99 clarification 4). Mode defaults to audit (GD-7). The kind-to-params pin and the published-requires-publish-evidence rule are JSON Schema if/then that Pydantic ignores (ADR-0004), so consumers validate against the JSON Schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "policy_version",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "display_name",
+    "status",
+    "severity",
+    "rules",
+    "content_sha256",
+    "created_by",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "policy_id": {
+      "description": "Policy id (slug).",
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "policy_version": {
+      "description": "Increments on every change.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "previous_version": {
+      "description": "Version this one replaces. Null for the first.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "default": null
+    },
+    "cloud": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "display_name": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/display_name"
+    },
+    "document_url": {
+      "description": "Link to the source policy document. Null when none.",
+      "anyOf": [
+        {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/https_url"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "retired"
+      ]
+    },
+    "mode": {
+      "$ref": "#/$defs/enforcement_mode",
+      "default": "audit"
+    },
+    "severity": {
+      "$ref": "#/$defs/severity"
+    },
+    "rules": {
+      "description": "One to 32 typed rules.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    },
+    "content_sha256": {
+      "description": "Digest of the canonical rules, so a published version cannot change silently.",
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "created_by": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/principal_id"
+    },
+    "created_at": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "published_at": {
+      "description": "When published. Required when status is published.",
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "published_intent_id": {
+      "description": "Approved publish intent.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "published_audit_id": {
+      "description": "Audit record of the publish.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "published"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "published_at",
+          "published_intent_id",
+          "published_audit_id"
+        ],
+        "properties": {
+          "published_at": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+          },
+          "published_intent_id": {
+            "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+          },
+          "published_audit_id": {
+            "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "enforcement_mode": {
+      "title": "EnforcementMode",
+      "description": "How a policy or enforcement point acts: off (not evaluated), audit (evaluated and recorded, never blocks; the default, GD-7) or enforce (blocks). Enforce is set only by an approved action.",
+      "type": "string",
+      "enum": [
+        "off",
+        "audit",
+        "enforce"
+      ],
+      "default": "audit"
+    },
+    "severity": {
+      "title": "PolicySeverity",
+      "description": "How serious a violation of the policy or rule is.",
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "rule_kind": {
+      "title": "PolicyRuleKind",
+      "description": "Closed typed rule kind that selects the parameter object; open-ended: readers must tolerate unknown values (PRP-110 adds identity_entitlement).",
+      "type": "string",
+      "enum": [
+        "model_allow_list",
+        "data_sensitivity_access",
+        "residency",
+        "budget",
+        "required_owner",
+        "required_attestation",
+        "required_approval",
+        "content_rule",
+        "registration_required"
+      ]
+    },
+    "applies_to": {
+      "title": "PolicyAppliesTo",
+      "description": "Which entities a rule covers inside the domain. Every list defaults to empty, and all-empty means every entity in the domain.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "entity_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "maxLength": 64
+          },
+          "maxItems": 8,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Catalog entity types."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/tag"
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Catalog tags."
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/environment"
+          },
+          "maxItems": 6,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Deployment environments."
+        },
+        "entity_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Specific entities by canonical id."
+        }
+      }
+    },
+    "model_allow_list_params": {
+      "title": "ModelAllowListParams",
+      "description": "Only the listed models or deployments may be used.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "allowed_models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "model_name"
+            ],
+            "properties": {
+              "model_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "model_version": {
+                "description": "Null means any version.",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 128,
+                "default": null
+              }
+            }
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Allowed model names and versions."
+        },
+        "allowed_deployment_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id"
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Allowed model deployments by canonical id."
+        }
+      }
+    },
+    "data_sensitivity_access_params": {
+      "title": "DataSensitivityAccessParams",
+      "description": "Access to data of the listed sensitivity categories needs an approved agent version or an exception.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sensitivity_categories",
+        "access",
+        "allowed_when"
+      ],
+      "properties": {
+        "sensitivity_categories": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/sensitivity_category"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "access": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write",
+            "read_or_write"
+          ]
+        },
+        "allowed_when": {
+          "type": "string",
+          "enum": [
+            "agent_version_approved",
+            "exception_only"
+          ]
+        }
+      }
+    },
+    "residency_params": {
+      "title": "ResidencyParams",
+      "description": "Data and calls stay inside the listed geographies and regions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "allowed_geographies": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/residency_geography"
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Coarse geographies."
+        },
+        "allowed_regions": {
+          "type": "array",
+          "items": {
+            "$ref": "../../catalog/v1/common.schema.json#/$defs/token"
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Provider region tokens."
+        }
+      }
+    },
+    "budget_rule_params": {
+      "title": "BudgetRuleParams",
+      "description": "A budget record crossing a percentage of its limit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "budget_record_id",
+        "threshold_percent",
+        "on_breach"
+      ],
+      "properties": {
+        "budget_record_id": {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/record_id"
+        },
+        "threshold_percent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "on_breach": {
+          "type": "string",
+          "enum": [
+            "alert",
+            "propose_cap_change"
+          ]
+        }
+      }
+    },
+    "required_owner_params": {
+      "title": "RequiredOwnerParams",
+      "description": "The entity needs owners.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "min_owners": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 1
+        },
+        "require_active_owner": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "required_attestation_params": {
+      "title": "RequiredAttestationParams",
+      "description": "A recent attestation of the given kind is required.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attestation_kind",
+        "max_age_days"
+      ],
+      "properties": {
+        "attestation_kind": {
+          "type": "string",
+          "enum": [
+            "owner_recertification",
+            "agent_attestation"
+          ]
+        },
+        "max_age_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 730
+        }
+      }
+    },
+    "required_approval_params": {
+      "title": "RequiredApprovalParams",
+      "description": "The entity version needs an approval before it is active.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "entity_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "maxLength": 64
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "uniqueItems": true,
+          "default": [
+            "agent_version"
+          ],
+          "description": "Entity types that need approval: `agent_version` today. Open-ended: readers must tolerate unknown values."
+        },
+        "block_activation": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "content_rule_params": {
+      "title": "ContentRuleParams",
+      "description": "Captured interactions whose findings include the listed categories, counted from interaction metadata (never content).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "detected_categories"
+      ],
+      "properties": {
+        "detected_categories": {
+          "type": "array",
+          "items": {
+            "$ref": "../../interactions/v1/detection-finding.schema.json#/$defs/detected_category"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "min_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 1
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "../../interactions/v1/detection-finding.schema.json#/$defs/part_kind"
+          },
+          "maxItems": 5,
+          "uniqueItems": true,
+          "default": [],
+          "description": "Content parts to count; empty means all."
+        },
+        "window_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "default": 60
+        }
+      }
+    },
+    "registration_required_params": {
+      "title": "RegistrationRequiredParams",
+      "description": "Entities seen in telemetry must be registered in the catalog within the grace period.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_types"
+      ],
+      "properties": {
+        "entity_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "tool",
+              "model_deployment",
+              "mcp_server",
+              "service"
+            ]
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "grace_period_hours": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 720,
+          "default": 24
+        }
+      }
+    },
+    "rule": {
+      "title": "PolicyRule",
+      "description": "One typed rule. params is pinned by kind (anyOf plus allOf if/then, the AdminConfigDocument pattern); core validates it again because the generated Pydantic model cannot express the per-kind rule (ADR-0004). There is no expression, code, query or free-text condition field.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "kind",
+        "params"
+      ],
+      "properties": {
+        "rule_id": {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+        },
+        "kind": {
+          "$ref": "#/$defs/rule_kind"
+        },
+        "severity": {
+          "description": "Overrides the policy severity. Null uses the policy's.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/severity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "applies_to": {
+          "$ref": "#/$defs/applies_to",
+          "default": {}
+        },
+        "params": {
+          "description": "The kind's parameter object; allOf below pins which one.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/model_allow_list_params"
+            },
+            {
+              "$ref": "#/$defs/data_sensitivity_access_params"
+            },
+            {
+              "$ref": "#/$defs/residency_params"
+            },
+            {
+              "$ref": "#/$defs/budget_rule_params"
+            },
+            {
+              "$ref": "#/$defs/required_owner_params"
+            },
+            {
+              "$ref": "#/$defs/required_attestation_params"
+            },
+            {
+              "$ref": "#/$defs/required_approval_params"
+            },
+            {
+              "$ref": "#/$defs/content_rule_params"
+            },
+            {
+              "$ref": "#/$defs/registration_required_params"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "model_allow_list"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/model_allow_list_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "data_sensitivity_access"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/data_sensitivity_access_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "residency"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/residency_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "budget"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/budget_rule_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "required_owner"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/required_owner_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "required_attestation"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/required_attestation_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "required_approval"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/required_approval_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "content_rule"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/content_rule_params"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "registration_required"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/registration_required_params"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

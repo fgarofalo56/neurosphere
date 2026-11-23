@@ -22,7 +22,8 @@ not be trusted by inspection.
 
 - Every schema is `packages/contracts/schemas/<area>/v<major>/<name>.schema.json`. Areas
   today: telemetry, cost, catalog, actions, audit, scope, query, chart, recommendations,
-  evaluation, deployment, connectors, errors, admin, compliance, map. All are `v1`.
+  evaluation, deployment, connectors, errors, admin, compliance, map, interactions, policy,
+  notifications. All are `v1`.
 - `$id` is `https://neurosphere.invalid/schemas/<area>/v<major>/<name>.schema.json`, a
   reserved-domain placeholder that is never resolved. Every `$ref` is a relative file
   reference (`common.schema.json#/$defs/x`, `../../actions/v1/actor.schema.json`); remote
@@ -266,3 +267,54 @@ on the model alone.
 **Snapshot.** `tests/contracts/fixtures/v1-baseline/` was refreshed in this change and
 `ALLOWED_TIGHTENINGS` is empty. The three PRP-37 connector-manifest tightenings recorded above
 are now part of the baseline.
+
+## Amendment note (2026-11-23, PRP-99)
+
+**Governance contracts A, additive inside `v1`.** No existing schema was tightened; every new
+`allOf` member constrains only a new value (a new kind, role, setting key or state), and the
+change passed the additive-only test with an empty `ALLOWED_TIGHTENINGS` before the snapshot
+moved.
+
+- `telemetry/v1`: `PayloadRef` gains the optional metadata-only members `interaction_id`,
+  `capture_policy_id`, `capture_policy_version`, `detector_set_version`,
+  `detected_categories` and `content_parts` (sizes only), documented as added in
+  `schema_version` 1.2.0. No top-level property was added and every object stays closed. New
+  `ContentEnvelope`: the transient opt-in content push, accepted only at the edge and never
+  stored, published, logged or returned.
+- New area `interactions/v1`: `DetectionFinding` (fragment, with `DetectedCategory`,
+  `CredentialCategory`, `ContentPartKind`), `RedactedContent`, `InteractionRecord`,
+  `CapturePolicy`, `InteractionAccessPurpose` (fragment) and `InteractionExportManifest`.
+- New area `policy/v1`: `PolicyDefinition` (nine typed rule kinds, `params` pinned by
+  `kind`, no expression field), `PolicyViolation`, `PolicyException`,
+  `PolicyDecisionRequest` (no scope-shaped or content field), `PolicyDecisionResponse` and
+  `EnforcementBinding` (with `EnforcementPoint`).
+- New area `notifications/v1`: `NotificationChannel`, `NotificationSubscription` (with
+  `NotificationEventClass`) and `NotificationDelivery` (no recipient and no body).
+- `catalog/v1`: `AgentVersionApproval` and `AgentVersionApprovalState`; optional
+  `AgentVersion.approval`. `query/v1`: keyword field `approval_state` (agent versions only).
+- `connectors/v1`: six manifest write actions (`agent_version_approve`,
+  `agent_version_suspend`, `capture_policy_change`, `governance_policy_publish`,
+  `enforcement_mode_change`, `gateway_policy_apply`), mirrored by the Python SDK literal.
+- `admin/v1` and `scope/v1`: eleven `connector_kind` values; `admin_kind`
+  `notification_channel`, `notification_subscription` and `enforcement_binding` with body
+  pins; role `interaction_investigator` (privileged, `expires_at` required);
+  `approver_permission` `config.manage` and `govpolicy.manage`; `setting_key`
+  `interaction_capture`, `notifications` and `enforcement` with their members. Core still
+  refuses the new kinds and keys until the consuming PRP registers them.
+
+**Open-ended enums.** `admin_kind`, `role`, `connector_kind`, `setting_key`,
+`approver_permission`, the manifest write actions, `DetectedCategory`, `PolicyRuleKind`,
+`EnforcementPoint`, `NotificationEventClass` and the other enums marked so in their
+descriptions are open-ended: readers must tolerate unknown values.
+
+**Stored content is secret-free by contract.** Only `ContentEnvelope` and `RedactedContent`
+may carry text, and no schema references either, so content cannot be embedded in an event,
+audit record, interaction record, violation, notification, export manifest or setting.
+`RedactedContent` text (`$defs/secret_free_text`) is rejected by JSON Schema `not` patterns
+when it contains a known credential format, and a credential finding must be `replaced`. The
+Python mirror `check_secret_free_text` stays equal to the schema patterns. As with the other
+conditionals, the generated Pydantic models do not enforce these rules: a writer of
+`RedactedContent` must validate against the JSON Schema before it encrypts.
+
+**Snapshot.** `tests/contracts/fixtures/v1-baseline/` was refreshed in this change and
+`ALLOWED_TIGHTENINGS` is empty.

@@ -1,7 +1,7 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `f77c05974a2ed28e3914b30eeb70f746562414b7`. Generated: 2026-11-22.
+> Source commit: `adb6e69690b3f08537eff6c16fabcd17114c8653`. Generated: 2026-11-23.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
 NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 221 operations on 186 paths.

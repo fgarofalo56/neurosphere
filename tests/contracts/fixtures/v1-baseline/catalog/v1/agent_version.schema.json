@@ -115,6 +115,18 @@
       ],
       "default": null,
       "description": "Declared Semantic Version of this release; null when not declared (version_label stays the free-form label)."
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/agent_version_approval"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Approval record; null when no approval was recorded."
     }
   },
   "required": [

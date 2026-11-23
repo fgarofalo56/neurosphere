@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/notifications/v1/notification.schema.json",
+  "title": "NotificationDelivery",
+  "description": "One queued or sent notification (PRP-99; container notification_outbox). Metadata only: a short title and an application-relative link. There is no recipient address, no body and no content of any kind; recipients resolve inside the sender and are never stored. Named NotificationDelivery to avoid the DOM Notification type.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "notification_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "channel_id",
+    "subscription_id",
+    "event_class",
+    "severity",
+    "subject",
+    "title",
+    "link",
+    "correlation_id",
+    "dedup_key",
+    "status",
+    "attempts",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version"
+    },
+    "notification_id": {
+      "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+    },
+    "cloud": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id"
+    },
+    "channel_id": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "subscription_id": {
+      "$ref": "../../admin/v1/common.schema.json#/$defs/slug"
+    },
+    "event_class": {
+      "$ref": "notification-subscription.schema.json#/$defs/event_class"
+    },
+    "severity": {
+      "$ref": "../../policy/v1/policy-definition.schema.json#/$defs/severity"
+    },
+    "subject": {
+      "$ref": "../../actions/v1/target-ref.schema.json"
+    },
+    "title": {
+      "description": "Short headline, 1 to 160 characters, no control characters.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "link": {
+      "description": "Application-relative path to the item in the console, never an absolute or protocol-relative (`//host`) URL.",
+      "type": "string",
+      "pattern": "^/([A-Za-z0-9_.=?&%:-][A-Za-z0-9/_.=?&%:-]{0,510})?$"
+    },
+    "correlation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,128}$"
+    },
+    "dedup_key": {
+      "description": "Digest of event class, subject and channel so one event is one delivery inside the dedup window.",
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "sending", "delivered", "failed", "dead_lettered", "suppressed"]
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20
+    },
+    "next_attempt_at": {
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "last_error_code": {
+      "anyOf": [
+        {
+          "$ref": "../../admin/v1/common.schema.json#/$defs/reason_code"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "created_at": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+    },
+    "delivered_at": {
+      "anyOf": [
+        {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_audit_id": {
+      "description": "Audit record of the event that caused the notification.",
+      "anyOf": [
+        {
+          "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  }
+}

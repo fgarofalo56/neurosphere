@@ -46,7 +46,10 @@
         { "$ref": "budget.schema.json" },
         { "$ref": "price-sheet-upload.schema.json" },
         { "$ref": "review-policy-document.schema.json" },
-        { "$ref": "system-setting.schema.json" }
+        { "$ref": "system-setting.schema.json" },
+        { "$ref": "../../notifications/v1/notification-channel.schema.json" },
+        { "$ref": "../../notifications/v1/notification-subscription.schema.json" },
+        { "$ref": "../../policy/v1/enforcement-binding.schema.json" }
       ]
     }
   },
@@ -78,6 +81,18 @@
     {
       "if": { "properties": { "kind": { "const": "system_setting" } }, "required": ["kind"] },
       "then": { "properties": { "body": { "$ref": "system-setting.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "notification_channel" } }, "required": ["kind"] },
+      "then": { "properties": { "body": { "$ref": "../../notifications/v1/notification-channel.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "notification_subscription" } }, "required": ["kind"] },
+      "then": { "properties": { "body": { "$ref": "../../notifications/v1/notification-subscription.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "enforcement_binding" } }, "required": ["kind"] },
+      "then": { "properties": { "body": { "$ref": "../../policy/v1/enforcement-binding.schema.json" } } }
     }
   ]
 }

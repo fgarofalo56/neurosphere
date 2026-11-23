@@ -44,6 +44,16 @@
         "required": ["op", "role"]
       },
       "then": { "required": ["expires_at"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "op": { "const": "assign" },
+          "role": { "const": "interaction_investigator" }
+        },
+        "required": ["op", "role"]
+      },
+      "then": { "required": ["expires_at"] }
     }
   ]
 }

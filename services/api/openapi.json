@@ -1721,6 +1721,16 @@
             "title": "Agent Id",
             "type": "string"
           },
+          "approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentVersionApproval"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "attributes": {
             "anyOf": [
               {
@@ -1866,6 +1876,111 @@
         ],
         "title": "AgentVersion",
         "type": "object"
+      },
+      "AgentVersionApproval": {
+        "additionalProperties": false,
+        "description": "Approval record of one agent version (PRP-99). Null on AgentVersion means no approval was recorded.",
+        "properties": {
+          "audit_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntentId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PolicyId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PolicyVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/AgentVersionApprovalState"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "AgentVersionApproval",
+        "type": "object"
+      },
+      "AgentVersionApprovalState": {
+        "enum": [
+          "not_required",
+          "pending",
+          "approved",
+          "rejected",
+          "suspended"
+        ],
+        "title": "AgentVersionApprovalState",
+        "type": "string"
       },
       "AgentVersionId": {
         "maxLength": 512,
@@ -2729,6 +2844,11 @@
         ],
         "title": "AuditDomainView",
         "type": "object"
+      },
+      "AuditId": {
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        "title": "AuditId",
+        "type": "string"
       },
       "AuditRecord": {
         "additionalProperties": false,
@@ -4280,7 +4400,18 @@
               "foundry_discovery",
               "billing_export",
               "otel",
-              "azure_monitor_ai"
+              "azure_monitor_ai",
+              "generic",
+              "entra_identity",
+              "purview",
+              "unity_catalog",
+              "m365_copilot",
+              "github_copilot",
+              "cursor",
+              "openai_enterprise",
+              "anthropic_claude",
+              "entra_shadow_ai",
+              "github_issues"
             ],
             "title": "Connector Kind",
             "type": "string"
@@ -9870,6 +10001,11 @@
         "title": "IngestResult",
         "type": "object"
       },
+      "IntentId": {
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        "title": "IntentId",
+        "type": "string"
+      },
       "InvoicedSeries": {
         "additionalProperties": false,
         "properties": {
@@ -10106,7 +10242,8 @@
           "capability",
           "sensitivity_category",
           "residency_region",
-          "residency_geography"
+          "residency_geography",
+          "approval_state"
         ],
         "title": "KeywordField",
         "type": "string"
@@ -13049,6 +13186,16 @@
         ],
         "title": "PolicyFragmentEntry",
         "type": "object"
+      },
+      "PolicyId": {
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "PolicyId",
+        "type": "string"
+      },
+      "PolicyVersion": {
+        "minimum": 1.0,
+        "title": "PolicyVersion",
+        "type": "integer"
       },
       "PollAttribution": {
         "additionalProperties": false,
@@ -16224,7 +16371,9 @@
           "approver_permission": {
             "enum": [
               "action.approve",
-              "catalog.curate"
+              "catalog.curate",
+              "config.manage",
+              "govpolicy.manage"
             ],
             "title": "Approver Permission",
             "type": "string"
@@ -16552,7 +16701,8 @@
           "analyst",
           "domain_steward",
           "admin",
-          "security_auditor"
+          "security_auditor",
+          "interaction_investigator"
         ],
         "title": "Role",
         "type": "string"
@@ -21199,6 +21349,11 @@
       "neurosphere_contracts__catalog__v1__common__EvidenceId": {
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
         "title": "EvidenceId",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__common__ReasonCode": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+        "title": "ReasonCode",
         "type": "string"
       },
       "neurosphere_contracts__catalog__v1__common__Timestamp": {
