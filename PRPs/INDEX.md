@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-78-copilot-graph-timeline-and-recommender-tools](active/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | P0 | 10/11 (90%) | in-progress 1, merged 10 | opus / sonnet | required |
+| [PRP-78-copilot-graph-timeline-and-recommender-tools](active/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | P0 | 11/11 (100%) | merged 11 | opus / sonnet | required |
 
 ## Backlog
 
