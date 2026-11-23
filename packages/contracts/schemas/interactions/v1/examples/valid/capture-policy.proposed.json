@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.2.0",
+  "capture_policy_id": "support-capture",
+  "version": 1,
+  "previous_version": null,
+  "display_name": "Support bot capture",
+  "cloud": "commercial",
+  "customer_id": "acme",
+  "domain_id": "commercial:acme:neurosphere:domain:support",
+  "source_ids": [
+    "otel-gateway"
+  ],
+  "parts": [
+    "prompt",
+    "response"
+  ],
+  "detector_set_version": "detectors-1.0",
+  "customer_dictionary_ids": [],
+  "redaction_mode": "redact_all_detections",
+  "kept_categories": [],
+  "sampling": {
+    "rate": 0.25,
+    "max_per_minute": 120
+  },
+  "max_part_chars": 8192,
+  "retention_class": "interaction_default",
+  "retention_days": 90,
+  "state": "proposed",
+  "approved_intent_id": null,
+  "approved_audit_id": null,
+  "effective_from": null
+}

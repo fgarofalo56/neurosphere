@@ -236,6 +236,17 @@ class PayloadRef(BaseModel):
     """
 
 
+class ContentParts(RootModel[list[ContentPart]]):
+    """
+    Which parts were captured and how large they were; sizes only, never text. Added in schema_version 1.2.0; events without it stay valid.
+    """
+
+    root: Annotated[list[ContentPart], Field(max_length=5, validate_default=True)] = []
+    """
+    Which parts were captured and how large they were; sizes only, never text. Added in schema_version 1.2.0; events without it stay valid.
+    """
+
+
 class TelemetryEvent(BaseModel):
     """
     Normalized telemetry envelope for one observed span or event (NS-01). Raw telemetry lives outside the catalog graph. Missing values are null or the enumerated 'unknown', never 0 by default; numeric 0 is only ever a measured zero. Prompt and response bodies are never carried here; see payload_ref. Rules JSON Schema cannot express are enforced by Python validators in tests/contracts: validate_span_not_self_parent (span_id must differ from parent_span_id) and validate_canonical_id_grammar (canonical_agent_id must also pass the catalog canonical-ID grammar owned by schemas/catalog/v1).
