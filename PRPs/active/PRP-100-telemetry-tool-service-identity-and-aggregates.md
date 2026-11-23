@@ -104,6 +104,9 @@ owns:
   - services/api/tests/ingest_tool_service/**
   - tests/integration/tool_service_subjects/**
   - services/api/neurosphere_api/realtime/source.py
+  - services/api/neurosphere_api/ingest/service.py
+  - docs/connectors/verification/otel-genai-tool-service.md
+  - mkdocs.yml
   - docs/connectors/verification/otel-genai-tool-service.md
 tier1: []
 tier2_appends: []
@@ -132,8 +135,8 @@ Pattern references: `aggregates/subject.py:48-58`.
 
 ### Item 3 - OTLP mapping  [P]
 Deliverable: `map_span` reads the verified tool, service and MCP attributes into the F1 fields, with caps and counted drops; metric points are untouched.
-Owned files: `services/api/neurosphere_api/ingest/otlp_mapping.py`, `services/api/tests/ingest_tool_service/**`.
-Must NOT touch: `ingest/service.py`, `payload/guard.py`. Depends on: items 1 and 2 (names); PRP-70.
+Owned files: `services/api/neurosphere_api/ingest/otlp_mapping.py`, `services/api/tests/ingest_tool_service/**`, `services/api/neurosphere_api/ingest/service.py` (decided 2026-11-23: two call-site changes only, pass the resource into `map_span` through a new optional keyword and merge its attribute drop counts into the existing `IngestResult.dropped_fields`; no route-model change).
+Must NOT touch: `payload/guard.py`, `ingest/reasons.py`. Attribute names come from `docs/connectors/verification/otel-genai-tool-service.md`. Depends on: items 1 and 2 (names); PRP-70.
 Acceptance criteria: mapping criteria; negative body-field test.
 Tests: `services/api/tests/ingest_tool_service/test_otlp_tool_service.py` (new directory name is unique); existing `services/api/tests/ingest` unchanged.
 Pattern references: `otlp_mapping.py:245-280`.
@@ -190,7 +193,7 @@ None. The real-stack run with seeded data belongs to PRP-109 and the hosted run 
 |------|--------|-----------------|-------|
 | 1 Verify-first attribute names | merged | prp-100-telemetry-tool-service-identity | orchestrator (implementers have no web fetch); GenAI conventions moved to `semantic-conventions-genai` (ae8214a8f3a9), core registry aef58d05090b; nav line added to `mkdocs.yml` (tests/docs/test_nav_allowlist requires built == nav); tests/docs 129 passed; 2026-11-23 |
 | 2 Core kinds and resolver | in-progress | prp-100-item-2-core-kinds | sonnet implementer; dispatched 2026-11-23 |
-| 3 OTLP mapping | todo | | |
+| 3 OTLP mapping | in-progress | prp-100-item-3-otlp-mapping | sonnet implementer; dispatched 2026-11-23 beside item 2 (needs item 1 names and F1 only) |
 | 4 Aggregates mapping and rollups | todo | | |
 | 5 End-to-end seeded incident check | todo | | |
 | 6 Integration and close-out | todo | | |
