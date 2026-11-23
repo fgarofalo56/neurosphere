@@ -108,7 +108,7 @@ Gate before the next wave: Tools and services have real aggregates and appear on
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-78: Copilot graph, timeline and recommender tools, tool-call audit, demo-profile copilot](backlog/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | opus | required | none | PRP-71 | - | `prp-78-copilot-graph-tools` |
+| 1 | [PRP-78: Copilot graph, timeline and recommender tools, tool-call audit, demo-profile copilot](active/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | opus | required | none | PRP-71 | - | `prp-78-copilot-graph-tools` |
 | 2 | [PRP-104: Interaction explorer, audited content reads and export](backlog/PRP-104-interaction-explorer-and-export.md) | opus | required | PRP-99, PRP-102, PRP-103, PRP-105 | - | - | `prp-104-interaction-explorer` |
 | 3 | [PRP-108: Agent approval gate and platform-control actions (the fix goes through approval)](backlog/PRP-108-agent-approval-gate-and-platform-control-actions.md) | opus | required | PRP-99, PRP-105, PRP-103 | - | - | `prp-108-platform-control` |
 | 4 | [PRP-106: Governance policy, violations and exceptions UI](backlog/PRP-106-policy-violations-and-exceptions-ui.md) | sonnet | required | PRP-105 | PRP-108 | - | `prp-106-policy-ui` |
@@ -720,7 +720,7 @@ Context for this run: wave W22 of PRPs/EXECUTION-PLAN.md, branch prp-107-notific
 ### PRP-78 (W23)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-78-copilot-graph-timeline-and-recommender-tools.md
+/prp:prp-execute PRPs/active/PRP-78-copilot-graph-timeline-and-recommender-tools.md
 
 Context for this run: wave W23 of PRPs/EXECUTION-PLAN.md, branch prp-78-copilot-graph-tools cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```

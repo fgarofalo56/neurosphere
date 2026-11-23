@@ -255,11 +255,84 @@ def test_unreported_features_are_listed_not_guessed() -> None:
         assert features[name].ok
 
 
-def test_copilot_is_pending_prp_78_while_disabled() -> None:
+def test_copilot_switched_off_by_the_operator_is_open_not_failed() -> None:
     copilot = _features()["copilot"]
-    assert copilot.state == check.PENDING_PRP_78
+    assert copilot.state == check.SWITCHED_OFF
     assert copilot.ok  # neither a pass nor a failure
-    assert "pending_prp_78" in check.render(check.Report(features=[copilot]))
+    assert "switched_off" in check.render(check.Report(features=[copilot]))
+
+
+class AskingClient(FakeClient):
+    """A FakeClient that can also post the demo question (the real client's ``ask_copilot``)."""
+
+    def __init__(self, answers: dict[str, Any], events: list[str], status: int = 200) -> None:
+        super().__init__(answers)
+        self.events = events
+        self.status = status
+        self.asked: list[str] = []
+
+    def ask_copilot(self, question: str) -> Any:
+        self.asked.append(question)
+        return check.Reply(self.status, {"events": [{"event": e, "data": {}} for e in self.events]})
+
+
+def _recorded(
+    status: Any, events: list[str] | None = None, http_status: int = 200, asking: bool = True
+) -> tuple[Any, Any]:
+    answers = {check.STATUS_PATH: _status(copilot="ok"), check.COPILOT_STATUS_PATH: status}
+    answers[check.LIFECYCLE_PATH] = {"mode": "dry_run"}
+    client = AskingClient(answers, events or [], http_status) if asking else FakeClient(answers)
+    found = {f.name: f for f in check.check_features(client, "recorded")}
+    return found["copilot"], client
+
+
+READY = {"state": "ready", "reason_code": None, "synthetic": True}
+
+
+def test_recorded_copilot_passes_on_ready_synthetic_and_a_cited_done() -> None:
+    copilot, client = _recorded(READY, ["context", "progress", "token", "citation", "done"])
+    assert (copilot.state, copilot.ok) == (check.ENABLED, True)
+    assert client.asked == [check.DEMO_QUESTION]
+    assert "1 citation" in copilot.detail
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        {"state": "disabled", "reason_code": "x", "synthetic": False},
+        {"state": "ready", "reason_code": None, "synthetic": False},
+        check.Reply(503, {"reason": "copilot_unconfigured"}),
+    ],
+)
+def test_recorded_copilot_fails_unless_ready_and_synthetic(status: Any) -> None:
+    copilot, client = _recorded(status, ["citation", "done"])
+    assert (copilot.state, copilot.ok) == (check.DISABLED, False)
+    assert client.asked == []  # no question is posted to a copilot that is not ready
+
+
+@pytest.mark.parametrize(
+    "events", [["token", "done"], ["citation", "abstain"], ["citation", "error"], []]
+)
+def test_recorded_copilot_needs_a_done_terminal_with_a_citation(events: list[str]) -> None:
+    copilot, _ = _recorded(READY, events)
+    assert (copilot.state, copilot.ok) == (check.UNEXPECTED, False)
+
+
+def test_recorded_copilot_fails_when_the_question_is_refused() -> None:
+    copilot, _ = _recorded(READY, ["citation", "done"], http_status=403)
+    assert not copilot.ok
+
+
+def test_recorded_copilot_without_a_posting_client_is_not_checked() -> None:
+    copilot, _ = _recorded(READY, asking=False)
+    assert (copilot.state, copilot.ok) == (check.NOT_CHECKED, True)
+
+
+def test_parse_sse_reads_event_and_data_blocks() -> None:
+    body = 'event: citation\ndata: {"record_id":"r"}\n\nevent: done\ndata: {"message_id":"m"}\n\n'
+    events = check.parse_sse(body)
+    assert [e["event"] for e in events] == ["citation", "done"]
+    assert events[0]["data"] == {"record_id": "r"}
 
 
 def test_copilot_with_the_wrong_disabled_shape_fails() -> None:
@@ -268,8 +341,8 @@ def test_copilot_with_the_wrong_disabled_shape_fails() -> None:
 
 
 def test_copilot_on_needs_its_component() -> None:
-    on = _features(_status(copilot="ok"), mode="recorded")["copilot"]
-    off = _features(_status(copilot="disabled"), mode="recorded")["copilot"]
+    on = _features(_status(copilot="ok"), mode="approved_endpoint")["copilot"]
+    off = _features(_status(copilot="disabled"), mode="approved_endpoint")["copilot"]
     assert on.state == check.ENABLED
     assert off.state == check.DISABLED
 
@@ -546,7 +619,7 @@ def test_a_whole_passing_run_exits_0_and_never_prints_the_token(
     assert code == 0, out.out
     assert seen == [TOKEN]  # the token reached the client factory only
     assert TOKEN not in out.out + out.err
-    assert "pending_prp_78" in out.out
+    assert "switched_off" in out.out
     assert "PASS" in out.out
     # rows that are pending or could not be checked are counted in the banner, never hidden
     assert "not verified" in out.out

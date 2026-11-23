@@ -20,8 +20,10 @@ Per route:
 It also reads ``GET /api/v1/admin/system/status`` and fails when the producer store, MCP server or
 scan is disabled, the lifecycle route (not part of the status payload) is not up in dry-run, or the
 stored feature settings did not load. The detector source and the connector worker roles are
-worker environment the API does not report: ``not_reported``. Copilot is ``pending_prp_78`` (neither
-pass nor failure) while ``NS_DEMO_COPILOT_MODE`` is ``disabled``. A few demo-world sanity checks
+worker environment the API does not report: ``not_reported``. Copilot (PRP-78): in ``recorded`` mode
+(the demo profile) ``GET /api/v1/copilot/status`` must be ``ready`` with ``synthetic: true`` and one
+demo question must end in ``done`` with a citation; ``switched_off`` (neither pass nor failure) when
+an operator set ``NS_DEMO_COPILOT_MODE`` to ``disabled``. A few demo-world sanity checks
 read the catalog and the map (curated agents, the four telemetry-only agents as discovered drafts,
 the outage service's downstream agents degraded).
 
@@ -90,6 +92,9 @@ DEFAULT_POLL_SECONDS: Final = 10.0
 STATUS_PATH: Final = "/api/v1/admin/system/status"
 LIFECYCLE_PATH: Final = "/api/v1/lifecycle/status"
 COPILOT_PATH: Final = "/api/v1/copilot/conversations"
+COPILOT_STATUS_PATH: Final = "/api/v1/copilot/status"
+#: The first recorded demo question (``fixtures/demo/01-eu-customer-data.json``).
+DEMO_QUESTION: Final = "Which agents touch EU customer data?"
 DOMAINS_PATH: Final = "/api/v1/me/domains"
 ENTITIES_PATH: Final = "/api/v1/catalog/entities"
 VIEWPORT_PATH: Final = "/api/v1/map/domains/{domain}/viewport"
@@ -116,7 +121,7 @@ ROUTE_PASS: Final = frozenset({DATA, SERVED, ALLOWED_EMPTY})
 ENABLED: Final = "enabled"
 DISABLED: Final = "disabled"
 NOT_REPORTED: Final = "not_reported"
-PENDING_PRP_78: Final = "pending_prp_78"
+SWITCHED_OFF: Final = "switched_off"
 UNEXPECTED: Final = "unexpected"
 FEATURE_FAIL: Final = frozenset({DISABLED, UNEXPECTED})
 
@@ -462,6 +467,8 @@ def _lifecycle(client: Client) -> FeatureResult:
 
 
 def _copilot(client: Client, mode: str, component: str) -> FeatureResult:
+    if mode == "recorded":
+        return _recorded_copilot(client)
     if mode != "disabled":
         state = ENABLED if component == "ok" else DISABLED
         return FeatureResult("copilot", state, f"mode {mode}; component copilot: {component}")
@@ -478,9 +485,46 @@ def _copilot(client: Client, mode: str, component: str) -> FeatureResult:
         )
     return FeatureResult(
         "copilot",
-        PENDING_PRP_78,
-        "disabled by design until PRP-78 ships the recorded mode; routes answer 503 "
+        SWITCHED_OFF,
+        "switched off by the operator (NS_DEMO_COPILOT_MODE=disabled); routes answer 503 "
         "copilot_unconfigured",
+    )
+
+
+def _recorded_copilot(client: Client) -> FeatureResult:
+    """Recorded mode: the status must be ready and synthetic, and one demo question must answer."""
+    reply = client.get(COPILOT_STATUS_PATH)
+    body = reply.body if isinstance(reply.body, dict) else {}
+    if reply.status != 200 or body.get("state") != "ready" or body.get("synthetic") is not True:
+        return FeatureResult(
+            "copilot",
+            DISABLED,
+            f"recorded mode needs {COPILOT_STATUS_PATH} ready with synthetic true; got "
+            f"{reply.status} state {body.get('state')} synthetic {body.get('synthetic')}"
+            f"{_reason(reply)}",
+        )
+    ask = getattr(client, "ask_copilot", None)
+    if ask is None:
+        return FeatureResult(
+            "copilot", NOT_CHECKED, "status ready and synthetic; this client cannot post a question"
+        )
+    answer = ask(DEMO_QUESTION)
+    events = answer.body.get("events", []) if isinstance(answer.body, dict) else []
+    names = [str(e.get("event")) for e in events if isinstance(e, dict)]
+    if answer.status != 200 or not names or names[-1] != "done":
+        return FeatureResult(
+            "copilot",
+            UNEXPECTED,
+            f"the demo question answered {answer.status} and ended in "
+            f"{names[-1] if names else 'no terminal event'}, not done",
+        )
+    if "citation" not in names:
+        return FeatureResult("copilot", UNEXPECTED, "the demo answer carried no citation")
+    return FeatureResult(
+        "copilot",
+        ENABLED,
+        "recorded demo model: status ready, synthetic; demo question done with "
+        f"{names.count('citation')} citation(s)",
     )
 
 
@@ -821,6 +865,25 @@ def resolve_token(
     return token
 
 
+def parse_sse(text: str) -> list[dict[str, Any]]:
+    """``event:``/``data:`` blocks of a finished SSE body, as ``{"event", "data"}`` dicts."""
+    events: list[dict[str, Any]] = []
+    for block in text.replace("\r\n", "\n").split("\n\n"):
+        name = ""
+        data: Any = None
+        for line in block.split("\n"):
+            if line.startswith("event:"):
+                name = line[6:].strip()
+            elif line.startswith("data:"):
+                try:
+                    data = json.loads(line[5:].strip())
+                except ValueError:
+                    data = None
+        if name:
+            events.append({"event": name, "data": data})
+    return events
+
+
 class HttpClient:
     """Plain GETs with the operator's bearer token. The token is never part of any output."""
 
@@ -848,6 +911,22 @@ class HttpClient:
         except ValueError:
             body = None
         return Reply(response.status_code, body)
+
+    def ask_copilot(self, question: str) -> Reply:
+        """Create a conversation, post ``question`` and fold the SSE stream into ``events``."""
+        import httpx
+
+        try:
+            created = self._http.post(COPILOT_PATH)
+            if created.status_code != 201:
+                return Reply(created.status_code, None)
+            conversation = str(created.json()["id"])
+            response = self._http.post(
+                f"{COPILOT_PATH}/{conversation}/messages", json={"text": question}
+            )
+        except (httpx.HTTPError, ValueError, KeyError):
+            raise CheckError("the copilot demo question could not be posted") from None
+        return Reply(response.status_code, {"events": parse_sse(response.text)})
 
     def close(self) -> None:
         self._http.close()
@@ -912,7 +991,7 @@ def render(report: Report) -> str:
     failed = sum(not r.ok for r in (*report.routes, *report.features, *report.sanity))
     # A row that could not be checked or is pending is not a failure, but it is not a pass either:
     # the banner counts it so a clean exit never reads as "everything was verified".
-    open_states = (NOT_CHECKED, NOT_REPORTED, PENDING_PRP_78)
+    open_states = (NOT_CHECKED, NOT_REPORTED, SWITCHED_OFF)
     unverified = sum(r.state in open_states for r in (*report.features, *report.sanity))
     suffix = f", {unverified} not verified (see the rows above)" if unverified else ""
     lines.append(f"\n{'PASS' if report.ok else 'FAIL'}: {failed} failing row(s){suffix}")

@@ -15,10 +15,13 @@ counted under ``skipped_existing``. Exit 0 and, on stdout and nothing else,
 ``{"seeded": {"settings": n}, "skipped_existing": n}``; exit 2 = refused, 3 = failed.
 
 Values are non-secret and consistent with ``infra/dev/demo-profile.env``: scan on, the MCP
-resource URL on ``127.0.0.1``, the copilot DISABLED (the placeholder keeps a model endpoint for
-the console but ``enabled`` is false; PRP-78 owns turning it on), search disabled (no Azure AI
-Search is reachable locally), write targets disabled (listed, never registered: the ARM host is a
-frozen cloud-profile fact and cannot be pointed at a loopback fake, so apply stays advisory).
+resource URL on ``127.0.0.1``, the copilot row stored only when ``NS_DEMO_COPILOT_MODE`` is not
+``recorded`` (PRP-78: the demo profile runs the recorded demo model, and a stored ``copilot`` row
+beats the environment, so a disabled placeholder would keep it off; the row is therefore not
+seeded and the environment mode applies; any other mode keeps the disabled placeholder), search
+disabled (no Azure AI Search is reachable locally), write targets disabled (listed, never
+registered: the ARM host is a frozen cloud-profile fact and cannot be pointed at a loopback
+fake, so apply stays advisory).
 Cloud resource ids are SYNTHETIC fixtures (all-zero subscription) that nothing resolves.
 """
 
@@ -108,8 +111,20 @@ def _identity() -> Doc:
     return {"kind": "managed_identity", "managed_identity_client_id": IDENTITY_CLIENT_ID}
 
 
-def demo_settings() -> tuple[tuple[SettingKey, Doc], ...]:
-    """``(key, body)`` of every stored setting, bodies in the ``SystemSetting`` shape."""
+def demo_settings(copilot_mode: str = "disabled") -> tuple[tuple[SettingKey, Doc], ...]:
+    """``(key, body)`` of every stored setting, bodies in the ``SystemSetting`` shape.
+
+    ``copilot_mode`` is ``NS_DEMO_COPILOT_MODE``. In ``recorded`` mode the ``copilot`` row is left
+    out: a stored setting beats the environment (PRP-45) and the placeholder's ``enabled: false``
+    would resolve to ``disabled``, keeping the recorded demo model off.
+    """
+    rows = _all_settings()
+    if copilot_mode == "recorded":
+        return tuple(r for r in rows if r[0] != "copilot")
+    return rows
+
+
+def _all_settings() -> tuple[tuple[SettingKey, Doc], ...]:
 
     def body(member: str, enabled: bool, value: Doc) -> Doc:
         return {
@@ -228,7 +243,7 @@ async def apply_demo_settings(
         customer_binding="local_default",
     )
     created = skipped = 0
-    for key, body in demo_settings():
+    for key, body in demo_settings(environ.get("NS_DEMO_COPILOT_MODE") or "disabled"):
         target = body["write_target"]["target_kind"] if key == WRITE_TARGETS else None
         doc_id = document_id(key, target)
         if await repository.get(scope.customer_id, SYSTEM_SETTING_KIND, doc_id) is not None:
