@@ -193,8 +193,8 @@ None. The real-stack run with seeded data belongs to PRP-109 and the hosted run 
 |------|--------|-----------------|-------|
 | 1 Verify-first attribute names | merged | prp-100-telemetry-tool-service-identity | orchestrator (implementers have no web fetch); GenAI conventions moved to `semantic-conventions-genai` (ae8214a8f3a9), core registry aef58d05090b; nav line added to `mkdocs.yml` (tests/docs/test_nav_allowlist requires built == nav); tests/docs 129 passed; 2026-11-23 |
 | 2 Core kinds and resolver | merged | prp-100-item-2-core-kinds | sonnet; commit 778ced71, merged bccce30f; orchestrator verify PASS 2026-11-23 (aggregates_subjects + workers aggregates + api realtime + api map 164 passed, ruff clean, pyright repo-wide 0 errors); review at PR level; realtime guard in `pick_newest` (covers cosmos) |
-| 3 OTLP mapping | in-progress | prp-100-item-3-otlp-mapping | sonnet implementer; dispatched 2026-11-23 beside item 2 (needs item 1 names and F1 only) |
-| 4 Aggregates mapping and rollups | in-progress | prp-100-item-4-aggregates | sonnet implementer; dispatched 2026-11-23 |
+| 3 OTLP mapping | merged | prp-100-item-3-otlp-mapping | sonnet; commit 1c3b467d, merged ab854ebc; orchestrator verify PASS 2026-11-23 (api ingest + ingest_tool_service + realtime 132 passed, ruff + format clean, pyright services/api 0 errors); F1 events stamped schema 1.1.0, others stay 1.0.0; pre-existing: root `execute_tool` span (no parent) is model-valid but schema-invalid (follow-up) |
+| 4 Aggregates mapping and rollups | in-progress | prp-100-item-4-aggregates | sonnet implementer; dispatched 2026-11-23; stopped once: `EventFact` lives in core `aggregates/models.py` (PRP-owned), granted that class |
 | 5 End-to-end seeded incident check | todo | | |
 | 6 Integration and close-out | todo | | |
 
