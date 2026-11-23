@@ -103,6 +103,7 @@ owns:
   - packages/core/tests/aggregates_subjects/**
   - services/api/tests/ingest_tool_service/**
   - tests/integration/tool_service_subjects/**
+  - services/api/neurosphere_api/realtime/source.py
   - docs/connectors/verification/otel-genai-tool-service.md
 tier1: []
 tier2_appends: []
@@ -123,9 +124,9 @@ Pattern references: `docs/connectors/coverage.md`.
 
 ### Item 2 - Core subject kinds and resolver
 Deliverable: `SubjectKind`, key function and `SubjectPoint` extended; `resolve_subjects.py` with the two pure functions; read the generated F1 bindings first and use their real names.
-Owned files: `packages/core/neurosphere_core/aggregates/**`, `services/workers/neurosphere_workers/ingestion/resolve_subjects.py`, `packages/core/tests/aggregates_subjects/**`.
+Owned files: `packages/core/neurosphere_core/aggregates/**`, `services/workers/neurosphere_workers/ingestion/resolve_subjects.py`, `packages/core/tests/aggregates_subjects/**`, `services/api/neurosphere_api/realtime/source.py` (guard only), resolver test `services/workers/neurosphere_workers/aggregates/tests/test_resolve_subjects.py` (new; core tests cannot import the worker package).
 Must NOT touch: contracts, `ingestion/pipeline.py`. Depends on: PRP-70 merged.
-Acceptance criteria: key and resolver criteria; agent and model keys unchanged; `cosmos.py` query accepts the new kinds.
+Acceptance criteria: key and resolver criteria; agent and model keys unchanged; `cosmos.py` query accepts the new kinds. Realtime guard (decided 2026-11-23): `newest_subject_points` keeps returning agent and model points only, and `realtime/source.py` skips any other kind, because `DeltaNode.kind` has no `tool` or `service`; the live delta stays byte-identical until PRP-74/77 add those node kinds.
 Tests: `packages/core/tests/aggregates_subjects/test_tool_service_keys.py`, `.../test_resolver.py` (new); existing suites in that directory unchanged.
 Pattern references: `aggregates/subject.py:48-58`.
 
@@ -187,8 +188,8 @@ None. The real-stack run with seeded data belongs to PRP-109 and the hosted run 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 Verify-first attribute names | todo | | |
-| 2 Core kinds and resolver | todo | | |
+| 1 Verify-first attribute names | in-progress | prp-100-telemetry-tool-service-identity | orchestrator (implementers have no web fetch); 2026-11-23 |
+| 2 Core kinds and resolver | in-progress | prp-100-item-2-core-kinds | sonnet implementer; dispatched 2026-11-23 |
 | 3 OTLP mapping | todo | | |
 | 4 Aggregates mapping and rollups | todo | | |
 | 5 End-to-end seeded incident check | todo | | |
