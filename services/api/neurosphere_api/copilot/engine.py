@@ -28,7 +28,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Final
+from typing import Any, Final, cast
 from uuid import uuid4
 
 from neurosphere_contracts.query.v1.structured_query import StructuredQuery
@@ -248,6 +248,25 @@ def _suggestion_call(suggestion: ActionSuggestion) -> ToolCallRequested:
     )
 
 
+_FLOAT_PLACES: Final = 6
+
+
+def _bound_floats(value: Any) -> Any:
+    """Round every float (recursively) to at most ``_FLOAT_PLACES`` decimals.
+
+    Long float fractions (scores, weights) read as card numbers to prompt redaction, which would
+    rewrite them into invalid JSON. Six places keeps values readable and digit runs far below
+    card-number length. Redaction patterns stay untouched (PII boundary).
+    """
+    if isinstance(value, float):
+        return round(value, _FLOAT_PLACES)
+    if isinstance(value, Mapping):
+        return {k: _bound_floats(v) for k, v in cast(Mapping[Any, Any], value).items()}
+    if isinstance(value, (list, tuple)):
+        return [_bound_floats(v) for v in cast(Sequence[Any], value)]
+    return value
+
+
 def _tool_content(result: ToolResult, state: _Run) -> str:
     """The tool result as JSON data for the model, redacted and bounded.
 
@@ -256,7 +275,8 @@ def _tool_content(result: ToolResult, state: _Run) -> str:
     which adapters replace) and are the only thing that resolves to a citation.
     """
     records: list[dict[str, Any]] = [
-        {"record_id": r.record_id, "kind": r.kind, "data": r.data} for r in result.records
+        {"record_id": r.record_id, "kind": r.kind, "data": _bound_floats(r.data)}
+        for r in result.records
     ]
     payload: dict[str, Any] = {
         "tool": result.tool,
