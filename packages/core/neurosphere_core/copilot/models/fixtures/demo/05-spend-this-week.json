@@ -1,0 +1,53 @@
+{
+  "id": "spend_this_week",
+  "question": "What did we spend this week?",
+  "phrases": [
+    [
+      "spend",
+      "week"
+    ],
+    [
+      "spent",
+      "week"
+    ],
+    [
+      "cost",
+      "week"
+    ]
+  ],
+  "steps": [
+    {
+      "tool": "get_cost_summary",
+      "arguments": {
+        "metric": "cost",
+        "query": {
+          "schema_version": "1.0.0",
+          "operation": "aggregate",
+          "entity": "cost_record",
+          "time_range": {
+            "start": "$now-7d",
+            "end": "$now"
+          },
+          "time_bucket": "day",
+          "budget": {
+            "timeout_ms": 5000,
+            "limit": 20,
+            "max_depth": 0
+          }
+        }
+      }
+    }
+  ],
+  "answer": {
+    "intro": "Recorded spend over the last 7 days:",
+    "empty": "No spend was recorded over the last 7 days.",
+    "label_fields": [
+      "bucket_start"
+    ],
+    "detail_fields": [
+      "amount",
+      "currency",
+      "kind"
+    ]
+  }
+}

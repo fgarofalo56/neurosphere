@@ -1,0 +1,59 @@
+{
+  "id": "eu_customer_data_agents",
+  "question": "Which agents touch EU customer data?",
+  "phrases": [
+    [
+      "eu",
+      "agent"
+    ],
+    [
+      "european",
+      "agent"
+    ],
+    [
+      "eu",
+      "customer",
+      "data"
+    ]
+  ],
+  "steps": [
+    {
+      "tool": "graph_query",
+      "arguments": {
+        "query": {
+          "schema_version": "1.0.0",
+          "operation": "list",
+          "entity": "grounding_source",
+          "filters": [
+            {
+              "field": "residency_geography",
+              "op": "eq",
+              "value": "eu_eea"
+            }
+          ],
+          "budget": {
+            "timeout_ms": 5000,
+            "limit": 50,
+            "max_depth": 0
+          }
+        },
+        "access_mode": "any"
+      }
+    }
+  ],
+  "answer": {
+    "intro": "These agents have a recorded read or write path to EU/EEA-resident data:",
+    "empty": "No agent with a recorded path to EU/EEA-resident data was returned.",
+    "exclude_kinds": [
+      "grounding_source",
+      "graph_edge"
+    ],
+    "label_fields": [
+      "name"
+    ],
+    "detail_fields": [
+      "accesses.mode",
+      "accesses.asset_id"
+    ]
+  }
+}
