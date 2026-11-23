@@ -1,7 +1,9 @@
 ---
 name: PRP-99-governance-contracts-a
-status: active
+status: shipped
 started: 2026-11-22
+shipped: 2026-11-23
+pr: 387
 priority: P0
 order: 99
 review: required
@@ -275,7 +277,7 @@ Stores, containers, routes, workers, detectors, encryption, UI, permissions in c
 | 5 | merged | worktree-agent-aadebe8d3d32a6d05 + fix worktree-agent-a9313012d04a7736f (sonnet) | adb6e696 + fix 3ece74fc merged 86c3f2b4; gen --check OK, pyright 0, 5502 passed (contracts+sdk+core admin/admin_platform/admin_runtime/auth.scope/payload+authz+admin api), ruff/format/contracts ts/frontend typecheck clean; one fix round for core admin parity (clarification 20); openapi drift expected, regenerated in item 8; follow-up: services admin identity PRIVILEGED_ROLES lacks interaction_investigator (PRP-104); 2026-11-23 |
 | 6 | merged | worktree-agent-a3cf1ba207855954f (sonnet) | 635a21d0 merged d35955af; 209 guard tests with planted-violation self-tests; 4175 passed (contracts + six guard suites unedited), ruff/format/pyright clean; deviation: criterion 4 literal fails on 14 pre-PRP strings >1024 and chart-plan text (approval reason, catalog, problem-details, agent-match task_text...); pinned as an exact grandfather set (new or stale entries fail, governance areas never grandfathered) since shortening them would be non-additive; 2026-11-23 |
 | 7 | merged | orchestrator sweep on integration branch | full Validation-gates set at d35955af: ruff/format clean, pyright 0, gen --check OK, gate pytest line 4911 passed + 1 expected fail (openapi drift, regenerated in item 8), contracts ts 215 passed, contracts ts + frontend typecheck ok, validate_planning PASS; independent review (opus): APPROVE, 0 blocking, 6 non-blocking; 3 applied pre-baseline in fc1f11e9 (merge 902dc8cf: redaction_failed forces null content_ref, kek_uri cloud check on record/export, hmac_credential Key Vault only, allowed_host refuses IP literals); 2026-11-23 |
-| 8 | in-progress | prp-99-governance-contracts-a | ADR-0004 amendment, baseline refreshed (ALLOWED_TIGHTENINGS empty), openapi.json + docs/reference + EXECUTION-PLAN regenerated, changelog fragment; 3761 contracts+drift passed, tests/docs+release 204 passed; PR 387 open, follow-ups 388 389; 2026-11-23 |
+| 8 | merged | prp-99-governance-contracts-a | ADR-0004 amendment, baseline refreshed (ALLOWED_TIGHTENINGS empty), openapi.json + docs/reference + EXECUTION-PLAN regenerated, changelog fragment; 3761 contracts+drift passed, tests/docs+release 204 passed; PR 387 CI green (33 pass, 1 skipping), squash-merged a61ff662; follow-ups 388 389; 2026-11-23 |
 
 ## Owner decisions for the governance core (decided 2026-11-16)
 Decided by the owner on 2026-11-16 (decision D19 in docs/DECISIONS-LOG.md): the recommended defaults were accepted, except GD-5, where the owner chose 90 days.
@@ -339,7 +341,7 @@ Decisions raised while planning (GD-16 onward), all decided:
 | GD-49 | Without a field-level lock in the contracts, GD-11's "steward-curated value (locked)" is implemented as: the asset's own declared sensitivity wins whole. | A lock field from the next contracts owner | 120, 121 |
 
 ## Completion note (filled at ship)
-- Date and PR: 2026-11-23, PR 387 (integration branch `prp-99-governance-contracts-a`).
+- Date and PR: 2026-11-23, PR 387, squash-merged as a61ff662 (integration branch `prp-99-governance-contracts-a`).
 - Provided names (for PRP-100 to PRP-136 authors), all as listed in "Interfaces provided", with these exact titles:
   - Telemetry: `PayloadRef` members `interaction_id`, `capture_policy_id`, `capture_policy_version`, `detector_set_version`, `detected_categories`, `content_parts` (`schema_version` 1.2.0); `ContentEnvelope`, `ContentPart` (`telemetry/v1/content-envelope.schema.json`).
   - Interactions: `DetectionFinding`, `DetectedCategory`, `CredentialCategory`, `ContentPartKind`, `RedactedContent`, `RedactedPart`, `$defs/secret_free_text`, `InteractionRecord`, `EncryptedObjectRef` (shared by `content_ref` and the export `bundle`), `CapturePolicy`, `InteractionAccessPurpose`, `InteractionExportManifest`.
