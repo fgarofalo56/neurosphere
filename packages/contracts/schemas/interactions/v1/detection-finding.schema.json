@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/interactions/v1/detection-finding.schema.json",
+  "title": "DetectionFinding",
+  "description": "One detector result for one content part of an interaction (opt-in content capture, PRP-99). A fragment: it has no schema_version of its own and is embedded by RedactedContent (and, in later items, the interaction record). It carries a category, counts and offsets into the redacted text, never the matched text. Rule JSON Schema expresses with if/then: a credential category (CredentialCategory) requires action `replaced`; a credential can never be kept. Pydantic ignores if/then (ADR-0004), so consumers validate against the JSON Schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["category", "part", "detector_id", "detector_version", "count", "action", "confidence"],
+  "properties": {
+    "category": { "$ref": "#/$defs/detected_category" },
+    "part": { "$ref": "#/$defs/part_kind" },
+    "detector_id": {
+      "description": "Detector that produced the finding (lowercase slug).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "detector_version": {
+      "description": "Detector version, semantic version without prefix.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "count": {
+      "description": "Number of matches of this category in the part.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000
+    },
+    "action": {
+      "description": "What redaction did with the matches: `replaced` with a placeholder, or `kept` as written (only for non-credential categories a capture policy keeps).",
+      "type": "string",
+      "enum": ["replaced", "kept"]
+    },
+    "confidence": {
+      "description": "Detector confidence.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "spans": {
+      "description": "Character offsets of the matches into the redacted text of the part. Offsets only; never the matched text.",
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["start", "end"],
+        "properties": {
+          "start": { "type": "integer", "minimum": 0 },
+          "end": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "default": []
+    }
+  },
+  "allOf": [
+    {
+      "description": "A credential category is always replaced, never kept.",
+      "if": {
+        "required": ["category"],
+        "properties": { "category": { "$ref": "#/$defs/credential_category" } }
+      },
+      "then": {
+        "properties": { "action": { "const": "replaced" } }
+      }
+    }
+  ],
+  "$defs": {
+    "detected_category": {
+      "title": "DetectedCategory",
+      "description": "Kind of sensitive content a detector found; open-ended: readers must tolerate unknown values. The first eight are credential categories (CredentialCategory).",
+      "type": "string",
+      "enum": [
+        "private_key",
+        "jwt",
+        "bearer_token",
+        "cloud_access_key",
+        "vendor_api_key",
+        "connection_string",
+        "url_with_credentials",
+        "password_assignment",
+        "payment_card",
+        "iban",
+        "us_ssn",
+        "email_address",
+        "phone_number",
+        "ip_address",
+        "mac_address",
+        "guid",
+        "customer_dictionary_term",
+        "customer_identifier_pattern",
+        "other"
+      ]
+    },
+    "credential_category": {
+      "title": "CredentialCategory",
+      "description": "Categories that are credentials. Closed set: always replaced, never kept, and never listed in a capture policy's kept categories.",
+      "type": "string",
+      "enum": [
+        "private_key",
+        "jwt",
+        "bearer_token",
+        "cloud_access_key",
+        "vendor_api_key",
+        "connection_string",
+        "url_with_credentials",
+        "password_assignment"
+      ]
+    },
+    "part_kind": {
+      "title": "ContentPartKind",
+      "description": "Which part of an interaction a piece of content is.",
+      "type": "string",
+      "enum": ["prompt", "response", "tool_input", "tool_output", "system_instructions"]
+    }
+  }
+}

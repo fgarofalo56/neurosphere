@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/interactions/v1/redacted-content.schema.json",
+  "title": "RedactedContent",
+  "description": "Redacted plaintext of one captured interaction (opt-in content capture, PRP-99): the document PRP-102 encrypts. It exists only in memory between redaction and encryption and after an audited decrypt; it is never an event, audit, index or notification field and no schema references it. Redaction replaces each detection with the placeholder `[[ns-redacted:<detected_category>]]`. Every text is secret-free: JSON Schema rejects text containing a private-key block, JWT, bearer token, AWS access key id, GitHub token, sk- key, Azure storage or Service Bus key assignment, SAS signature or URL with userinfo. The same patterns are mirrored by the Python validator check_secret_free_text in tests/contracts/validators.py, which PRP-101 must keep a subset of its credential detectors. redaction_state is `redacted` or `not_required` only; content whose redaction failed is not representable here. Pydantic ignores `not` (ADR-0004): validate against the JSON Schema before encryption.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "interaction_id", "redaction_state", "detector_set_version", "parts"],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document, major 1 with additive minor revisions.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "interaction_id": {
+      "description": "Interaction this content belongs to (lowercase UUID).",
+      "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid"
+    },
+    "redaction_state": {
+      "description": "`redacted`: detectors ran and replaced detections. `not_required`: detectors ran and found nothing to replace. No other state is storable.",
+      "type": "string",
+      "enum": ["redacted", "not_required"]
+    },
+    "detector_set_version": {
+      "description": "Version of the deterministic detector set that produced this redaction.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "parts": {
+      "description": "One part per ContentPartKind, at most five.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/redacted_part" }
+    }
+  },
+  "$defs": {
+    "redacted_part": {
+      "title": "RedactedPart",
+      "description": "One redacted content part with its detection findings.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["part", "text"],
+      "properties": {
+        "part": { "$ref": "detection-finding.schema.json#/$defs/part_kind" },
+        "text": { "$ref": "#/$defs/secret_free_text" },
+        "truncated": {
+          "description": "True when the text was cut to the capture policy's max_part_chars.",
+          "type": "boolean",
+          "default": false
+        },
+        "findings": {
+          "description": "Detector results for this part.",
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "detection-finding.schema.json" },
+          "default": []
+        }
+      }
+    },
+    "secret_free_text": {
+      "description": "Redacted text, 0 to 32768 characters, that matches none of the known credential formats (patterns are ECMA-262 compatible, no lookbehind). Mirrored by check_secret_free_text.",
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 32768,
+      "not": {
+        "anyOf": [
+          { "description": "private key block", "pattern": "-----BEGIN [A-Z ]{0,30}PRIVATE KEY-----" },
+          { "description": "JWT", "pattern": "eyJ[A-Za-z0-9_-]{4,}\\.[A-Za-z0-9_-]{4,}\\.[A-Za-z0-9_-]*" },
+          { "description": "bearer token", "pattern": "[Bb][Ee][Aa][Rr][Ee][Rr][ \\t]+[A-Za-z0-9._~+/=-]{8,}" },
+          { "description": "AWS access key id", "pattern": "(AKIA|ASIA)[A-Z0-9]{16}" },
+          { "description": "GitHub token", "pattern": "(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})" },
+          { "description": "sk- key", "pattern": "sk-[A-Za-z0-9_-]{20,}" },
+          { "description": "Azure storage or Service Bus key assignment", "pattern": "(AccountKey|SharedAccessKey)=[A-Za-z0-9+/]{8,}" },
+          { "description": "SAS signature", "pattern": "sig=[A-Za-z0-9%+/=]{20,}" },
+          { "description": "URL with userinfo", "pattern": "[A-Za-z][A-Za-z0-9+.-]*://[^\\s/@:]+:[^\\s/@]+@" }
+        ]
+      }
+    }
+  }
+}

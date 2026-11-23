@@ -368,6 +368,51 @@
           "description": "Redaction status of the stored payload.",
           "type": "string",
           "enum": ["redacted", "pending", "redaction_failed", "not_required", "unknown"]
+        },
+        "interaction_id": {
+          "description": "Interaction record this payload belongs to (lowercase UUID). Null when no content was captured. Added in schema_version 1.2.0; events without it stay valid.",
+          "anyOf": [{ "$ref": "../../audit/v1/audit-record.schema.json#/$defs/uuid" }, { "type": "null" }],
+          "default": null
+        },
+        "capture_policy_id": {
+          "description": "Capture policy that allowed the capture (lowercase slug). Null when none. Added in schema_version 1.2.0; events without it stay valid.",
+          "anyOf": [{ "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }, { "type": "null" }],
+          "default": null
+        },
+        "capture_policy_version": {
+          "description": "Version of that capture policy. Null when none. Added in schema_version 1.2.0; events without it stay valid.",
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "default": null
+        },
+        "detector_set_version": {
+          "description": "Version of the deterministic detector set that redacted the content. Null when none. Added in schema_version 1.2.0; events without it stay valid.",
+          "anyOf": [{ "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }, { "type": "null" }],
+          "default": null
+        },
+        "detected_categories": {
+          "description": "Categories the detectors found in the captured content. Category names only, never matched text. Added in schema_version 1.2.0; events without it stay valid.",
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "../../interactions/v1/detection-finding.schema.json#/$defs/detected_category" },
+          "default": []
+        },
+        "content_parts": {
+          "description": "Which parts were captured and how large they were; sizes only, never text. Added in schema_version 1.2.0; events without it stay valid.",
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["part", "char_count", "truncated"],
+            "properties": {
+              "part": { "$ref": "../../interactions/v1/detection-finding.schema.json#/$defs/part_kind" },
+              "char_count": { "type": "integer", "minimum": 0 },
+              "truncated": { "type": "boolean" }
+            }
+          },
+          "default": []
         }
       }
     }

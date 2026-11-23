@@ -1,0 +1,37 @@
+{
+  "description": "Examples for interactions v1 (PRP-99). Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error that must appear in the validation error tree. Rules JSON Schema expresses with if/then or not (credential finding kept; secret-bearing text) are tested inline in tests/contracts/test_governance_a_content.py because the Pydantic projection drops those keywords.",
+  "examples": [
+    {
+      "file": "valid/redacted-content.jwt-placeholder.json",
+      "schema": "redacted-content.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/redacted-content.state-pending.json",
+      "schema": "redacted-content.schema.json",
+      "valid": false,
+      "derived_from": "valid/redacted-content.jwt-placeholder.json",
+      "expected_error": {
+        "instance_path": "/redaction_state",
+        "keyword": "enum"
+      },
+      "reason": "pending redaction is not storable"
+    },
+    {
+      "file": "valid/detection-finding.jwt-replaced.json",
+      "schema": "detection-finding.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/detection-finding.unknown-confidence.json",
+      "schema": "detection-finding.schema.json",
+      "valid": false,
+      "derived_from": "valid/detection-finding.jwt-replaced.json",
+      "expected_error": {
+        "instance_path": "/confidence",
+        "keyword": "enum"
+      },
+      "reason": "confidence is high, medium or low"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.2.0",
+  "cloud": "commercial",
+  "source_id": "otel-gateway-01",
+  "event_id": "evt-0011",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b8",
+  "occurred_at": "2026-11-10T09:30:00Z",
+  "parts": [
+    {
+      "part": "prompt",
+      "text": "Summarise invoice 4471 for the finance team."
+    },
+    {
+      "part": "response",
+      "text": "Invoice 4471 is for 1,200.00 and is due on 2026-12-01.",
+      "truncated": false
+    }
+  ]
+}

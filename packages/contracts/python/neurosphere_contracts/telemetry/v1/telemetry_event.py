@@ -13,10 +13,14 @@ from pydantic import (
     ConfigDict,
     Field,
     RootModel,
+    StrictBool,
     StrictFloat,
     StrictInt,
     StrictStr,
 )
+
+from ...audit.v1 import audit_record
+from ...interactions.v1 import detection_finding
 
 
 class Identifier(RootModel[StrictStr]):
@@ -158,6 +162,29 @@ class SamplingMetadata(BaseModel):
     """
 
 
+class CapturePolicyId(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(pattern="^[a-z0-9][a-z0-9._-]{0,63}$")] = None
+    """
+    Capture policy that allowed the capture (lowercase slug). Null when none. Added in schema_version 1.2.0; events without it stay valid.
+    """
+
+
+class DetectorSetVersion(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(pattern="^[a-z0-9][a-z0-9._-]{0,63}$")] = None
+    """
+    Version of the deterministic detector set that redacted the content. Null when none. Added in schema_version 1.2.0; events without it stay valid.
+    """
+
+
+class ContentPart(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    part: detection_finding.ContentPartKind
+    char_count: Annotated[StrictInt, Field(ge=0)]
+    truncated: StrictBool
+
+
 class PayloadRef(BaseModel):
     """
     Pointer to a stored payload; never the payload itself. The pointer is opaque and is never fetched by schema validation.
@@ -177,6 +204,35 @@ class PayloadRef(BaseModel):
     redaction_state: Literal["redacted", "pending", "redaction_failed", "not_required", "unknown"]
     """
     Redaction status of the stored payload.
+    """
+    interaction_id: audit_record.Uuid | None = None
+    """
+    Interaction record this payload belongs to (lowercase UUID). Null when no content was captured. Added in schema_version 1.2.0; events without it stay valid.
+    """
+    capture_policy_id: CapturePolicyId | None = None
+    """
+    Capture policy that allowed the capture (lowercase slug). Null when none. Added in schema_version 1.2.0; events without it stay valid.
+    """
+    capture_policy_version: Annotated[StrictInt | None, Field(ge=1)] = None
+    """
+    Version of that capture policy. Null when none. Added in schema_version 1.2.0; events without it stay valid.
+    """
+    detector_set_version: DetectorSetVersion | None = None
+    """
+    Version of the deterministic detector set that redacted the content. Null when none. Added in schema_version 1.2.0; events without it stay valid.
+    """
+    detected_categories: Annotated[
+        list[detection_finding.DetectedCategory] | None,
+        Field(max_length=32, validate_default=True),
+    ] = []
+    """
+    Categories the detectors found in the captured content. Category names only, never matched text. Added in schema_version 1.2.0; events without it stay valid.
+    """
+    content_parts: Annotated[
+        list[ContentPart] | None, Field(max_length=5, validate_default=True)
+    ] = []
+    """
+    Which parts were captured and how large they were; sizes only, never text. Added in schema_version 1.2.0; events without it stay valid.
     """
 
 
