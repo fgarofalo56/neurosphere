@@ -19,7 +19,9 @@ resource URL on ``127.0.0.1``, the copilot row stored only when ``NS_DEMO_COPILO
 ``recorded`` (PRP-78: the demo profile runs the recorded demo model, and a stored ``copilot`` row
 beats the environment, so a disabled placeholder would keep it off; the row is therefore not
 seeded and the environment mode applies; any other mode keeps the disabled placeholder), search
-disabled (no Azure AI Search is reachable locally), write targets disabled (listed, never
+disabled (no Azure AI Search is reachable locally; also not seeded in ``recorded`` mode, because
+a stored disabled row beats ``NS_SEARCH_PROVIDER=fixture`` and the agent matcher then has no
+search), write targets disabled (listed, never
 registered: the ARM host is a frozen cloud-profile fact and cannot be pointed at a loopback
 fake, so apply stays advisory).
 Cloud resource ids are SYNTHETIC fixtures (all-zero subscription) that nothing resolves.
@@ -117,10 +119,15 @@ def demo_settings(copilot_mode: str = "disabled") -> tuple[tuple[SettingKey, Doc
     ``copilot_mode`` is ``NS_DEMO_COPILOT_MODE``. In ``recorded`` mode the ``copilot`` row is left
     out: a stored setting beats the environment (PRP-45) and the placeholder's ``enabled: false``
     would resolve to ``disabled``, keeping the recorded demo model off.
+
+    The ``search`` row is left out in ``recorded`` mode too: the compose API sets
+    ``NS_SEARCH_PROVIDER=fixture``, but a stored ``search`` row beats it and a disabled one
+    resolves to no provider (``search_init_args``), so no graph search is composed, the agent
+    matcher disables itself (``search_unavailable``) and the copilot loses ``recommend_agent``.
     """
     rows = _all_settings()
     if copilot_mode == "recorded":
-        return tuple(r for r in rows if r[0] != "copilot")
+        return tuple(r for r in rows if r[0] not in {"copilot", "search"})
     return rows
 
 
