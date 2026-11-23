@@ -1,7 +1,9 @@
 ---
 name: PRP-78-copilot-graph-timeline-and-recommender-tools
-status: active
+status: shipped
 started: 2026-11-22
+shipped: 2026-11-23
+pr: 383
 priority: P0
 order: 69
 review: required
@@ -15,7 +17,7 @@ depends_on: [PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-s
 wave: W23
 branch: prp-78-copilot-graph-tools
 allow_parallel: true
-issues: []
+issues: [384]
 ---
 
 # PRP-78: Copilot graph, timeline and recommender tools, tool-call audit, demo-profile copilot
@@ -266,10 +268,10 @@ Live product check 2026-11-22 (fresh `make demo-up`, Browser sign-in already cac
 Live product check, second run 2026-11-23 (after F1-F3; fresh `make demo-up OPERATOR_OID=...`, then a deliberate `docker compose restart api` after the seed): readyz composes copilot and agent_matcher (neither disabled); `sbx_demo_check` copilot row ok ("status ready, synthetic; demo question done with 8 citations"), 32/32 curated agents, 4 undeclared drafts; its one failing row is the 1-day cost tile while the seeded events still drain (PRP-71 known slow drain, not PRP-78). Dock walk-through with Finance selected: all five demo questions answered with resolving citations and the "Recorded demo model, not AI" label (Q1 3 agents, Q2 Invoice Intake Assistant via catalog_graph, Q3 10 audit changes, Q4 5 ranked agents, Q5 7 daily cost points). Screenshot: `temp/prp78-dock-demo.jpg` (local, not committed).
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator: `NS_COPILOT_MODE=recorded` (local only).
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-23. PR #383 (squash `1113b6f2`, items 1-8, merged at branch head `79edbcbe`) and PR #385 (squash `d5fb204d`, live product check fixes F1-F3 plus board, tree identical to the verified branch head `9a23ced4`). CI green on both (33 checks).
+- Deviations: (a) owner decisions 9-11 recorded at plan approval and mid-flight: two-step geography lookup (the PRP-73 `AccessQuery` has no geography filter), item 8 owns the demo stored-settings seed, item 5 updates the pinned copilot tests additively. (b) `build_copilot_registry` lives in a new `copilot/tools/copilot_registry.py`, not `builtin.py` (avoids an import cycle; `builtin.py` untouched). (c) `ToolResult.domain_ids` is excluded from dumps, so the MCP wire shape is unchanged. (d) `grants_access_to` is excluded from copilot traversal relations. (e) `RecordedDemoAdapter` reports descriptor kind `fixture` (no `recorded_demo` AdapterKind). (f) Item 7 dispatched against item 5's committed wire shape before item 5 merged (frontend only). (g) No `docker-compose.yml` edit was needed (passthrough and `NS_ENV=local` already present). (h) Three fix-forward items F1-F3 from the live product check (see Execution state); `Makefile` edited under Tier 1 for F3. (i) The `tests/integration/copilot` wiring test was not extended for recorded mode (builder tests cover it); `tests/integration/real_stack/test_demo_profile.py` touched for the `pending_prp_78` removal.
+- Descoped items: none.
+- OPEN gates: first real-model turn with `graph_query`/`get_timeline`/`recommend_agent` (`NS_LIVE_APPROVED=1`, approved Foundry endpoint) OPEN, handed to PRP-64 (row to add, tracked in #384). First-token time against a real provider stays OPEN (G07).
+- Env vars for the operator: `NS_COPILOT_MODE=recorded` (local only; `misconfigured` elsewhere); the demo profile sets `NS_DEMO_COPILOT_MODE=recorded`. A demo database seeded before PRP-78 holds stored `copilot`/`search` rows that keep it off: reseed (`docker compose down -v`, `make demo-up OPERATOR_OID=...`).
+- Follow-up issues: #384 (builtin tools populate `domain_ids`, shared `_subject_target`, change-log page-cap truncation flag, `synthetic` OpenAPI note, keep the progress live region mounted, runbook reseed note, `recorded_demo` AdapterKind, graph node field allowlist, PRP-64 row). Not filed: the shell defaults to the `customer-control` domain ("name unavailable"), where an admin-only operator reads nothing, so the first dock question abstains until a business domain is picked.
+- Product check (can an operator use it without editing files): yes. Fresh `make demo-up OPERATOR_OID=...` plus an API restart after the seed; with a business domain selected, all five demo questions answer in the dock with resolving citations and the "Recorded demo model, not AI" label (evidence in the Execution state notes).
