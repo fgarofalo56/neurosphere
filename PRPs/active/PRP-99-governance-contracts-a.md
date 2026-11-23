@@ -266,8 +266,8 @@ Stores, containers, routes, workers, detectors, encryption, UI, permissions in c
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | worktree (implementer, sonnet) | dispatched 2026-11-23 |
-| 2 | todo | | |
+| 1 | merged | worktree-agent-a96adb3e589139b84 (sonnet) | 76e2976b merged c041412b; gen --check OK, 3614 passed (contracts+sdk+payload+audit+ingest+archive+quarantine), ruff/format/pyright clean, openapi drift 3 passed; deviation: PRP-70 test_payload_ref_untouched relaxed to pin original members (baseline-diff trap); 2026-11-23 |
+| 2 | in-progress | worktree (implementer, sonnet) | dispatched 2026-11-23 |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

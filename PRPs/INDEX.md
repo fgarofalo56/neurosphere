@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-99-governance-contracts-a](active/PRP-99-governance-contracts-a.md) | P0 | 0/8 (0%) | todo 7, in-progress 1 | opus / sonnet | required |
+| [PRP-99-governance-contracts-a](active/PRP-99-governance-contracts-a.md) | P0 | 1/8 (12%) | todo 6, in-progress 1, merged 1 | opus / sonnet | required |
 
 ## Backlog
 
