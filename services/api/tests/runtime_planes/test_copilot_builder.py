@@ -10,13 +10,18 @@ from typing import Any
 
 import pytest
 from neurosphere_api.copilot.evidence import StoreEvidenceReader
+from neurosphere_api.copilot.tooling import CopilotExtraPorts, CopilotToolAuditor
 from neurosphere_api.runtime.builders import copilot as copilot_builder
 from neurosphere_api.runtime.builders.copilot import (
     CopilotCredentialConfigError,
+    CopilotRuntimeSettings,
     refuse_credential_shaped_env,
 )
+from neurosphere_contracts.admin.v1.system_setting import SystemSetting
+from neurosphere_core.admin.runtime import copilot_init_args
 from neurosphere_core.cloud import CloudName, Settings
-from neurosphere_core.copilot.models import ApprovedEndpointAdapter
+from neurosphere_core.copilot.models import ApprovedEndpointAdapter, RecordedDemoAdapter
+from pydantic import ValidationError
 from runtime_api.runtime_helpers import compose  # pyright: ignore[reportMissingImports]
 
 from .planes_helpers import ALICE, ch, compose_planes, configure_auth_env
@@ -235,3 +240,79 @@ def test_non_credential_copilot_variables_are_accepted() -> None:
     refuse_credential_shaped_env(
         {"NS_COPILOT_MODE": "disabled", "NS_COPILOT_OAUTH_SCOPE": "x", "NS_OTHER_SECRET": "x"}
     )
+
+
+# -- recorded demo mode (PRP-78 item 6): env-only, NS_ENV=local only ------------------------------
+
+
+def test_recorded_mode_in_a_local_environment_composes_the_synthetic_demo_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _copilot_env(monkeypatch, MODE="recorded")
+    planes = compose_planes()  # NS_ENV=local
+    assert planes.registry.get("copilot").state == "ok"
+    adapter = planes.app.state.copilot_model_adapter
+    assert isinstance(adapter, RecordedDemoAdapter)
+    assert adapter.descriptor.synthetic is True
+    assert adapter.descriptor.name == "recorded-demo"
+    with planes.composed.client() as client:
+        created = client.post(CONVERSATIONS, headers=planes.auth(ALICE))
+    assert created.status_code == 201, created.text
+
+
+@pytest.mark.parametrize("env", ["dev", "test", "staging", "prod"])
+def test_recorded_mode_outside_local_is_misconfigured(
+    monkeypatch: pytest.MonkeyPatch, env: str
+) -> None:
+    monkeypatch.setenv("NS_ENV", env)
+    monkeypatch.setenv("NS_CLOUD", "commercial")
+    _copilot_env(monkeypatch, MODE="recorded")
+    copilot = _copilot_only().registry.get("copilot")
+    assert (copilot.state, copilot.code) == ("failed", "misconfigured")
+
+
+def test_a_stored_setting_cannot_select_recorded_mode() -> None:
+    stored = SystemSetting.model_validate(
+        {
+            "schema_version": "1.0.0",
+            "setting_key": "copilot",
+            "enabled": True,
+            "copilot": {
+                "endpoint": COM_ENDPOINT,
+                "deployment": "gpt-4o",
+                "api_version": "2024-10-21",
+                "resource_id": (
+                    "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-ns"
+                    "/providers/Microsoft.CognitiveServices/accounts/acct"
+                ),
+                "credential": {
+                    "kind": "managed_identity",
+                    "managed_identity_client_id": "0b5d0c6e-1f2a-4b3c-8d4e-5f6a7b8c9d0e",
+                },
+            },
+        }
+    )
+    # With the env mode disabled a stored setting picks the endpoint adapter, never recorded.
+    args = copilot_init_args(stored, env_mode="disabled")
+    assert CopilotRuntimeSettings(**args).mode == "approved_endpoint"
+    # The stored member has no mode field to carry one.
+    body = stored.model_dump(mode="json", by_alias=True)
+    body["copilot"]["mode"] = "recorded"
+    with pytest.raises(ValidationError):
+        SystemSetting.model_validate(body)
+
+
+def test_extra_tool_ports_and_the_tool_auditor_are_wired_for_every_mode() -> None:
+    planes = compose_planes(model_adapter=ch.ScriptedAdapter(ch.say("Nothing changed.")))
+    assert planes.registry.get("copilot").state == "ok"
+    assert isinstance(planes.app.state.copilot_extra_ports, CopilotExtraPorts)
+    assert isinstance(planes.app.state.copilot_tool_auditor, CopilotToolAuditor)
+
+
+def test_recorded_mode_also_wires_the_extra_ports_and_auditor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _copilot_env(monkeypatch, MODE="recorded")
+    planes = compose_planes()
+    assert isinstance(planes.app.state.copilot_extra_ports, CopilotExtraPorts)
+    assert isinstance(planes.app.state.copilot_tool_auditor, CopilotToolAuditor)

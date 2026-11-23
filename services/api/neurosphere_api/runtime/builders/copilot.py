@@ -13,6 +13,10 @@
   conversation store is ``CosmosConversationStore`` (``copilot_conversations``), and
   ``configure_copilot`` installs both. Chat drafts through the PRP-17 ``app.state`` action plane,
   i.e. the ONE ``ACTION_SERVICE`` the planes builder published (``get_optional_action_plane``).
+* ``recorded`` (PRP-78 item 6): the scripted demo adapter, ``NS_ENV=local`` ONLY (owner decision
+  D15); any other environment is ``failed("misconfigured")``. No endpoint, no credential. It is
+  selectable from the environment alone: a stored ``copilot`` setting only keeps an env adapter
+  mode and defaults to ``approved_endpoint`` when the env mode is ``disabled``.
 * A mode with a missing or invalid endpoint, deployment, region or model feature is
   ``failed("misconfigured")``; a wrong-cloud or unapproved endpoint fails with
   ``require_endpoint``'s reason (``endpoint_cloud_mismatch``, ``endpoint_not_approved``...); an
@@ -51,6 +55,7 @@ from neurosphere_core.admin.runtime import copilot_init_args
 from neurosphere_core.copilot.models import (
     AdapterConfig,
     ModelAdapter,
+    RecordedDemoAdapter,
     create_adapter,
     resolve_adapters,
 )
@@ -64,6 +69,7 @@ from neurosphere_api.copilot import CosmosConversationStore, configure_copilot
 from neurosphere_api.copilot.dependencies import get_copilot
 from neurosphere_api.copilot.evidence import StoreEvidenceReader
 from neurosphere_api.copilot.store import ConversationStore
+from neurosphere_api.copilot.tooling import CopilotToolAuditor, build_tool_ports
 from neurosphere_api.runtime.builders import (
     AGGREGATE_READER,
     CATALOG_REPOSITORY,
@@ -90,7 +96,7 @@ ENV_PREFIX: Final = "NS_COPILOT_"
 MISCONFIGURED: Final = "misconfigured"
 _CREDENTIAL_MARKERS: Final = ("KEY", "SECRET", "PASSWORD")
 
-CopilotMode = Literal["disabled", "approved_endpoint", "foundry_agent"]
+CopilotMode = Literal["disabled", "approved_endpoint", "foundry_agent", "recorded"]
 
 
 class CopilotCredentialConfigError(StartupRefusedError):
@@ -144,8 +150,8 @@ class CopilotRuntimeSettings(BaseSettings):
 
     def adapter_config(self) -> AdapterConfig:
         """The gating input for the configured mode; missing pieces are ``misconfigured``."""
-        if self.mode == "disabled":
-            raise ValueError("disabled has no adapter")
+        if self.mode in ("disabled", "recorded"):
+            raise ValueError(f"{self.mode} has no adapter config")
         if not (self.endpoint and self.deployment and self.region and self.model_feature):
             raise ComponentUnavailableError(MISCONFIGURED)
         try:
@@ -212,6 +218,13 @@ def _date_clock(ctx: BuildContext) -> Callable[[], datetime] | None:
     return lambda: datetime.fromtimestamp(clock(), UTC)
 
 
+def _recorded_adapter(ctx: BuildContext) -> ModelAdapter:
+    """The scripted demo adapter, only under ``NS_ENV=local`` (never hosted)."""
+    if ctx.settings.env != "local":
+        raise ComponentUnavailableError(MISCONFIGURED)
+    return RecordedDemoAdapter(clock=_date_clock(ctx))
+
+
 def _install(ctx: BuildContext, adapter: ModelAdapter) -> None:
     # The tool read ports (catalog, aggregates, recommendations) come from the data builder.
     catalog = ctx.shared(CATALOG_REPOSITORY)
@@ -231,6 +244,8 @@ def _install(ctx: BuildContext, adapter: ModelAdapter) -> None:
         conversation_store=store,
         evidence_reader=evidence,
         clock=_date_clock(ctx),
+        extra_ports=build_tool_ports(ctx),
+        tool_auditor=CopilotToolAuditor.from_app_state(state),
     )
     try:
         get_copilot(_state_request(ctx))
@@ -274,6 +289,9 @@ def build(ctx: BuildContext) -> None:
         return
     if settings.mode == "disabled":
         ctx.disabled("copilot")
+        return
+    if settings.mode == "recorded":
+        ctx.attempt("copilot", lambda: _install(ctx, _recorded_adapter(ctx)))
         return
     ctx.attempt("copilot", lambda: _install(ctx, _adapter(ctx, settings)))
 

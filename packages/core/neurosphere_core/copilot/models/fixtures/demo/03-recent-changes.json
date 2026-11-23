@@ -1,0 +1,45 @@
+{
+  "id": "what_changed_last_hour",
+  "question": "What changed in the last hour?",
+  "phrases": [
+    [
+      "change",
+      "hour"
+    ],
+    [
+      "changed",
+      "hour"
+    ],
+    [
+      "happen",
+      "hour"
+    ]
+  ],
+  "steps": [
+    {
+      "tool": "get_timeline",
+      "arguments": {
+        "window_minutes": 60
+      }
+    }
+  ],
+  "answer": {
+    "intro": "Changes recorded in the last hour:",
+    "empty": "Nothing was recorded in the last hour.",
+    "exclude_kinds": [
+      "timeline_meta"
+    ],
+    "label_fields": [
+      "operation",
+      "metric",
+      "recommendation_kind"
+    ],
+    "detail_fields": [
+      "occurred_at",
+      "subject_id",
+      "outcome",
+      "delta"
+    ],
+    "show_kind": true
+  }
+}

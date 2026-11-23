@@ -1,6 +1,7 @@
 """Model adapters for the governed copilot (PRP-19 item 3)."""
 
 from neurosphere_core.copilot.models.approved_endpoint import ApprovedEndpointAdapter
+from neurosphere_core.copilot.models.demo import RecordedDemoAdapter
 from neurosphere_core.copilot.models.endpoints import AdapterConfig, endpoint_problem
 from neurosphere_core.copilot.models.foundry_agent import FoundryAgentAdapter
 from neurosphere_core.copilot.models.gating import (
@@ -40,6 +41,7 @@ __all__ = [
     "ModelAdapter",
     "ModelEvent",
     "ModelRequest",
+    "RecordedDemoAdapter",
     "TextDelta",
     "ToolCallRequest",
     "ToolCallRequested",

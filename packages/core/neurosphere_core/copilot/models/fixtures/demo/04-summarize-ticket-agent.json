@@ -1,0 +1,45 @@
+{
+  "id": "agent_for_ticket_summary",
+  "question": "Which agent should summarize a support ticket?",
+  "phrases": [
+    [
+      "agent",
+      "summarize",
+      "ticket"
+    ],
+    [
+      "agent",
+      "summarise",
+      "ticket"
+    ],
+    [
+      "summarize",
+      "support",
+      "ticket"
+    ]
+  ],
+  "steps": [
+    {
+      "tool": "recommend_agent",
+      "arguments": {
+        "request": {
+          "schema_version": "1.0.0",
+          "task_text": "summarize a customer support ticket"
+        }
+      }
+    }
+  ],
+  "answer": {
+    "intro": "Best matches for summarizing a support ticket, ranked:",
+    "empty": "No agent matched that task.",
+    "label_fields": [
+      "display_name"
+    ],
+    "detail_fields": [
+      "entity_type",
+      "score",
+      "lifecycle_status"
+    ],
+    "max_items": 5
+  }
+}
