@@ -58,9 +58,9 @@ export interface ReviewKindDefault {
 export interface ReviewPolicySettings {
   self_approval_forbidden: boolean;
   /**
-   * Permission the reviewer needs on the item's domain.
+   * Permission the reviewer needs on the item's domain. Open-ended: readers must tolerate unknown values.
    */
-  approver_permission: "action.approve" | "catalog.curate";
+  approver_permission: "action.approve" | "catalog.curate" | "config.manage" | "govpolicy.manage";
   assignment_timeout_seconds: DurationSeconds;
   sla_seconds: DurationSeconds;
   escalation_step_seconds: DurationSeconds;

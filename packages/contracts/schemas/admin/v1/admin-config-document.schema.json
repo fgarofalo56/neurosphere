@@ -18,21 +18,36 @@
     "body"
   ],
   "properties": {
-    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
     "id": {
       "description": "Document id, unique per customer and kind (for example the producer_id, domain slug or setting_key).",
       "$ref": "common.schema.json#/$defs/record_id"
     },
-    "customer_id": { "$ref": "common.schema.json#/$defs/customer_id" },
-    "kind": { "$ref": "common.schema.json#/$defs/admin_kind" },
-    "version": { "$ref": "common.schema.json#/$defs/config_version" },
-    "etag": { "$ref": "common.schema.json#/$defs/etag" },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "kind": {
+      "$ref": "common.schema.json#/$defs/admin_kind"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/config_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
     "status": {
       "description": "active: applied by the runtime. retired: kept for audit and history only.",
       "type": "string",
-      "enum": ["active", "retired"]
+      "enum": [
+        "active",
+        "retired"
+      ]
     },
-    "updated_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
     "updated_by": {
       "description": "Pseudonymous principal that made the accepted write.",
       "$ref": "common.schema.json#/$defs/principal_id"
@@ -40,44 +55,229 @@
     "body": {
       "description": "The kind's contract document; allOf below pins which one. Never a credential value.",
       "anyOf": [
-        { "$ref": "producer-record.schema.json" },
-        { "$ref": "connector-config.schema.json" },
-        { "$ref": "domain-definition.schema.json" },
-        { "$ref": "budget.schema.json" },
-        { "$ref": "price-sheet-upload.schema.json" },
-        { "$ref": "review-policy-document.schema.json" },
-        { "$ref": "system-setting.schema.json" }
+        {
+          "$ref": "producer-record.schema.json"
+        },
+        {
+          "$ref": "connector-config.schema.json"
+        },
+        {
+          "$ref": "domain-definition.schema.json"
+        },
+        {
+          "$ref": "budget.schema.json"
+        },
+        {
+          "$ref": "price-sheet-upload.schema.json"
+        },
+        {
+          "$ref": "review-policy-document.schema.json"
+        },
+        {
+          "$ref": "system-setting.schema.json"
+        },
+        {
+          "$ref": "../../notifications/v1/notification-channel.schema.json"
+        },
+        {
+          "$ref": "../../notifications/v1/notification-subscription.schema.json"
+        },
+        {
+          "$ref": "../../policy/v1/enforcement-binding.schema.json"
+        }
       ]
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "kind": { "const": "producer" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "producer-record.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "producer"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "producer-record.schema.json"
+          }
+        }
+      }
     },
     {
-      "if": { "properties": { "kind": { "const": "connector_config" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "connector-config.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "connector_config"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "connector-config.schema.json"
+          }
+        }
+      }
     },
     {
-      "if": { "properties": { "kind": { "const": "domain" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "domain-definition.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "domain"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "domain-definition.schema.json"
+          }
+        }
+      }
     },
     {
-      "if": { "properties": { "kind": { "const": "budget" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "budget.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "budget"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "budget.schema.json"
+          }
+        }
+      }
     },
     {
-      "if": { "properties": { "kind": { "const": "price_sheet" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "price-sheet-upload.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "price_sheet"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "price-sheet-upload.schema.json"
+          }
+        }
+      }
     },
     {
-      "if": { "properties": { "kind": { "const": "review_policy" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "review-policy-document.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "review_policy"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "review-policy-document.schema.json"
+          }
+        }
+      }
     },
     {
-      "if": { "properties": { "kind": { "const": "system_setting" } }, "required": ["kind"] },
-      "then": { "properties": { "body": { "$ref": "system-setting.schema.json" } } }
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "system_setting"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "system-setting.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "notification_channel"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "../../notifications/v1/notification-channel.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "notification_subscription"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "../../notifications/v1/notification-subscription.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "enforcement_binding"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "../../policy/v1/enforcement-binding.schema.json"
+          }
+        }
+      }
     }
   ]
 }

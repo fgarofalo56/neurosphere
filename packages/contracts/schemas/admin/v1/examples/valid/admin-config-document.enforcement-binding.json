@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "support-gateway",
+  "customer_id": "acme",
+  "kind": "enforcement_binding",
+  "version": 1,
+  "etag": "\"0x8DD2A1B3C4D5E6F\"",
+  "status": "active",
+  "updated_at": "2026-11-16T10:00:00Z",
+  "updated_by": "commercial:acme:entra:person:p-0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+  "body": {
+    "schema_version": "1.2.0",
+    "binding_id": "support-gateway",
+    "cloud": "commercial",
+    "customer_id": "acme",
+    "domain_id": "commercial:acme:neurosphere:domain:support",
+    "policy_id": "support-governance",
+    "point": "gateway",
+    "target": null,
+    "mode": "audit",
+    "state": "applied",
+    "last_intent_id": "00000007-0000-4000-8000-000000000007",
+    "last_audit_id": "00000008-0000-4000-8000-000000000008",
+    "last_verified_at": "2026-11-16T10:00:00Z"
+  }
+}

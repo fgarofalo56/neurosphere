@@ -10,7 +10,7 @@
       "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
     "admin_kind": {
-      "description": "Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65).",
+      "description": "Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65). Open-ended: readers must tolerate unknown values.",
       "type": "string",
       "enum": [
         "producer",
@@ -19,7 +19,10 @@
         "budget",
         "price_sheet",
         "review_policy",
-        "system_setting"
+        "system_setting",
+        "notification_channel",
+        "notification_subscription",
+        "enforcement_binding"
       ]
     },
     "config_version": {
@@ -95,9 +98,16 @@
       "maxLength": 256
     },
     "role": {
-      "description": "Platform role (NS-08). admin and security_auditor are privileged and always time-bound.",
+      "description": "Platform role (NS-08). admin, security_auditor and interaction_investigator are privileged and always time-bound. Open-ended: readers must tolerate unknown values.",
       "type": "string",
-      "enum": ["viewer", "analyst", "domain_steward", "admin", "security_auditor"]
+      "enum": [
+        "viewer",
+        "analyst",
+        "domain_steward",
+        "admin",
+        "security_auditor",
+        "interaction_investigator"
+      ]
     },
     "grant_permission": {
       "description": "Permission a resource-scoped grant may carry (mirrors scope/v1 resource_grant).",

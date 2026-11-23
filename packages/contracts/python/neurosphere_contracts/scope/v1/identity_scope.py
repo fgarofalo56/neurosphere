@@ -67,7 +67,17 @@ class RoleAssignment(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    role: Literal["viewer", "analyst", "domain_steward", "admin", "security_auditor"]
+    role: Literal[
+        "viewer",
+        "analyst",
+        "domain_steward",
+        "admin",
+        "security_auditor",
+        "interaction_investigator",
+    ]
+    """
+    Open-ended: readers must tolerate unknown values. interaction_investigator is privileged and time-bound like admin and security_auditor.
+    """
     domain_ids: Annotated[list[CanonicalId], Field(max_length=1024, min_length=1)]
     """
     Domains this role applies to. At least one; there is no tenant-wide form.

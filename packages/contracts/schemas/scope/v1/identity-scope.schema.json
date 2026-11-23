@@ -106,7 +106,15 @@
       "required": ["role", "domain_ids"],
       "properties": {
         "role": {
-          "enum": ["viewer", "analyst", "domain_steward", "admin", "security_auditor"]
+          "description": "Open-ended: readers must tolerate unknown values. interaction_investigator is privileged and time-bound like admin and security_auditor.",
+          "enum": [
+            "viewer",
+            "analyst",
+            "domain_steward",
+            "admin",
+            "security_auditor",
+            "interaction_investigator"
+          ]
         },
         "domain_ids": {
           "description": "Domains this role applies to. At least one; there is no tenant-wide form.",
@@ -122,6 +130,13 @@
         {
           "if": {
             "properties": { "role": { "enum": ["admin", "security_auditor"] } },
+            "required": ["role"]
+          },
+          "then": { "required": ["expires_at"] }
+        },
+        {
+          "if": {
+            "properties": { "role": { "const": "interaction_investigator" } },
             "required": ["role"]
           },
           "then": { "required": ["expires_at"] }

@@ -53,6 +53,12 @@ WriteAction = Literal[
     "gateway_mode_change",
     "deploy_plan_apply",
     "deploy_uninstall",
+    "agent_version_approve",
+    "agent_version_suspend",
+    "capture_policy_change",
+    "governance_policy_publish",
+    "enforcement_mode_change",
+    "gateway_policy_apply",
 ]
 Cloud = Literal["commercial", "government"]
 

@@ -13,7 +13,19 @@ export interface SystemSetting {
    * Contract version of the document, major 1 with additive minor revisions (ADR-0004).
    */
   schema_version: string;
-  setting_key: "copilot" | "judge" | "search" | "scan" | "mcp_server" | "write_target";
+  /**
+   * Open-ended: readers must tolerate unknown values.
+   */
+  setting_key:
+    | "copilot"
+    | "judge"
+    | "search"
+    | "scan"
+    | "mcp_server"
+    | "write_target"
+    | "interaction_capture"
+    | "notifications"
+    | "enforcement";
   enabled: boolean;
   copilot?: ModelEndpointSetting;
   judge?: ModelEndpointSetting;
@@ -21,6 +33,9 @@ export interface SystemSetting {
   scan?: ScanSetting;
   mcp_server?: McpServerSetting;
   write_target?: WriteTargetSetting;
+  interaction_capture?: InteractionCaptureSetting;
+  notifications?: NotificationsSetting;
+  enforcement?: EnforcementSetting;
 }
 /**
  * An Azure OpenAI / Foundry model deployment used by the copilot or the evaluation judge.
@@ -115,4 +130,58 @@ export interface WriteTargetSetting {
    */
   resource_id: string;
   credential: CredentialReference;
+}
+/**
+ * Where captured interaction content is stored and how it is encrypted (PRP-99). kek_uri is a Key Vault key identifier only (https://<vault>.vault.azure.net or usgovcloudapi.net /keys/<name>[/<32 hex version>]); it is null only when kek_provider is local_development and is required when it is key_vault_key. The vault suffix must match the cloud of the deployment (tests/contracts/validators.py::check_kek_uri_cloud). Capture itself stays off until an approved capture_policy_change.
+ *
+ * This interface was referenced by `SystemSetting`'s JSON-Schema
+ * via the `definition` "interaction_capture".
+ */
+export interface InteractionCaptureSetting {
+  /**
+   * Where the key-encryption key lives. Open-ended: readers must tolerate unknown values.
+   */
+  kek_provider: "key_vault_key" | "local_development";
+  /**
+   * Key Vault key identifier of the key-encryption key; null only for local_development.
+   */
+  kek_uri: string | null;
+  /**
+   * Azure Resource Manager resource id (/subscriptions/<guid>/resourceGroups/<name>/providers/<namespace>/<type>/<name>...).
+   */
+  content_storage_account_resource_id: string;
+  content_container: string;
+  credential: CredentialReference;
+  max_content_chars_per_interaction?: number;
+  shed_capture_at_queue_percent?: number;
+}
+/**
+ * Notification sender limits and the egress allow-list (PRP-99). Hostnames only; every channel's allowed_host must be on this list at send time.
+ *
+ * This interface was referenced by `SystemSetting`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface NotificationsSetting {
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  egress_allowed_hosts: [string, ...string[]];
+  max_attempts?: number;
+  retry_base_seconds?: number;
+  dedup_window_seconds?: number;
+}
+/**
+ * Policy decision service limits (PRP-99). The SDK guard fails open by default (owner decision GD-8); enforcement modes live on EnforcementBinding and default to audit.
+ *
+ * This interface was referenced by `SystemSetting`'s JSON-Schema
+ * via the `definition` "enforcement".
+ */
+export interface EnforcementSetting {
+  decision_cache_ttl_seconds?: number;
+  /**
+   * Open-ended: readers must tolerate unknown values.
+   */
+  sdk_failure_mode?: "fail_open" | "fail_closed";
+  decide_rate_limit_per_minute?: number;
 }

@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from ...notifications.v1 import notification_channel, notification_subscription
+from ...policy.v1 import enforcement_binding
 from . import (
     budget,
     common,
@@ -56,6 +58,9 @@ class AdminConfigDocument(BaseModel):
         | price_sheet_upload.PriceSheetUpload
         | review_policy_document.ReviewPolicyDocument
         | system_setting.SystemSetting
+        | notification_channel.NotificationChannel
+        | notification_subscription.NotificationSubscription
+        | enforcement_binding.EnforcementBinding
     )
     """
     The kind's contract document; allOf below pins which one. Never a credential value.

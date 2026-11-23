@@ -35,6 +35,9 @@ class AdminKind(
             "price_sheet",
             "review_policy",
             "system_setting",
+            "notification_channel",
+            "notification_subscription",
+            "enforcement_binding",
         ]
     ]
 ):
@@ -46,9 +49,12 @@ class AdminKind(
         "price_sheet",
         "review_policy",
         "system_setting",
+        "notification_channel",
+        "notification_subscription",
+        "enforcement_binding",
     ]
     """
-    Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65).
+    Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65). Open-ended: readers must tolerate unknown values.
     """
 
 
@@ -166,10 +172,28 @@ class Etag(RootModel[StrictStr]):
     """
 
 
-class Role(RootModel[Literal["viewer", "analyst", "domain_steward", "admin", "security_auditor"]]):
-    root: Literal["viewer", "analyst", "domain_steward", "admin", "security_auditor"]
+class Role(
+    RootModel[
+        Literal[
+            "viewer",
+            "analyst",
+            "domain_steward",
+            "admin",
+            "security_auditor",
+            "interaction_investigator",
+        ]
+    ]
+):
+    root: Literal[
+        "viewer",
+        "analyst",
+        "domain_steward",
+        "admin",
+        "security_auditor",
+        "interaction_investigator",
+    ]
     """
-    Platform role (NS-08). admin and security_auditor are privileged and always time-bound.
+    Platform role (NS-08). admin, security_auditor and interaction_investigator are privileged and always time-bound. Open-ended: readers must tolerate unknown values.
     """
 
 
