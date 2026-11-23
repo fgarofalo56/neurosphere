@@ -7,6 +7,7 @@ export function newTurn(key: string, userText: string): AssistantTurn {
     status: "streaming",
     text: "",
     tools: [],
+    phase: null,
     citations: [],
     charts: [],
     chartQuerySpecs: [],
@@ -38,6 +39,8 @@ export function applyEvent(
       const rest = turn.tools.filter((t) => t.name !== event.data.name);
       return { ...turn, tools: [...rest, event.data] };
     }
+    case "progress":
+      return { ...turn, phase: event.data.phase };
     case "token":
       return {
         ...turn,
@@ -55,7 +58,7 @@ export function applyEvent(
     case "action_suggestion":
       return { ...turn, suggestions: [...turn.suggestions, event.data] };
     case "done":
-      return { ...turn, status: "answered" };
+      return { ...turn, status: "answered", phase: null };
     case "abstain":
       return discard(turn, "abstain", event.data);
     case "denied":
@@ -73,6 +76,7 @@ function discardOnError(
   return {
     ...turn,
     status: "error",
+    phase: null,
     text: "",
     citations: [],
     charts: [],
@@ -90,6 +94,7 @@ function discard(
   return {
     ...turn,
     status,
+    phase: null,
     text: "",
     citations: [],
     charts: [],

@@ -137,7 +137,10 @@ interface Call {
 /** A fetch stub: the first call per path family is conversation create, the rest are messages. */
 function stubFetch(
   messages: (n: number, init: RequestInit) => Response | Promise<Response>,
-  status: { state: string; reason_code: string | null } = { state: "ready", reason_code: null },
+  status: { state: string; reason_code: string | null; synthetic?: boolean } = {
+    state: "ready",
+    reason_code: null,
+  },
 ) {
   const calls: Call[] = [];
   let n = 0;
@@ -780,6 +783,93 @@ describe("SseParser and parseEvent", () => {
 
   it("rejects a chart without a spec or citations", () => {
     expect(parseEvent({ event: "chart", data: '{"chart_plan":{"spec":{}}}' })).toBeNull();
+  });
+});
+
+// ---- progress phase and recorded-demo label (PRP-78 item 7) -------------------------------------
+
+describe("progress events", () => {
+  it("parses a valid progress event and ignores malformed ones like unknown events", () => {
+    expect(parseEvent({ event: "progress", data: '{"phase":"tools","iteration":2}' })).toEqual({
+      name: "progress",
+      data: { phase: "tools", iteration: 2 },
+    });
+    for (const data of [
+      '{"phase":"thinking","iteration":1}',
+      '{"phase":"model","iteration":0}',
+      '{"phase":"model","iteration":1.5}',
+      '{"phase":"model","iteration":"1"}',
+      '{"phase":"model"}',
+      "not json",
+    ]) {
+      expect(parseEvent({ event: "progress", data })).toBeNull();
+    }
+  });
+
+  it("shows the current phase while streaming and clears it on the terminal", async () => {
+    let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controllerRef = controller;
+        controller.enqueue(encoder.encode(frame(["context", ECHO])));
+        controller.enqueue(encoder.encode(frame(["progress", { phase: "model", iteration: 1 }])));
+      },
+    });
+    const { impl } = stubFetch(() => new Response(body, { status: 200 }));
+    mount(impl);
+    await ask();
+    const progress = await screen.findByTestId("turn-progress");
+    expect(progress).toHaveAttribute("role", "status");
+    expect(progress).toHaveAttribute("aria-live", "polite");
+    await waitFor(() => expect(progress).toHaveTextContent(STRINGS.progress.model));
+
+    const push = (ev: Ev): void => {
+      (controllerRef as ReadableStreamDefaultController<Uint8Array> | null)?.enqueue(
+        encoder.encode(frame(ev)),
+      );
+    };
+    push(["progress", { phase: "tools", iteration: 1 }]);
+    await waitFor(() => expect(progress).toHaveTextContent(STRINGS.progress.tools));
+    push(["progress", { phase: "checking", iteration: 1 }]);
+    await waitFor(() => expect(progress).toHaveTextContent(STRINGS.progress.checking));
+
+    push(["done", { message_id: "m9", status: "answered" }]);
+    await waitFor(() =>
+      expect(screen.getByTestId("assistant-turn")).toHaveAttribute("data-status", "answered"),
+    );
+    expect(screen.queryByTestId("turn-progress")).toBeNull();
+  });
+});
+
+describe("recorded demo model label", () => {
+  it("is shown in the header and on each answer only when status is synthetic", async () => {
+    const { impl } = stubFetch(() => sse(ANSWERED), {
+      state: "ready",
+      reason_code: null,
+      synthetic: true,
+    });
+    mount(impl);
+    await ask();
+    await waitFor(() =>
+      expect(screen.getByTestId("assistant-turn")).toHaveAttribute("data-status", "answered"),
+    );
+    expect(STRINGS.syntheticLabel).toBe("Recorded demo model, not AI");
+    const header = await screen.findByTestId("synthetic-label");
+    expect(header).toHaveAttribute("role", "status");
+    expect(header).toHaveTextContent(STRINGS.syntheticLabel);
+    expect(screen.getByTestId("synthetic-answer-label")).toHaveTextContent(STRINGS.syntheticLabel);
+  });
+
+  it("is absent when synthetic is false or missing", async () => {
+    const { impl } = stubFetch(() => sse(ANSWERED));
+    mount(impl);
+    await ask();
+    await waitFor(() =>
+      expect(screen.getByTestId("assistant-turn")).toHaveAttribute("data-status", "answered"),
+    );
+    expect(screen.queryByTestId("synthetic-label")).toBeNull();
+    expect(screen.queryByTestId("synthetic-answer-label")).toBeNull();
+    expect(screen.queryByText(STRINGS.syntheticLabel)).toBeNull();
   });
 });
 

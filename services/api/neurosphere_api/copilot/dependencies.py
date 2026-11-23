@@ -21,6 +21,9 @@ wrongly-typed REQUIRED collaborator fails closed with 503 (``dependency_transien
                                ``reject_all_chart_plans`` to fail closed explicitly)
 ``copilot_refusal_sink``       optional ``RefusalSink`` (audit hook for refused tool calls)
 ``copilot_clock``              optional ``() -> datetime`` (aware)
+``copilot_extra_ports``        optional ``CopilotExtraPorts`` (graph, access, change log, matcher;
+                               PRP-78); an absent port leaves its tool unregistered/unavailable
+``copilot_tool_auditor``       optional ``CopilotToolAuditor`` (one audit record per tool call)
 =============================  =====================================================================
 
 The action plane is read from the PRP-17 keys (``neurosphere_api.actions.dependencies``); when it
@@ -49,6 +52,7 @@ from neurosphere_api.copilot.engine import ChartPlanValidator, CopilotEngine, To
 from neurosphere_api.copilot.models import CopilotStatus
 from neurosphere_api.copilot.settings import CopilotSettings
 from neurosphere_api.copilot.store import ConversationStore
+from neurosphere_api.copilot.tooling import CopilotExtraPorts, CopilotToolAuditor
 
 __all__ = [
     "CopilotRuntime",
@@ -129,8 +133,18 @@ def get_copilot(request: Request) -> CopilotRuntime:
         chart_validator=getattr(state, "copilot_chart_validator", None),
         refusal_sink=getattr(state, "copilot_refusal_sink", None),
         clock=clock,
+        extra_ports=getattr(state, "copilot_extra_ports", None),
+        tool_auditor=getattr(state, "copilot_tool_auditor", None),
     )
     return CopilotRuntime(engine=engine, store=store, settings=settings, clock=clock)
+
+
+def _synthetic(request: Request) -> bool:
+    """Whether the composed adapter replays recordings (its descriptor says so)."""
+    adapter = getattr(request.app.state, "copilot_model_adapter", None)
+    if not isinstance(adapter, ModelAdapter):
+        return False
+    return bool(adapter.descriptor.synthetic)
 
 
 def read_copilot_status(request: Request) -> CopilotStatus:
@@ -145,7 +159,7 @@ def read_copilot_status(request: Request) -> CopilotStatus:
         if registry.reported("copilot"):
             component = registry.get("copilot")
             if component.state == "ok":
-                return CopilotStatus(state="ready")
+                return CopilotStatus(state="ready", synthetic=_synthetic(request))
             if component.state == "failed":
                 return CopilotStatus(state="failed", reason_code=component.reason)
             return CopilotStatus(state="disabled", reason_code=component.state)
@@ -153,7 +167,7 @@ def read_copilot_status(request: Request) -> CopilotStatus:
         get_copilot(request)
     except DependencyTransientError as exc:
         return CopilotStatus(state="disabled", reason_code=exc.reason or _UNCONFIGURED)
-    return CopilotStatus(state="ready")
+    return CopilotStatus(state="ready", synthetic=_synthetic(request))
 
 
 def get_optional_action_plane(request: Request) -> ActionPlane | None:
@@ -174,6 +188,8 @@ def configure_copilot(
     chart_validator: ChartPlanValidator | None = None,
     refusal_sink: RefusalSink | None = None,
     clock: Callable[[], datetime] | None = None,
+    extra_ports: CopilotExtraPorts | None = None,
+    tool_auditor: CopilotToolAuditor | None = None,
 ) -> None:
     """Install the copilot-specific collaborators on ``app.state`` (one call for item 7)."""
     state = app.state
@@ -184,3 +200,5 @@ def configure_copilot(
     state.copilot_chart_validator = chart_validator or validate_chart_plan_mapping
     state.copilot_refusal_sink = refusal_sink
     state.copilot_clock = clock
+    state.copilot_extra_ports = extra_ports
+    state.copilot_tool_auditor = tool_auditor

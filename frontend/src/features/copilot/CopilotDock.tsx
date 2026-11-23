@@ -123,6 +123,7 @@ function CopilotDockInner(): ReactElement {
   const chat = useCopilotChat(transport);
   const [open, setOpen] = useState(false);
   const status = useCopilotStatus(transport, open);
+  const synthetic = status?.synthetic === true;
   const notConfigured = status !== null && status.state !== "ready";
   const [draft, setDraft] = useState("");
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -189,6 +190,11 @@ function CopilotDockInner(): ReactElement {
               {STRINGS.close}
             </Button>
           </div>
+          {synthetic ? (
+            <div role="status" data-testid="synthetic-label">
+              <strong>{STRINGS.syntheticLabel}</strong>
+            </div>
+          ) : null}
           <ContextChip echo={chat.echo} />
           <div
             ref={logRef}
@@ -206,6 +212,7 @@ function CopilotDockInner(): ReactElement {
                 key={turn.key}
                 turn={turn}
                 echo={chat.echo}
+                synthetic={synthetic}
                 onNavigate={() => setOpen(false)}
               />
             ))}

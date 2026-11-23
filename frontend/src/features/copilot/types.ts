@@ -65,6 +65,14 @@ export interface ActionSuggestionEvent {
   readonly intent_hash: string;
 }
 
+/** The phase the server is in; `progress` events carry no content, only this. */
+export type ProgressPhase = "model" | "tools" | "checking";
+
+export interface ProgressEvent {
+  readonly phase: ProgressPhase;
+  readonly iteration: number;
+}
+
 export interface TerminalReason {
   readonly message_id: string;
   readonly reason_code: string;
@@ -75,6 +83,7 @@ export interface TerminalReason {
 export type CopilotEvent =
   | { readonly name: "context"; readonly data: ContextEcho }
   | { readonly name: "tool"; readonly data: ToolEvent }
+  | { readonly name: "progress"; readonly data: ProgressEvent }
   | { readonly name: "token"; readonly data: { readonly text: string } }
   | { readonly name: "citation"; readonly data: CitationEvent }
   | {
@@ -107,6 +116,8 @@ export interface AssistantTurn {
   /** Streamed tokens. Emptied when the turn ends in `abstain` or `denied`. */
   readonly text: string;
   readonly tools: readonly ToolEvent[];
+  /** Latest `progress` phase while streaming; null before the first one and after the terminal. */
+  readonly phase: ProgressPhase | null;
   readonly citations: readonly CitationEvent[];
   readonly charts: readonly ChartPlan[];
   /** Parallel to `charts`: the query that produced each chart's data, or null when not sent. */
@@ -124,4 +135,6 @@ export interface AssistantTurn {
 export interface CopilotStatus {
   readonly state: "ready" | "disabled" | "failed";
   readonly reason_code: string | null;
+  /** True when the composed model is the recorded demo model (not a real AI model). */
+  readonly synthetic: boolean;
 }

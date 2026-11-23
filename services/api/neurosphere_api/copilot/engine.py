@@ -48,14 +48,14 @@ from neurosphere_core.copilot.models import ToolSpec as ModelToolSpec
 from neurosphere_core.copilot.tools import (
     CatalogReader,
     Citation,
+    CopilotToolDependencies,
     EvidenceReader,
     MetricsReader,
     RecommendationReader,
     RefusalSink,
-    ToolDependencies,
     ToolRegistry,
     ToolResult,
-    build_default_registry,
+    build_copilot_registry,
     unknown_citations,
 )
 from neurosphere_core.errors import (
@@ -85,12 +85,14 @@ from neurosphere_api.copilot.models import (
     DeniedEvent,
     DoneEvent,
     ErrorEvent,
+    ProgressEvent,
     SseEvent,
     TokenEvent,
     ToolEvent,
 )
 from neurosphere_api.copilot.settings import CopilotSettings
 from neurosphere_api.copilot.store import TurnStatus
+from neurosphere_api.copilot.tooling import CopilotExtraPorts, CopilotToolAuditor
 from neurosphere_api.reports.models import ReportBody
 from neurosphere_api.reports.service import tool_for
 
@@ -335,6 +337,8 @@ class CopilotEngine:
         chart_validator: ChartPlanValidator | None = None,
         refusal_sink: RefusalSink | None = None,
         clock: Callable[[], datetime] = _utc_now,
+        extra_ports: CopilotExtraPorts | None = None,
+        tool_auditor: CopilotToolAuditor | None = None,
     ) -> None:
         self._adapter = adapter
         self._ports = ports
@@ -343,6 +347,8 @@ class CopilotEngine:
         self._chart_validator: ChartPlanValidator = chart_validator or reject_all_chart_plans
         self._sink = refusal_sink
         self._clock = clock
+        self._extra = extra_ports or CopilotExtraPorts()
+        self._auditor = tool_auditor
 
     @property
     def ports(self) -> ToolPorts:
@@ -366,16 +372,25 @@ class CopilotEngine:
         started = time.monotonic()
         yield SseEvent(name="context", payload=context.event())
         state = _Run()
-        registry = build_default_registry(
-            ToolDependencies(
+        narrowed = context.applied_domains if context.narrowed else ()
+        registry = build_copilot_registry(
+            CopilotToolDependencies(
                 catalog=self._ports.catalog,
                 metrics=self._ports.metrics,
                 recommendations=self._ports.recommendations,
                 evidence=self._ports.evidence,
                 drafter=drafter,
                 clock=self._clock,
+                graph=self._extra.graph,
+                access=self._extra.access,
+                changes=self._extra.changes,
+                matcher=self._extra.matcher,
+                preferred_domains=lambda _scope: narrowed,
             ),
             sink=self._sink,
+            observer=(
+                self._auditor.for_turn(scope, correlation_id) if self._auditor is not None else None
+            ),
         )
         turns: list[ConversationTurn] = [
             *history,
@@ -388,10 +403,16 @@ class CopilotEngine:
             deadline = asyncio.get_running_loop().time() + self._settings.turn_timeout_seconds
             for _ in range(self._settings.max_tool_iterations):
                 iterations += 1
+                yield SseEvent(
+                    name="progress", payload=ProgressEvent(phase="model", iteration=iterations)
+                )
                 collected = await self._model_pass(registry, turns, correlation_id, deadline)
                 if not collected.calls:
                     final_text = collected.text
                     break
+                yield SseEvent(
+                    name="progress", payload=ProgressEvent(phase="tools", iteration=iterations)
+                )
                 async for event in self._tool_phase(
                     registry, scope, context, collected, turns, state, deadline
                 ):
@@ -418,6 +439,9 @@ class CopilotEngine:
 
         if terminal is None:
             assert final_text is not None
+            yield SseEvent(
+                name="progress", payload=ProgressEvent(phase="checking", iteration=iterations)
+            )
             async for event in self._finalize(
                 message_id, final_text, state, drafter, persist, correlation_id
             ):

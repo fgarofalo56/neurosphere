@@ -77,6 +77,58 @@ export NS_COPILOT_SKU="Global Standard"
 
 Each model call is a paid call: get operator approval first.
 
+## Recorded demo mode (local only)
+
+`NS_COPILOT_MODE=recorded` composes the recorded demo model (PRP-78) instead of a model endpoint.
+It never reaches a model: it replays one of five scripted questions, calls the real tools with the
+asker's own scope, and answers **extractively** from those tool results (text and citations come
+only from rows the tools returned). Any other question, or a script whose tools return nothing,
+gets a fixed abstention with no citations.
+
+- Local only: `NS_ENV` must be `local`. In any other environment `recorded` resolves to
+  `misconfigured` and the copilot is not composed.
+- Labelled: `GET /api/v1/copilot/status` reports `synthetic: true`, and the dock shows "Recorded
+  demo model, not AI". Never present it as a model.
+- The five demo questions: "Which agents touch EU customer data?", "Which agents write to the
+  Accounts Payable Invoices source?", "What changed in the last hour?", "Which agent should
+  summarize a support ticket?", "What did we spend this week?".
+- The demo profile turns it on: `infra/dev/demo-profile.env` sets `NS_DEMO_COPILOT_MODE=recorded`,
+  which compose maps to `NS_COPILOT_MODE`. The demo settings seed does not store a `copilot` row in
+  this mode (a stored row beats the environment and a disabled placeholder would keep it off).
+  `make demo-check` requires the status to be `ready` and `synthetic`, then posts one demo question
+  and requires a `done` event with a citation.
+- Switch to a real endpoint: set `NS_DEMO_COPILOT_MODE=disabled` (or unset `NS_COPILOT_MODE`
+  override) and follow "Local real-model use" below; that path is unchanged. Setting
+  `NS_DEMO_COPILOT_MODE=disabled` makes the demo check report copilot as `switched_off`.
+
+## Copilot tools
+
+Eight tools are registered (the five built-in ones plus three added by PRP-78). Every call rechecks
+the caller's scope; an out-of-scope domain or asset is refused, never widened.
+
+| Tool | Permission | Bounds |
+|---|---|---|
+| `graph_query` | `data.read` per domain | depth at most 3, 100 nodes, 300 edges, 50 start ids; `grants_access_to` edges are excluded |
+| `get_timeline` | `audit.read` for `changes`; `data.read` for `metric_shifts` and `recommendations` | window 5 to 1440 minutes, 100 entries, a section the caller cannot read is listed under `sections_omitted` with a reason; no actor or before/after body |
+| `recommend_agent` | `data.read` | at most 5 domains |
+
+The other five are `get_cost_summary`, `get_evidence`, `list_recommendations`, `propose_action` and
+`search_catalog`.
+
+### Progress events
+
+The message stream emits `progress` SSE events (`phase` is `model`, `tools` or `checking`, plus
+`iteration`) so the dock can show where a turn is. They carry no content.
+
+### Audit
+
+Each tool invocation appends one `copilot.tool_call` record on channel `chat`. The outcome is
+`allowed`, `refused` or `failed`. The subject state digest binds the tool, outcome, reason, the
+domain ids consulted and the result count; arguments, prompt text and rows are never recorded. The
+chain is the domain chain when exactly one domain was consulted, else the customer's read-audit
+chain. A failed or unconfigured audit write is logged without values and counted on
+`read_audit_stats`; it never changes the answer.
+
 ## Hosted use
 
 `scripts/gates/hosted_demo.py` takes `--copilot-mode approved_endpoint` with `--copilot-endpoint`
@@ -125,3 +177,7 @@ A live answer from a real model has **not** been run: it needs an operator-appro
 `NS_LIVE_APPROVED=1`. The Foundry Responses wire shape is documentation-derived. Matrix rows state
 availability only; they are not an authorization or compliance claim. Tracked under G01 and G05 in
 [RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).
+
+The first real-model turn that uses the PRP-78 tools (`graph_query`, `get_timeline`,
+`recommend_agent`) is **OPEN**, handed to PRP-64. Only the recorded demo model has exercised them
+end to end.

@@ -104,8 +104,8 @@ def test_the_incident_and_undeclared_agent_expectations_hold(report: Any) -> Non
     ]
 
 
-def test_copilot_reports_pending_prp_78_while_disabled(report: Any) -> None:
-    if (os.environ.get("NS_DEMO_COPILOT_MODE") or "disabled") != "disabled":
-        pytest.skip("copilot is switched on in this demo profile")
+def test_copilot_answers_in_recorded_mode(report: Any) -> None:
+    if (os.environ.get("NS_DEMO_COPILOT_MODE") or "disabled") != "recorded":
+        pytest.skip("the recorded demo model is not switched on in this demo profile")
     copilot = next(f for f in report.features if f.name == "copilot")
-    assert copilot.state == "pending_prp_78", copilot
+    assert copilot.state == "enabled", copilot

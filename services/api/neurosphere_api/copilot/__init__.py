@@ -45,17 +45,26 @@ from neurosphere_api.copilot.store import (
     StoredConversation,
     StoredTurn,
 )
+from neurosphere_api.copilot.tooling import (
+    AuditChangeLogReader,
+    CopilotExtraPorts,
+    CopilotToolAuditor,
+    build_tool_ports,
+)
 
 __all__ = [
     "DEFAULT_CONVERSATION_CONTAINER",
     "PREFIX",
     "SYSTEM_PROMPT",
     "ActionPlaneDrafter",
+    "AuditChangeLogReader",
     "ChartPlanValidator",
     "ConversationStore",
     "CopilotEngine",
+    "CopilotExtraPorts",
     "CopilotRuntime",
     "CopilotSettings",
+    "CopilotToolAuditor",
     "CosmosConversationStore",
     "DraftedIntent",
     "EmptyEvidenceReader",
@@ -68,6 +77,7 @@ __all__ = [
     "ToolPorts",
     "TurnOutcome",
     "build_router",
+    "build_tool_ports",
     "configure_copilot",
     "create_conversation_container",
     "get_copilot",

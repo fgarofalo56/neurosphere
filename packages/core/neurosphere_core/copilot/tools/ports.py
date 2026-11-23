@@ -10,6 +10,7 @@ intent and nothing else (no confirm, no execute).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Literal, Protocol
 
 from neurosphere_contracts.actions.v1.action_intent import ActionIntent
@@ -19,14 +20,22 @@ from pydantic import BaseModel, ConfigDict, Field
 from neurosphere_core.actions import DraftRequest
 from neurosphere_core.aggregates import AggregateWindow, Grain, Metric, QueryResult
 from neurosphere_core.catalog import CatalogEntity, EntityFilter
+from neurosphere_core.catalog.graph.access import AccessQuery, AccessResult
+from neurosphere_core.catalog.protocol import GraphResult, ImpactRequest, NeighborsRequest
 from neurosphere_core.paging import Page, PageRequest
+from neurosphere_core.recommendations.matching.service import AgentMatchReader
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
+    "AccessReader",
     "ActionDrafter",
+    "AgentMatchReader",
     "CatalogReader",
+    "ChangeLogReader",
+    "ChangeRecord",
     "EvidenceReader",
     "EvidenceRecord",
+    "GraphReader",
     "MetricsReader",
     "RecommendationReader",
 ]
@@ -102,3 +111,48 @@ class ActionDrafter(Protocol):
     async def draft(
         self, scope: IdentityScope, request: DraftRequest, *, domain_id: str
     ) -> ActionIntent: ...
+
+
+class GraphReader(Protocol):
+    """The bounded ``neighbors`` and ``impact_paths`` reads of ``catalog.protocol.GraphQuery``."""
+
+    async def neighbors(self, scope: IdentityScope, request: NeighborsRequest) -> GraphResult: ...
+
+    async def impact_paths(self, scope: IdentityScope, request: ImpactRequest) -> GraphResult: ...
+
+
+class AccessReader(Protocol):
+    """PRP-73 ``AccessEngine.who_accesses``: who reads or writes the matching data assets."""
+
+    async def who_accesses(self, scope: IdentityScope, query: AccessQuery) -> AccessResult: ...
+
+
+class ChangeRecord(BaseModel):
+    """One audited change, reduced to what the timeline may show.
+
+    Deliberately no actor (name, id or pseudonym) and no before/after body: the timeline says
+    what changed and when, never who or the content.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    record_id: str = Field(min_length=1, max_length=512)
+    operation: str = Field(min_length=1, max_length=128)
+    subject_id: str = Field(min_length=1, max_length=512)
+    outcome: str = Field(min_length=1, max_length=64)
+    occurred_at: datetime
+    domain_id: str = Field(min_length=1, max_length=512)
+
+
+class ChangeLogReader(Protocol):
+    async def changes(
+        self,
+        scope: IdentityScope,
+        domain_ids: Sequence[str],
+        since: datetime,
+        until: datetime,
+        *,
+        limit: int,
+    ) -> Sequence[ChangeRecord]:
+        """Changes in ``[since, until]`` for ``domain_ids`` (server-derived ``audit.read``)."""
+        ...

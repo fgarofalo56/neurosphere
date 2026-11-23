@@ -129,7 +129,22 @@ def test_stored_values_are_non_secret_and_consistent_with_the_profile_env() -> N
         assert marker.lower() not in text.lower()
 
 
-def test_the_copilot_stays_disabled_and_nothing_turns_it_on() -> None:
+def test_recorded_mode_does_not_seed_the_copilot_row(scope: Any) -> None:
+    """A stored copilot row beats the environment, so recorded mode must leave it out."""
+    keys = [key for key, _ in settings.demo_settings("recorded")]
+    assert keys == ["scan", "mcp_server", "search", "write_targets", "write_targets"]
+    repo, audit = _stores()
+    created, skipped = asyncio.run(
+        settings.apply_demo_settings(
+            repo, audit, scope, environ={**ENV, "NS_DEMO_COPILOT_MODE": "recorded"}
+        )
+    )
+    assert (created, skipped) == (5, 0)
+    docs = asyncio.run(repo.list_by_kind(CUSTOMER, SYSTEM_SETTING_KIND))
+    assert document_id("copilot") not in {d.id.root for d in docs}
+
+
+def test_the_copilot_placeholder_stays_disabled_for_any_other_mode() -> None:
     from neurosphere_core.admin.runtime import copilot_init_args
 
     copilot = {k: b for k, b in settings.demo_settings()}["copilot"]

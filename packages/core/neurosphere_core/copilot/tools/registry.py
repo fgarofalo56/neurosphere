@@ -17,13 +17,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Protocol
+from datetime import UTC, datetime
+from typing import Any, Final, Literal, Protocol
 
 from pydantic import ValidationError
 
-from neurosphere_core.auth.scope import Permission
+from neurosphere_core.auth.scope import Permission, domains_with_permission
 from neurosphere_core.copilot.tools.args import ToolArgs
 from neurosphere_core.copilot.tools.errors import (
     ArgumentNotAllowedError,
@@ -32,7 +33,7 @@ from neurosphere_core.copilot.tools.errors import (
     ToolTimeoutError,
 )
 from neurosphere_core.copilot.tools.models import ToolResult
-from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
+from neurosphere_core.errors import ForbiddenError, InvalidSchemaError, ValidationIssue
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
@@ -41,6 +42,8 @@ __all__ = [
     "SCOPE_SHAPED_KEYS",
     "RefusalEvent",
     "RefusalSink",
+    "ToolCallEvent",
+    "ToolCallObserver",
     "ToolHandler",
     "ToolRegistry",
     "ToolSpec",
@@ -112,6 +115,32 @@ class RefusalSink(Protocol):
     def refused(self, event: RefusalEvent) -> None: ...
 
 
+@dataclass(frozen=True)
+class ToolCallEvent:
+    """One tool invocation as the audit observer sees it (PRP-78).
+
+    Carries the tool name, the outcome, a fixed reason code, the domain ids consulted, the number
+    of records returned and the scope hash. Never an argument value, prompt text or returned row.
+    """
+
+    tool: str
+    outcome: Literal["allowed", "refused", "failed"]
+    reason: str | None
+    domain_ids: tuple[str, ...]
+    record_count: int
+    scope_hash: str
+
+
+class ToolCallObserver(Protocol):
+    """Told once per ``invoke``, whatever the outcome. It can never change that outcome."""
+
+    async def tool_called(self, event: ToolCallEvent) -> None: ...
+
+
+def _event_now() -> datetime:
+    return datetime.now(UTC)
+
+
 def _normalize(key: str) -> str:
     return re.sub(r"[-_\s]", "", key).lower()
 
@@ -125,12 +154,19 @@ def _safe_names(keys: list[str]) -> tuple[str, ...]:
 class ToolRegistry:
     """Holds the tools registered at construction. The set is immutable afterwards."""
 
-    def __init__(self, specs: list[ToolSpec], *, sink: RefusalSink | None = None) -> None:
+    def __init__(
+        self,
+        specs: Sequence[ToolSpec],
+        *,
+        sink: RefusalSink | None = None,
+        observer: ToolCallObserver | None = None,
+    ) -> None:
         names = [s.name for s in specs]
         if len(set(names)) != len(names):
             raise ValueError("duplicate tool name")
         self._specs: Mapping[str, ToolSpec] = {s.name: s for s in specs}
         self._sink = sink
+        self._observer = observer
 
     @property
     def names(self) -> tuple[str, ...]:
@@ -144,6 +180,28 @@ class ToolRegistry:
         self, name: str, raw_args: Mapping[str, object], scope: IdentityScope
     ) -> ToolResult:
         spec = self._specs.get(name) if isinstance(name, str) else None
+        try:
+            result = await self._run(spec, raw_args, scope)
+        except (ForbiddenError, InvalidSchemaError) as exc:
+            await self._observe(spec, "refused", exc.reason, (), 0, scope)
+            raise
+        except ToolTimeoutError as exc:
+            await self._observe(spec, "failed", exc.reason, (), 0, scope)
+            raise
+        except Exception:
+            await self._observe(spec, "failed", "tool_failed", (), 0, scope)
+            raise
+        domains = result.domain_ids
+        if not domains and spec is not None:
+            domains = tuple(
+                sorted(domains_with_permission(scope, spec.permission, now=_event_now()))
+            )
+        await self._observe(spec, "allowed", None, domains, len(result.records), scope)
+        return result
+
+    async def _run(
+        self, spec: ToolSpec | None, raw_args: Mapping[str, object], scope: IdentityScope
+    ) -> ToolResult:
         if spec is None:
             self._refuse("<unregistered>", "tool_not_registered", [], scope)
             raise ToolNotRegisteredError
@@ -174,6 +232,34 @@ class ToolRegistry:
                 return await spec.handler(scope, args)
         except TimeoutError:
             raise ToolTimeoutError from None
+
+    async def _observe(
+        self,
+        spec: ToolSpec | None,
+        outcome: Literal["allowed", "refused", "failed"],
+        reason: str | None,
+        domain_ids: tuple[str, ...],
+        record_count: int,
+        scope: IdentityScope,
+    ) -> None:
+        """Tell the observer once. A failing observer is logged (no values) and ignored."""
+        if self._observer is None:
+            return
+        event = ToolCallEvent(
+            tool=spec.name if spec is not None else "<unregistered>",
+            outcome=outcome,
+            reason=reason,
+            domain_ids=domain_ids,
+            record_count=record_count,
+            scope_hash=scope.scope_hash,
+        )
+        try:
+            await self._observer.tool_called(event)
+        except Exception:
+            logger.warning(
+                "copilot tool observer failed",
+                extra={"tool": event.tool, "outcome": event.outcome},
+            )
 
     def _refuse(self, tool: str, reason: str, keys: list[str], scope: IdentityScope) -> None:
         names = _safe_names(keys)
