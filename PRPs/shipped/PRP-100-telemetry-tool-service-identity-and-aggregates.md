@@ -1,7 +1,9 @@
 ---
 name: PRP-100-telemetry-tool-service-identity-and-aggregates
-status: active
+status: shipped
 started: 2026-11-23
+shipped: 2026-11-23
+pr: 391
 priority: P0
 order: 100
 review: required
@@ -196,12 +198,12 @@ None. The real-stack run with seeded data belongs to PRP-109 and the hosted run 
 | 3 OTLP mapping | merged | prp-100-item-3-otlp-mapping | sonnet; commit 1c3b467d, merged ab854ebc; orchestrator verify PASS 2026-11-23 (api ingest + ingest_tool_service + realtime 132 passed, ruff + format clean, pyright services/api 0 errors); F1 events stamped schema 1.1.0, others stay 1.0.0; pre-existing: root `execute_tool` span (no parent) is model-valid but schema-invalid (follow-up) |
 | 4 Aggregates mapping and rollups | merged | prp-100-item-4-aggregates | sonnet; stopped once: `EventFact` lives in core `aggregates/models.py` (PRP-owned), granted that class; commit 506de67c, merged d67d1ba9; orchestrator verify PASS 2026-11-23 (workers aggregates + core aggregates_subjects + agent_identity_worker + api realtime + api map + sandbox incident 243 passed, ruff clean, pyright 0 errors); `model_call` guard on domain latency/error and agent/model keys; tool/service points carry no tokens |
 | 5 End-to-end seeded incident check | merged | prp-100-item-5-seeded-incident | sonnet; commit 6e0d5155, merged e77b0735; real `AggregateProjection` over in-memory stores, ids from the read-back manifest; measured outage service error_rate 0.8596 (failing), failing tool `payment-initiation` 0.8333, 6 other services ok; orchestrator verify PASS 2026-11-23 (item 5 + workers aggregates + sandbox incident + CI shard pin + tests/docs 212 passed, ruff + format clean) |
-| 6 Integration and close-out | in-progress | prp-100-telemetry-tool-service-identity | orchestrator; changelog fragment; no route model changed, so no `openapi.json` regeneration; PR-level review APPROVED 2026-11-23 (no blockers; 4 non-blocking findings to follow-up issues); Snyk Code 0 issues on ingest, realtime, core aggregates, worker aggregates and ingestion; verify-gates full 2026-11-23: typecheck PASS, tests PASS (16363 passed, 364 deselected), build PASS, lint FAIL only on 41 errors inside untracked stale `.claude/worktrees/wf_73a5d379-*` copies (ruff over all tracked trees: all checks passed) |
+| 6 Integration and close-out | merged | prp-100-telemetry-tool-service-identity | orchestrator; PR 391 CI green, merged ffa2d7e3 2026-11-23; changelog fragment; no route model changed, so no `openapi.json` regeneration; PR-level review APPROVED 2026-11-23 (no blockers; 4 non-blocking findings to follow-up issues); Snyk Code 0 issues on ingest, realtime, core aggregates, worker aggregates and ingestion; verify-gates full 2026-11-23: typecheck PASS, tests PASS (16363 passed, 364 deselected), build PASS, lint FAIL only on 41 errors inside untracked stale `.claude/worktrees/wf_73a5d379-*` copies (ruff over all tracked trees: all checks passed) |
 
 ## Completion note (filled at ship)
-- Date, PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
+- Date, PR: 2026-11-23, PR 391, merge commit ffa2d7e3 (integration branch `prp-100-telemetry-tool-service-identity`; item merges bccce30f, ab854ebc, d67d1ba9, e77b0735). CI green on every required check; one independent PR-level review, APPROVED with no blockers.
+- Deviations: item 1 added one nav line to `mkdocs.yml` (`tests/docs/test_nav_allowlist` requires built pages == nav); item 4 was granted the core `EventFact` class in `packages/core/neurosphere_core/aggregates/models.py` (outside its declared files; stopped once and approved); the OpenTelemetry GenAI conventions now live in `semantic-conventions-genai` (ae8214a8f3a9), core registry pinned at aef58d05090b. No route model changed, so `services/api/openapi.json` was not regenerated. Local verify-gates lint FAIL was confined to untracked stale `.claude/worktrees/wf_73a5d379-*` copies; ruff over tracked trees passed.
+- Descoped items: none.
+- OPEN gates: none in scope (real-stack seeded run belongs to PRP-109, hosted run to PRP-64). Measured in-memory: outage service error_rate 0.8596, failing tool `payment-initiation` 0.8333, six other services ok.
+- Env vars for the operator: none.
+- Follow-up issues: #392 (service series volume and shared subject cap), #393 (align edge and resolver id alphabets, document drop keys), #394 (root `execute_tool` span is model-valid but schema-invalid, pre-existing).
