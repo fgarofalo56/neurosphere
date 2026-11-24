@@ -226,6 +226,17 @@ export function parseEdge(raw: unknown): ViewportEdge | null {
   };
 }
 
+export interface NeighbourhoodMergeResult {
+  /** New nodes added to the graph. */
+  readonly added: number;
+  /** Nodes of the previous view removed to stay under NODE_BUDGET. */
+  readonly dropped: number;
+  /** Response nodes that did not fit even after dropping. */
+  readonly skipped: number;
+  /** The requested centre node is in the graph. */
+  readonly centred: boolean;
+}
+
 export class MapGraph {
   readonly graph = new Graph<MapNodeAttributes, MapEdgeAttributes>({
     type: "directed",
@@ -388,6 +399,69 @@ export class MapGraph {
         dashOffset: 1,
       });
     });
+  }
+
+  /**
+   * Merges a neighbourhood response (a jump to a node that is not on screen) without ever
+   * exceeding NODE_BUDGET. When the new nodes do not fit, the farthest leaf nodes of the previous
+   * view are dropped first; selected and `keep` nodes, clusters and every node in the response
+   * are never dropped. A node that still does not fit is skipped (the centre node is placed
+   * first, so it wins). Nodes keep their `cluster_id`, so cluster membership stays intact.
+   */
+  mergeNeighbourhood(
+    centreId: string,
+    nodes: readonly ViewportNode[],
+    edges: readonly ViewportEdge[],
+    keep: ReadonlySet<string> = new Set(),
+  ): NeighbourhoodMergeResult {
+    const g = this.graph;
+    const ordered = [...nodes].sort(
+      (a, b) => Number(b.id === centreId) - Number(a.id === centreId),
+    );
+    const incoming = new Set(ordered.map((n) => n.id));
+    const fresh = ordered.filter((n) => !g.hasNode(n.id));
+    const overflow = Math.max(0, g.order + fresh.length - NODE_BUDGET);
+    let dropped = 0;
+    if (overflow > 0) {
+      // Anchor: where the neighbourhood attaches (its known neighbours), else the graph origin.
+      const anchors: { x: number; y: number }[] = [];
+      for (const e of edges) {
+        for (const id of [e.source, e.target]) {
+          if (g.hasNode(id) && incoming.has(id)) anchors.push(g.getNodeAttributes(id));
+        }
+      }
+      const ax = anchors.length > 0 ? anchors.reduce((t, a) => t + a.x, 0) / anchors.length : 0;
+      const ay = anchors.length > 0 ? anchors.reduce((t, a) => t + a.y, 0) / anchors.length : 0;
+      const candidates: { id: string; dist: number }[] = [];
+      g.forEachNode((id, a) => {
+        if (keep.has(id) || incoming.has(id) || a.kind === "cluster" || g.degree(id) > 1) return;
+        candidates.push({ id, dist: Math.hypot(a.x - ax, a.y - ay) });
+      });
+      candidates.sort((a, b) => b.dist - a.dist || (a.id < b.id ? -1 : 1));
+      for (const c of candidates.slice(0, overflow)) {
+        g.dropNode(c.id);
+        dropped += 1;
+      }
+    }
+    const room = Math.max(0, NODE_BUDGET - g.order);
+    const accepted = fresh.slice(0, room);
+    const acceptedIds = new Set(accepted.map((n) => n.id));
+    // Existing nodes in the response are refreshed too; they do not count against the room.
+    this.upsertNodes([...nodes.filter((n) => g.hasNode(n.id)), ...accepted]);
+    this.upsertEdges(
+      edges.filter(
+        (e) =>
+          (g.hasNode(e.source) || acceptedIds.has(e.source)) &&
+          (g.hasNode(e.target) || acceptedIds.has(e.target)),
+      ),
+    );
+    this.restyle();
+    return {
+      added: accepted.length,
+      dropped,
+      skipped: fresh.length - accepted.length,
+      centred: g.hasNode(centreId),
+    };
   }
 
   /** Ids of the edges that animate (observed only, and only when motion is allowed). */
