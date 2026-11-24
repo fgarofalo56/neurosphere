@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `adb6e69690b3f08537eff6c16fabcd17114c8653`. Generated: 2026-11-23.
+> Source commit: `38c144fca6928972588cbc56d208702740a05520`. Generated: 2026-11-23.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 221 operations on 186 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 224 operations on 189 paths.
 
 ## Status and verification
 
@@ -203,6 +203,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | lifecycle | POST | `/api/v1/lifecycle/requests` | Submit Request |
 | lifecycle | GET | `/api/v1/lifecycle/requests/{request_id}` | Get Request |
 | lifecycle | GET | `/api/v1/lifecycle/status` | Status |
+| map | POST | `/api/v1/map/domains/{domain_id}/impact` | Post Impact |
+| map | GET | `/api/v1/map/domains/{domain_id}/neighborhood/{node_id}` | Get Neighborhood |
+| map | GET | `/api/v1/map/domains/{domain_id}/search` | Search |
 | map | GET | `/api/v1/map/domains/{domain_id}/viewport` | Get Viewport |
 | mcp-admin | GET | `/api/v1/mcp/admin/servers` | List Servers |
 | mcp-admin | POST | `/api/v1/mcp/admin/servers` | Register Server |
@@ -1605,11 +1608,33 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 ### Tag: map
 
+#### POST `/api/v1/map/domains/{domain_id}/impact`
+
+- Operation id: `post_impact_api_v1_map_domains__domain_id__impact_post`
+- Summary: Post Impact
+- Parameters: `domain_id` (path, required)
+- Request body: application/json: `ImpactRequest` (required)
+- Responses: `200` `ImpactResponse`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/map/domains/{domain_id}/neighborhood/{node_id}`
+
+- Operation id: `get_neighborhood_api_v1_map_domains__domain_id__neighborhood__node_id__get`
+- Summary: Get Neighborhood
+- Parameters: `domain_id` (path, required), `node_id` (path, required), `node_budget` (query), `edge_budget` (query)
+- Responses: `200` `ViewportResponse`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/map/domains/{domain_id}/search`
+
+- Operation id: `search_api_v1_map_domains__domain_id__search_get`
+- Summary: Search
+- Parameters: `domain_id` (path, required), `q` (query), `limit` (query), `node_type` (query), `tag` (query), `environment` (query), `cloud` (query), `health` (query)
+- Responses: `200` `SearchResponse`; `422` `HTTPValidationError`
+
 #### GET `/api/v1/map/domains/{domain_id}/viewport`
 
 - Operation id: `get_viewport_api_v1_map_domains__domain_id__viewport_get`
 - Summary: Get Viewport
-- Parameters: `domain_id` (path, required), `cluster_id` (query), `cursor` (query), `node_budget` (query), `edge_budget` (query)
+- Parameters: `domain_id` (path, required), `cluster_id` (query), `cursor` (query), `node_budget` (query), `edge_budget` (query), `node_type` (query), `tag` (query), `environment` (query), `cloud` (query), `health` (query)
 - Responses: `200` `ViewportResponse`; `422` `HTTPValidationError`
 
 ### Tag: mcp-admin

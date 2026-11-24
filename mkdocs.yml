@@ -131,6 +131,7 @@ nav:
       - runbooks/lifecycle.md
       - runbooks/catalog-review-queue.md
       - runbooks/catalog-access.md
+      - runbooks/live-map.md
       - runbooks/runtime-composition.md
       - runbooks/api-path-aliases.md
       - runbooks/identity-admin.md
