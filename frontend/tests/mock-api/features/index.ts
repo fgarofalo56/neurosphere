@@ -12,6 +12,7 @@ import { handle as executionControl } from "./execution-control.ts";
 import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
 import { handle as compliance } from "./compliance.ts";
+import { handle as mapTopology } from "./map-topology.ts";
 import { handle as roleMapping } from "./role-mapping.ts";
 import { handle as sourceStatus } from "./sourceStatus.ts";
 
@@ -41,6 +42,8 @@ export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   adminSources,
   sourceStatus,
   adminCore,
+  // PRP-77: answers only the map-incident fixture domain family; passes everything else.
+  mapTopology,
 ];
 
 /** Runs the handlers in order; true when one answered the request. */
