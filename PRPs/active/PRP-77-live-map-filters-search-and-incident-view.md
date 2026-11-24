@@ -237,9 +237,9 @@ A 50k-node browser rendering mode or a raised client cap; client-side search ove
 | 2 | merged | item 93af01cc, merge 07ee9822 (sonnet) | 2026-11-24: typecheck + lint green, vitest 109/109, map e2e 12/12. One value per filter (API client comma-joins arrays); counts from search `q=&limit=1` unfiltered |
 | 3 | merged | item e69ff310, merge acac2b14 (sonnet) | 2026-11-24: typecheck + lint green, vitest 124/124, map e2e 12/12. Camera centring needs `renderer.centreOn` (renderer.ts is item 4's) - carried into item 4 |
 | 4 | merged | item d02250b3, merge 2a5a4fbf (sonnet; first agent lost to an auth expiry, resumed from its snapshot) | 2026-11-24: typecheck + lint green, vitest 145/145, map e2e incl. map-perf 13/13. Includes renderer `centreOn` and SDF shapes for service/tool/mcp_server; shortcut `i`; ring + dim, not colour only |
-| 5 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 | table parity |
-| 6 | todo | | mock API, e2e, a11y |
-| 7 | todo | | interaction-latency measurement and evidence |
+| 5 | merged | item 46428e36, merge f93f39a0 (sonnet) | 2026-11-24: typecheck + lint green, vitest 162/162, map e2e 12/12 (keyboard spec unchanged). Deviation: a search hit not on a loaded table page is reported as text, not fetched (table is cluster-paged, no merge path) |
+| 6 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 | mock API, e2e, a11y |
+| 7 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 beside item 5 (deps 1-4 met, disjoint files) | interaction-latency measurement and evidence; orchestrator replaces the headless file with a headed run |
 | 8 | todo | | Tier-2, runbook, Tier-3, close-out |
 
 ## Completion note (filled at ship)
