@@ -10,13 +10,16 @@ and ``latency_p95_ms`` from the latest hour; ``health`` from the error rate; ``t
 ``context_size`` stay ``None``). When the reader implements ``SubjectMetricsReader`` (PRP-49) it
 also carries up to ``MAX_DELTA_SUBJECT_NODES`` agent and model nodes with the newest subject
 points; a reader without it yields the one-node delta unchanged.
-Unknown is ``None``, never 0. ``edges`` is empty: edges come from
-the viewport API (item 2), not from aggregates. Coverage and lag come from the aggregate status
-and document completeness; a gap is labelled, never smoothed over.
+Model nodes leave this source with the subject id ``provider/model``; the gateway rewrites them
+to the viewport's deployment ids per session (:func:`expand_model_nodes`), because only a
+snapshot taken under the receiving session's scope can say which deployments it may see.
+Unknown is ``None``, never 0, and ``None`` in a delta means "not carried". ``edges`` is empty:
+edges come from the viewport API (item 2), not from aggregates. Coverage and lag come from the
+aggregate status and document completeness; a gap is labelled, never smoothed over.
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Final, Literal, Protocol, runtime_checkable
 
@@ -45,6 +48,7 @@ __all__ = [
     "DeltaPayload",
     "DeltaSource",
     "NodeMetrics",
+    "expand_model_nodes",
 ]
 
 MAX_DELTA_SUBJECT_NODES: Final = 50
@@ -61,6 +65,12 @@ class _Model(BaseModel):
 
 
 class NodeMetrics(_Model):
+    """Metric-only payload of a delta node.
+
+    ``None`` means "not carried": the delta says nothing about that value, so a client keeps what
+    the viewport gave it. It never means zero and never means "cleared".
+    """
+
     tokens: int | None = None
     context_size: int | None = None
     frequency: int | None = None
@@ -101,6 +111,33 @@ class DeltaPayload(_Model):
     def digest(self) -> str:
         """Change detector: everything except the lag, which grows on every tick."""
         return self.model_dump_json(exclude={"coverage": {"lag_seconds"}})
+
+
+def expand_model_nodes(
+    payload: DeltaPayload, resolve: Callable[[str, str], Sequence[str]] | None
+) -> DeltaPayload:
+    """Rewrite model nodes (``provider/model`` ids) to the viewport's deployment node ids.
+
+    The aggregate source is shared by every session of a (customer, domain), so it cannot know
+    which deployments a given scope may read; the gateway calls this per session with a
+    ``resolve(provider, model)`` backed by a snapshot taken under THAT session's scope. Each
+    model node becomes one node per readable deployment, carrying the same (model-level) metrics.
+    With ``resolve=None`` (no snapshot) every model node is dropped: an id is never guessed.
+    """
+    if not any(n.kind == "model" for n in payload.nodes):
+        return payload
+    nodes: list[DeltaNode] = []
+    for node in payload.nodes:
+        if node.kind != "model":
+            nodes.append(node)
+            continue
+        if resolve is None:
+            continue
+        provider, sep, model = node.id.partition("/")
+        if not sep:
+            continue
+        nodes.extend(node.model_copy(update={"id": dep}) for dep in resolve(provider, model))
+    return payload.model_copy(update={"nodes": tuple(nodes)})
 
 
 @runtime_checkable
