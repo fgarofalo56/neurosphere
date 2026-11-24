@@ -1,0 +1,149 @@
+{
+  "schema": "ns.map.server-timings/1",
+  "measured_at": "2026-11-24T02:01:00Z",
+  "commit": "99ffd7d80d797b9058bae8e15130afb182e89c69",
+  "branch": "prp-74-item-5",
+  "hardware": {
+    "cpu_model": "AMD Ryzen 9 5950X 16-Core Processor",
+    "logical_cores": 32,
+    "ram_gb": 127.9,
+    "os": "Windows-11-10.0.26300-SP0",
+    "python": "3.12.13"
+  },
+  "target": "Cosmos NoSQL vNext emulator on 127.0.0.1:8081, local loopback, in-process app",
+  "no_target_asserted": true,
+  "measured": true,
+  "dataset": {
+    "domain": "commercial:contoso:catalog:domain:perf-prp74",
+    "entities": 50000,
+    "edges": 9608,
+    "impact_tree_dependents": 5120,
+    "seed_seconds": 423.0
+  },
+  "cleanup": "throwaway database ns_perf_prp74_da361845c7 NOT deleted: CosmosHttpResponseError: (InternalServerError) Database query failed: PostgresError(SqlState(E58P01), None)\nCode: InternalServerError\nMessage: Database query failed: PostgresError(SqlState(E58P01), None)",
+  "calls": {
+    "viewport_clusters": {
+      "wall_ms_median": 45324.9,
+      "wall_ms_p95": 46997.0,
+      "wall_ms_all": [
+        46383.3,
+        43381.4,
+        46997.0,
+        45324.9,
+        42726.8
+      ],
+      "repeats": 5,
+      "http_status": 200,
+      "cosmos_reads_per_call": 20.0,
+      "cosmos_queries_per_call": 20.0,
+      "ru_per_call": null,
+      "response_shape": {
+        "nodes_returned": 1,
+        "edges_returned": 0,
+        "truncated": true,
+        "truncation_reason": "node_budget",
+        "next_cursor": false
+      }
+    },
+    "viewport_2000_nodes": {
+      "wall_ms_median": 19703.2,
+      "wall_ms_p95": 22501.6,
+      "wall_ms_all": [
+        18532.9,
+        20200.7,
+        19048.0,
+        19703.2,
+        22501.6
+      ],
+      "repeats": 5,
+      "http_status": 200,
+      "cosmos_reads_per_call": 8.8,
+      "cosmos_queries_per_call": 8.8,
+      "ru_per_call": null,
+      "response_shape": {
+        "nodes_returned": 2000,
+        "edges_returned": 0,
+        "truncated": true,
+        "truncation_reason": "node_budget",
+        "next_cursor": true
+      }
+    },
+    "search": {
+      "wall_ms_median": 8024.0,
+      "wall_ms_p95": 8025.6,
+      "wall_ms_all": [
+        8024.0,
+        8012.3,
+        8025.6
+      ],
+      "repeats": 3,
+      "http_status": 200,
+      "cosmos_reads_per_call": 3.0,
+      "cosmos_queries_per_call": 4.0,
+      "ru_per_call": null,
+      "response_shape": {
+        "matches_returned": 0,
+        "match_total": 0,
+        "truncated": true,
+        "truncation_reason": "timeout_ms"
+      }
+    },
+    "impact_depth_5": {
+      "wall_ms_median": 28417.3,
+      "wall_ms_p95": 29624.9,
+      "wall_ms_all": [
+        28243.0,
+        28417.3,
+        29624.9
+      ],
+      "repeats": 3,
+      "http_status": 200,
+      "cosmos_reads_per_call": 24.0,
+      "cosmos_queries_per_call": 24.0,
+      "ru_per_call": null,
+      "response_shape": {
+        "levels_returned": 0,
+        "nodes_returned": 0,
+        "truncated": true,
+        "truncation_reason": "timeout_ms"
+      }
+    },
+    "topology_poll": {
+      "wall_ms_median": 85622.9,
+      "wall_ms_p95": 95078.0,
+      "wall_ms_all": [
+        85505.8,
+        85622.9,
+        95078.0
+      ],
+      "repeats": 3,
+      "http_status": 200,
+      "cosmos_reads_per_call": 40.0,
+      "cosmos_queries_per_call": 40.0,
+      "ru_per_call": null,
+      "response_shape": {
+        "nodes": 10000,
+        "edges": 5100
+      }
+    }
+  },
+  "follow_ups": [
+    "viewport_clusters: median 45324.9 ms (p95 46997.0 ms) exceeds 2000 ms",
+    "viewport_2000_nodes: median 19703.2 ms (p95 22501.6 ms) exceeds 2000 ms",
+    "search: median 8024.0 ms (p95 8025.6 ms) exceeds 2000 ms",
+    "impact_depth_5: median 28417.3 ms (p95 29624.9 ms) exceeds 2000 ms",
+    "topology_poll: median 85622.9 ms (p95 95078.0 ms) exceeds 2000 ms"
+  ],
+  "notes": [
+    "No target is asserted; every number is as measured on this machine, once.",
+    "ru_per_call is null: the vNext emulator returns x-ms-request-charge 1 on every request, a constant, not request units. Real RU needs a live account (gate G03/G07 OPEN).",
+    "cosmos_reads_per_call counts paged query round trips through the repository's container (point reads are queries here); the Python app and the Cosmos emulator share one machine, so wall time includes loopback and emulator CPU.",
+    "The graph search index is an empty fixture; the four routes scan the repository, they do not use Azure AI Search.",
+    "Entities are seeded straight into the repository backend (not create_entity) to skip the per-write duplicate lookup; stored documents have the same shape.",
+    "Delete of the throwaway database fails on this emulator for every database, even an empty one (E58P01); see the cleanup field.",
+    "Read the response_shape before the wall time: search stopped at its 8 s timeout_ms and returned 0 matches (no partial result), impact depth 5 stopped at its timeout_ms with 0 levels, and the topology poll saw 10000 of 50000 nodes (topology_scan_pages 20 x 500 per page is a cap, not a fault). Those wall times are the timeout, not the cost of a complete answer.",
+    "The repeats are 5 (viewport) and 3 (search, impact, topology_poll); with so few runs the p95 is effectively the slowest run.",
+    "commit is the base of the measured working tree (the routes under test, unchanged by this item); this item adds tests, the harness and this file only.",
+    "The emulator keeps 6 throwaway databases named ns_perf_prp74_* (this run, three earlier smaller or interrupted runs, two delete probes) because database delete fails on it; they hold synthetic data only and go away with the compose volume."
+  ]
+}
