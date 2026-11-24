@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-77-live-map-filters-search-and-incident-view](active/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 3/8 (37%) | todo 4, in-progress 1, merged 3 | sonnet / sonnet | required |
+| [PRP-77-live-map-filters-search-and-incident-view](active/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 4/8 (50%) | todo 3, in-progress 1, merged 4 | sonnet / sonnet | required |
 
 ## Backlog
 
