@@ -11,7 +11,7 @@ No ``from __future__ import annotations``: FastAPI inspects the signatures that 
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
 
 from fastapi import FastAPI
@@ -19,6 +19,7 @@ from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.auth.revocation import load_revocation_settings
 from neurosphere_core.errors import InvalidSchemaError
 
+from neurosphere_api.map.settings import MapSettings
 from neurosphere_api.realtime.registry import GatewayRegistry
 from neurosphere_api.realtime.settings import RealtimeSettings
 from neurosphere_api.realtime.source import AggregateDeltaSource, DeltaSource
@@ -41,6 +42,8 @@ class RealtimeState:
     refresh_seconds: float
     clock: Clock
     sleeper: Sleeper
+    map_settings: MapSettings = field(default_factory=MapSettings)
+    """``NS_MAP_*`` (PRP-74): topology switch, cadence and scan bound. Read once at configure."""
 
 
 def configure_realtime(
@@ -53,6 +56,7 @@ def configure_realtime(
     revocation_ttl_seconds: float | None = None,
     clock: Clock = time.time,
     sleeper: Sleeper = asyncio.sleep,
+    map_settings: MapSettings | None = None,
 ) -> GatewayRegistry:
     """Install the gateway on ``app.state.realtime`` and return its session registry.
 
@@ -86,6 +90,7 @@ def configure_realtime(
         refresh_seconds=cfg.effective_refresh_seconds(ttl),
         clock=clock,
         sleeper=sleeper,
+        map_settings=map_settings if map_settings is not None else MapSettings(),
     )
     setattr(app.state, STATE_ATTRIBUTE, state)
     return session_registry

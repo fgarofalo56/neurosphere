@@ -2,7 +2,8 @@
 
 Protocol (client -> server): ``{"type":"subscribe","domain_id":...}``, ``{"type":"unsubscribe",
 "domain_id":...}``, ``{"type":"ping"}``. Server -> client: ``subscribed``, ``unsubscribed``,
-``pong``, ``delta`` and ``error`` (``code`` from the ``neurosphere_core.errors`` taxonomy).
+``pong``, ``delta``, ``topology`` (PRP-74: the ids that changed, refetch the viewport) and
+``error`` (``code`` from the ``neurosphere_core.errors`` taxonomy).
 
 Guarantees, each enforced here:
 
@@ -35,6 +36,7 @@ from typing import Annotated, Any, Final, Literal
 from fastapi import WebSocket
 from neurosphere_core.auth.jwt import VerifiedClaims
 from neurosphere_core.auth.scope import Permission, ScopeDerivation, permits
+from neurosphere_core.catalog import CatalogRepository
 from neurosphere_core.errors import (
     DependencyTransientError,
     ForbiddenError,
@@ -49,6 +51,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from neurosphere_api.authz.state import STATE_ATTRIBUTE as AUTHZ_ATTRIBUTE
 from neurosphere_api.authz.state import AuthzState
+from neurosphere_api.map.topology import TopologySnapshot, TopologySource, diff_snapshots
 from neurosphere_api.realtime.budgets import TokenBucket
 from neurosphere_api.realtime.dependencies import STATE_ATTRIBUTE, RealtimeState
 from neurosphere_api.realtime.registry import (
@@ -59,10 +62,12 @@ from neurosphere_api.realtime.registry import (
     Session,
     Subscription,
 )
+from neurosphere_api.realtime.source import DeltaPayload, expand_model_nodes
 
 __all__ = ["BEARER_SUBPROTOCOL", "serve"]
 
 BEARER_SUBPROTOCOL: Final = "ns.bearer"
+TOPOLOGY_ATTRIBUTE: Final = "map_topology"
 _CLOSE_INTERNAL: Final = 1011
 _CLOSE_TOO_BIG: Final = 1009
 _LOG = get_logger("neurosphere_api.realtime")
@@ -181,6 +186,26 @@ class _Connection:
         self._gw = gateway
         self._authz = authz
         self._cfg = gateway.settings
+        # Per-connection topology state: the snapshot this session last saw and when it last
+        # polled, per subscribed domain. A fresh subscription starts with neither (baseline).
+        self._topology_seen: dict[str, TopologySnapshot] = {}
+        self._topology_polled: dict[str, float] = {}
+
+    def _topology(self) -> TopologySource | None:
+        """The topology source, built lazily from ``app.state.catalog_repository`` and cached on
+        ``app.state.map_topology``; ``None`` when the switch is off or no repository is wired."""
+        if not self._gw.map_settings.topology_enabled:
+            return None
+        state = self._ws.app.state
+        existing = getattr(state, TOPOLOGY_ATTRIBUTE, None)
+        if isinstance(existing, TopologySource):
+            return existing
+        repository = getattr(state, "catalog_repository", None)
+        if not isinstance(repository, CatalogRepository):
+            return None
+        source = TopologySource(repository, self._gw.map_settings, clock=self._gw.clock)
+        setattr(state, TOPOLOGY_ATTRIBUTE, source)
+        return source
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -337,6 +362,7 @@ class _Connection:
             await self._send(session, {"type": "pong"})
         elif isinstance(message, _Unsubscribe):
             session.subscriptions.pop(message.domain_id, None)
+            self._forget_topology(message.domain_id)
             await self._send(session, {"type": "unsubscribed", "domain_id": message.domain_id})
         else:
             await self._subscribe(session, message.domain_id)
@@ -366,7 +392,13 @@ class _Connection:
             return
         session.subscriptions.setdefault(domain_id, Subscription())
         await self._send(session, {"type": "subscribed", "domain_id": domain_id})
+        self._forget_topology(domain_id)
         await self._deliver(session, domain_id, force=True)
+        await self._deliver_topology(session, domain_id, baseline=True)
+
+    def _forget_topology(self, domain_id: str) -> None:
+        self._topology_seen.pop(domain_id, None)
+        self._topology_polled.pop(domain_id, None)
 
     def _may_read(self, session: Session, domain_id: str) -> bool:
         now = datetime.fromtimestamp(self._gw.clock(), UTC)
@@ -390,6 +422,75 @@ class _Connection:
             await self._refresh_scope(session)
             for domain_id in tuple(session.subscriptions):
                 await self._deliver(session, domain_id, force=False)
+                await self._deliver_topology(session, domain_id, baseline=False)
+
+    async def _deliver_topology(self, session: Session, domain_id: str, *, baseline: bool) -> None:
+        """Push a ``topology`` notice when the scope's view of the domain changed (PRP-74).
+
+        Same send-time rule as deltas: the CURRENT scope must still read the domain, else the
+        subscription is dropped with ``scope_narrowed``. The first look (``baseline``) only
+        records the snapshot. The snapshot is taken under this session's scope, so the notice
+        never names an id the scope cannot read.
+        """
+        source = self._topology()
+        if source is None:
+            return
+        cfg = self._gw.map_settings
+        async with session.deliver_lock:
+            if domain_id not in session.subscriptions:
+                return
+            await self._refresh_scope(session)
+            if not self._may_read(session, domain_id):
+                del session.subscriptions[domain_id]
+                self._forget_topology(domain_id)
+                self._gw.registry.counters.scope_denied_deltas += 1
+                await self._send(
+                    session,
+                    _error(ForbiddenError.code, "scope_narrowed", domain_id=domain_id),
+                )
+                return
+            now_ts = self._gw.clock()
+            last = self._topology_polled.get(domain_id)
+            if not baseline and last is not None and now_ts - last < cfg.topology_poll_seconds:
+                return
+            try:
+                current = await source.snapshot(session.scope, domain_id)
+            except Exception as exc:
+                _LOG.warning("topology source failed", extra={"error_type": type(exc).__name__})
+                return
+            self._topology_polled[domain_id] = now_ts
+            previous = self._topology_seen.get(domain_id)
+            self._topology_seen[domain_id] = current
+            if baseline or previous is None:
+                return
+            now = datetime.fromtimestamp(now_ts, UTC)
+            change = diff_snapshots(previous, current, domain_id, now)
+            if change is None:
+                return
+            session.seq += 1
+            message = {
+                "type": "topology",
+                "seq": session.seq,
+                **change.model_dump(mode="json"),
+                "emitted_at": _iso(now),
+            }
+            await self._send(session, message, delta=True)
+
+    async def _with_deployment_ids(
+        self, session: Session, domain_id: str, payload: DeltaPayload
+    ) -> DeltaPayload:
+        """Rewrite model nodes to deployment ids from a snapshot under THIS session's scope."""
+        if not any(n.kind == "model" for n in payload.nodes):
+            return payload
+        source = self._topology()
+        if source is None:
+            return expand_model_nodes(payload, None)
+        try:
+            snapshot = await source.snapshot(session.scope, domain_id)
+        except Exception as exc:
+            _LOG.warning("topology snapshot failed", extra={"error_type": type(exc).__name__})
+            return expand_model_nodes(payload, None)
+        return expand_model_nodes(payload, snapshot.model_ids)
 
     async def _deliver(self, session: Session, domain_id: str, *, force: bool) -> None:
         async with session.deliver_lock:
@@ -400,6 +501,7 @@ class _Connection:
             # Send-time filter: the CURRENT scope decides, not the one at subscribe time.
             if not self._may_read(session, domain_id):
                 del session.subscriptions[domain_id]
+                self._forget_topology(domain_id)
                 self._gw.registry.counters.scope_denied_deltas += 1
                 await self._send(
                     session,
@@ -410,6 +512,7 @@ class _Connection:
             now = datetime.fromtimestamp(now_ts, UTC)
             try:
                 payload = await self._gw.source.poll(session.scope.customer_id, domain_id, now)
+                payload = await self._with_deployment_ids(session, domain_id, payload)
             except Exception as exc:
                 if not sub.failing:
                     sub.failing = True
