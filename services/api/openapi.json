@@ -17582,6 +17582,123 @@
         "title": "Score",
         "type": "object"
       },
+      "SearchCounts": {
+        "additionalProperties": false,
+        "description": "Counts over ALL matches scanned (not only the returned page); each sums to the total.",
+        "properties": {
+          "by_cloud": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Cloud",
+            "type": "object"
+          },
+          "by_environment": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Environment",
+            "type": "object"
+          },
+          "by_health": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Health",
+            "type": "object"
+          },
+          "by_kind": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Kind",
+            "type": "object"
+          }
+        },
+        "title": "SearchCounts",
+        "type": "object"
+      },
+      "SearchMatch": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "node": {
+            "$ref": "#/components/schemas/ViewportNode"
+          }
+        },
+        "required": [
+          "node",
+          "cluster_id"
+        ],
+        "title": "SearchMatch",
+        "type": "object"
+      },
+      "SearchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/SearchCounts"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/neurosphere_api__map__models__Coverage"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "filters_applied": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ViewportFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/SearchMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncation_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "node_budget",
+                  "edge_budget",
+                  "scan_limit",
+                  "traversal_incomplete",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncation Reason"
+          }
+        },
+        "required": [
+          "domain_id",
+          "matches",
+          "counts",
+          "truncated",
+          "coverage"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
       "Semver": {
         "maxLength": 128,
         "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
@@ -20880,6 +20997,49 @@
         "title": "ViewportEdge",
         "type": "object"
       },
+      "ViewportFilters": {
+        "additionalProperties": false,
+        "description": "The filters a response was built with (PRP-74 item 2); each list is empty when unused.",
+        "properties": {
+          "cloud": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cloud",
+            "type": "array"
+          },
+          "environment": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Environment",
+            "type": "array"
+          },
+          "health": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Health",
+            "type": "array"
+          },
+          "node_type": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Type",
+            "type": "array"
+          },
+          "tag": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tag",
+            "type": "array"
+          }
+        },
+        "title": "ViewportFilters",
+        "type": "object"
+      },
       "ViewportNode": {
         "additionalProperties": false,
         "properties": {
@@ -20972,6 +21132,16 @@
             },
             "title": "Edges",
             "type": "array"
+          },
+          "filters_applied": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ViewportFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "next_cursor": {
             "anyOf": [
@@ -30616,6 +30786,250 @@
         ]
       }
     },
+    "/api/v1/map/domains/{domain_id}/neighborhood/{node_id}": {
+      "get": {
+        "operationId": "get_neighborhood_api_v1_map_domains__domain_id__neighborhood__node_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "node_budget",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "minimum": 1,
+              "title": "Node Budget",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "edge_budget",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "minimum": 1,
+              "title": "Edge Budget",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Neighborhood",
+        "tags": [
+          "map"
+        ]
+      }
+    },
+    "/api/v1/map/domains/{domain_id}/search": {
+      "get": {
+        "operationId": "search_api_v1_map_domains__domain_id__search_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "node_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Node Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "environment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Environment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cloud",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cloud"
+            }
+          },
+          {
+            "in": "query",
+            "name": "health",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Health"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "map"
+        ]
+      }
+    },
     "/api/v1/map/domains/{domain_id}/viewport": {
       "get": {
         "operationId": "get_viewport_api_v1_map_domains__domain_id__viewport_get",
@@ -30685,6 +31099,106 @@
               "minimum": 1,
               "title": "Edge Budget",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "node_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Node Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "environment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Environment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cloud",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cloud"
+            }
+          },
+          {
+            "in": "query",
+            "name": "health",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Health"
             }
           }
         ],
