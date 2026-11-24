@@ -92,13 +92,21 @@ function clusterPage(page: number): ViewportResponse {
 
 function setup(
   path: string,
-  opts: { status?: number; top?: ViewportResponse; gatePage2?: Promise<void> } = {},
+  opts: {
+    status?: number;
+    top?: ViewportResponse;
+    gatePage2?: Promise<void>;
+    /** Answers search / impact requests; undefined falls through to the viewport fixtures. */
+    respond?: (url: URL, init: RequestInit | undefined) => unknown;
+  } = {},
 ) {
-  const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+  const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
     if (opts.status !== undefined) {
       return new Response("{}", { status: opts.status });
     }
     const url = new URL(String(input));
+    const custom = opts.respond?.(url, init);
+    if (custom !== undefined) return new Response(JSON.stringify(custom), { status: 200 });
     let body: ViewportResponse = opts.top ?? TOP;
     if (url.searchParams.get("cluster_id") === "cluster:agents") {
       const cursor = url.searchParams.get("cursor");
@@ -119,7 +127,7 @@ function setup(
       <RouterProvider router={router} />
     </QueryProvider>,
   );
-  return { fetchImpl, ...view };
+  return { fetchImpl, router, ...view };
 }
 
 const PATH = "/map/table?domain_id=dom-1";
@@ -310,6 +318,421 @@ describe("map table", () => {
     (within(grid).getAllByTestId("node-row")[0] as HTMLElement).focus();
     await user.keyboard("{Enter}");
     await within(grid).findByText("member-1-0");
+    expect((await axe(container)).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  });
+});
+
+// ---- PRP-77 item 5: filters, search, new kinds, facet columns and the impact view ----
+
+const COVERAGE_OK = { state: "complete", lag_seconds: 0, as_of: null } as const;
+
+function searchBody(
+  matches: readonly { node: ViewportNode; cluster_id: string }[],
+): Record<string, unknown> {
+  return {
+    domain_id: "dom-1",
+    matches,
+    counts: {
+      by_kind: { agent: 3, model: 1 },
+      by_health: { ok: 2, failing: 1, degraded: 1 },
+      by_environment: { production: 2, staging: 1 },
+      by_cloud: { commercial: 3 },
+    },
+    truncated: false,
+    truncation_reason: null,
+    coverage: COVERAGE_OK,
+  };
+}
+
+const isSearch = (url: URL): boolean => url.pathname.endsWith("/search");
+const isImpact = (url: URL): boolean => url.pathname.endsWith("/impact");
+const viewportUrls = (fetchImpl: { mock: { calls: unknown[][] } }): URL[] =>
+  fetchImpl.mock.calls
+    .map((c) => new URL(String(c[0])))
+    .filter((u) => u.pathname.endsWith("/viewport"));
+
+function impactBody(rootId: string, levels: { depth: number; nodes: ViewportNode[] }[]) {
+  return {
+    domain_id: "dom-1",
+    node_id: rootId,
+    direction: "dependents",
+    levels: levels.map((l) => ({
+      depth: l.depth,
+      nodes: l.nodes.map((n) => ({
+        id: n.id,
+        kind: n.kind,
+        label: n.label,
+        domain_id: "dom-1",
+        health: n.metrics.health,
+      })),
+      edge_ids: [],
+    })),
+    truncated: false,
+    truncation_reason: null,
+    coverage: COVERAGE_OK,
+  };
+}
+
+describe("map table: filters (same URL state as the map)", () => {
+  it("sends the filters from the URL with the viewport request and shows them in the bar", async () => {
+    const { fetchImpl } = setup(`${PATH}&environment=production&health=failing`);
+    await screen.findByRole("treegrid");
+    const urls = viewportUrls(fetchImpl);
+    expect(urls.length).toBeGreaterThan(0);
+    for (const u of urls) {
+      expect(u.searchParams.get("environment")).toBe("production");
+      expect(u.searchParams.get("health")).toBe("failing");
+    }
+    expect(screen.getByTestId("filter-environment")).toHaveValue("production");
+    expect(screen.getByTestId("map-filter-bar")).toHaveAttribute("data-active-filters", "2");
+    // the map link carries the same filters
+    expect(screen.getByRole("link", { name: "View as map" }).getAttribute("href")).toBe(
+      "/map?domain_id=dom-1&environment=production&health=failing",
+    );
+  });
+
+  it("sends the filters with an expanded cluster's request too", async () => {
+    const user = userEvent.setup();
+    const { fetchImpl } = setup(`${PATH}&cloud=government`);
+    const grid = await screen.findByRole("treegrid");
+    (within(grid).getAllByTestId("node-row")[0] as HTMLElement).focus();
+    await user.keyboard("{Enter}");
+    await within(grid).findByText("member-1-0");
+    const clusterCalls = viewportUrls(fetchImpl).filter((u) => u.searchParams.has("cluster_id"));
+    expect(clusterCalls.length).toBeGreaterThan(0);
+    expect(clusterCalls.every((u) => u.searchParams.get("cloud") === "government")).toBe(true);
+  });
+
+  it("changing a filter updates the URL and refetches; clear all removes it", async () => {
+    const user = userEvent.setup();
+    const { fetchImpl, router } = setup(PATH, {
+      respond: (url) => (isSearch(url) ? searchBody([]) : undefined),
+    });
+    await screen.findByRole("treegrid");
+    await user.selectOptions(await screen.findByTestId("filter-health"), "failing");
+    await waitFor(() => expect(router.state.location.search).toContain("health=failing"));
+    expect(router.state.location.search).toContain("domain_id=dom-1");
+    await waitFor(() =>
+      expect(viewportUrls(fetchImpl).some((u) => u.searchParams.get("health") === "failing")).toBe(
+        true,
+      ),
+    );
+    await user.click(await screen.findByTestId("filter-clear"));
+    await waitFor(() => expect(router.state.location.search).not.toContain("health="));
+  });
+
+  it("rejects an invalid tag in the field before any request", async () => {
+    const user = userEvent.setup();
+    const { router } = setup(PATH);
+    await screen.findByRole("treegrid");
+    await user.type(screen.getByTestId("filter-tag"), "Bad Tag!{Enter}");
+    expect(router.state.location.search).not.toContain("tag=");
+    expect(await screen.findByText(/Not a valid tag/)).toBeTruthy();
+  });
+});
+
+describe("map table: kinds and facet columns", () => {
+  const KINDS: ViewportResponse = {
+    ...TOP,
+    nodes: [
+      node("s1", "service", "billing-api"),
+      node("t1", "tool", "web-search"),
+      node("x1", "mcp_server", "files-mcp"),
+      node("q1", "quantum" as ViewportNode["kind"], "odd-node"),
+    ],
+    edges: [],
+    truncated: false,
+    truncation_reason: null,
+  };
+
+  it("labels service, tool and MCP server rows and shows an unknown kind by its raw name", async () => {
+    setup(PATH, { top: KINDS });
+    const grid = await screen.findByRole("treegrid");
+    const kinds = within(grid)
+      .getAllByTestId("kind-text")
+      .map((k) => k.textContent);
+    expect(kinds).toEqual(["Service", "Tool", "MCP server", "quantum"]);
+  });
+
+  it("shows environment, cloud and error rate as text, Unknown when absent", async () => {
+    const top: ViewportResponse = {
+      ...TOP,
+      nodes: [
+        node("a1", "agent", "with-facets", {
+          metrics: OK,
+          facets: { environment: "production", cloud: "government", error_rate: 0.125 },
+        }),
+        node("a2", "agent", "no-facets", { metrics: OK }),
+        node("a3", "agent", "zero-errors", { metrics: OK, facets: { error_rate: 0 } }),
+      ],
+      edges: [],
+    };
+    setup(PATH, { top });
+    const grid = await screen.findByRole("treegrid");
+    expect(
+      within(grid)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual([
+      "Kind",
+      "Label",
+      "Members",
+      "Tokens",
+      "Context size",
+      "Frequency",
+      "Latency p95",
+      "Health",
+      "Environment",
+      "Cloud",
+      "Error rate",
+    ]);
+    const rows = within(grid).getAllByTestId("node-row");
+    const text = (row: HTMLElement | undefined, id: string): string | null | undefined =>
+      row?.querySelector(`[data-testid='${id}']`)?.textContent;
+    expect(text(rows[0], "environment")).toBe("Production");
+    expect(text(rows[0], "cloud")).toBe("Government");
+    expect(text(rows[0], "error-rate")).toBe("12.5%");
+    expect(text(rows[1], "environment")).toBe("Unknown");
+    expect(text(rows[1], "error-rate")).toBe("Unknown");
+    // a measured zero is a zero, not unknown
+    expect(text(rows[2], "error-rate")).toBe("0.0%");
+  });
+});
+
+describe("map table: search focuses the row", () => {
+  const MATCH_TOP = { node: TOP.nodes[1] as ViewportNode, cluster_id: "cluster:agents" };
+  const MATCH_MEMBER = {
+    node: node("c:1:0", "agent", "member-1-0", { cluster_id: "cluster:agents" }),
+    cluster_id: "cluster:agents",
+  };
+  const MATCH_UNLOADED = {
+    node: node("c:9:9", "agent", "far-member", { cluster_id: "cluster:agents" }),
+    cluster_id: "cluster:agents",
+  };
+  const MATCH_NOWHERE = {
+    node: node("z:1", "agent", "stranger", { cluster_id: "cluster:gone" }),
+    cluster_id: "cluster:gone",
+  };
+
+  async function searchAndPick(user: ReturnType<typeof userEvent.setup>, text: string) {
+    await user.type(screen.getByTestId("map-search"), text);
+    const results = await screen.findAllByTestId("map-search-result", {}, { timeout: 3000 });
+    await user.click(results[0] as HTMLElement);
+  }
+
+  function withMatch(m: { node: ViewportNode; cluster_id: string }) {
+    return { respond: (url: URL) => (isSearch(url) ? searchBody([m]) : undefined) };
+  }
+
+  it("focuses a row that is already loaded and selects it", async () => {
+    const user = userEvent.setup();
+    setup(PATH, withMatch(MATCH_TOP));
+    await screen.findByRole("treegrid");
+    await searchAndPick(user, "supp");
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute("data-row-key")).toBe("root|a1");
+    });
+    expect(screen.getByTestId("detail").textContent).toContain("Agent support-agent");
+    expect(screen.getByTestId("search-note").textContent).toBe(
+      "Focused support-agent in the table.",
+    );
+  });
+
+  it("opens the cluster to reach a member, then focuses its row", async () => {
+    const user = userEvent.setup();
+    setup(PATH, withMatch(MATCH_MEMBER));
+    const grid = await screen.findByRole("treegrid");
+    expect(within(grid).queryByText("member-1-0")).toBeNull();
+    await searchAndPick(user, "memb");
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute("data-row-key")).toBe(
+        "root|cluster:agents|c:1:0",
+      );
+    });
+    expect(within(grid).getAllByTestId("node-row")[0]).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("says in text when the row is in a cluster page that is not loaded", async () => {
+    const user = userEvent.setup();
+    setup(PATH, withMatch(MATCH_UNLOADED));
+    await screen.findByRole("treegrid");
+    await searchAndPick(user, "far");
+    await waitFor(() => {
+      expect(screen.getByTestId("search-note").textContent).toBe(
+        'far-member is in Agents but is not loaded yet. Use "Load more" in Agents.',
+      );
+    });
+  });
+
+  it("says in text when the row is not in the table with the current filters", async () => {
+    const user = userEvent.setup();
+    setup(PATH, withMatch(MATCH_NOWHERE));
+    await screen.findByRole("treegrid");
+    await searchAndPick(user, "stra");
+    await waitFor(() => {
+      expect(screen.getByTestId("search-note").textContent).toContain(
+        "stranger is not in the table with the current filters",
+      );
+    });
+  });
+
+  it("sends the active filters with the search request", async () => {
+    const user = userEvent.setup();
+    const { fetchImpl } = setup(`${PATH}&health=ok`, withMatch(MATCH_TOP));
+    await screen.findByRole("treegrid");
+    await user.type(screen.getByTestId("map-search"), "supp");
+    await screen.findAllByTestId("map-search-result", {}, { timeout: 3000 });
+    const searches = fetchImpl.mock.calls
+      .map((c) => new URL(String(c[0])))
+      .filter((u) => isSearch(u) && u.searchParams.get("q") === "supp");
+    expect(searches.length).toBeGreaterThan(0);
+    expect(searches[0]?.searchParams.get("health")).toBe("ok");
+  });
+});
+
+describe("map table: impact view", () => {
+  const IMPACT_RESPONDER = (depths: number[]) => (url: URL, init: RequestInit | undefined) => {
+    if (isSearch(url)) return searchBody([]);
+    if (!isImpact(url)) return undefined;
+    depths.push(JSON.parse(String(init?.body)).max_depth as number);
+    return impactBody("a1", [
+      { depth: 1, nodes: [TOP.nodes[2] as ViewportNode] },
+      { depth: 2, nodes: [TOP.nodes[3] as ViewportNode] },
+    ]);
+  };
+
+  it("adds a depth column, filters to affected rows, announces the count and restores on clear", async () => {
+    const user = userEvent.setup();
+    const depths: number[] = [];
+    setup(PATH, { respond: IMPACT_RESPONDER(depths) });
+    const grid = await screen.findByRole("treegrid");
+    expect(screen.getByTestId("show-impact")).toBeDisabled();
+    const row = within(grid).getAllByTestId("node-row")[1] as HTMLElement;
+    row.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("show-impact")).toBeEnabled();
+    await user.click(screen.getByTestId("show-impact"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("impact-status").textContent).toContain(
+        "2 dependents affected by support-agent",
+      ),
+    );
+    expect(screen.getByTestId("impact-status")).toHaveAttribute("aria-live", "polite");
+    expect(depths).toEqual([2]);
+    expect(
+      within(grid)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toContain("Depth");
+    const rows = within(grid).getAllByTestId("node-row");
+    expect(rows.map((r) => r.querySelector("[data-testid='label']")?.textContent)).toEqual([
+      "support-agent",
+      "triage",
+      "gpt",
+    ]);
+    expect(rows.map((r) => r.querySelector("[data-testid='depth']")?.textContent)).toEqual([
+      "Selected",
+      "1",
+      "2",
+    ]);
+
+    // exactly one row stays tabbable after the filter
+    expect(grid.querySelectorAll("tr[data-row-key][tabindex='0']")).toHaveLength(1);
+
+    await user.click(screen.getByTestId("show-impact"));
+    expect(within(grid).getAllByTestId("node-row")).toHaveLength(5);
+    expect(
+      within(grid)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).not.toContain("Depth");
+    expect(screen.getByTestId("impact-status").textContent).toBe("");
+  });
+
+  it("changes the depth with the 1 to 5 control and asks again", async () => {
+    const user = userEvent.setup();
+    const depths: number[] = [];
+    setup(PATH, { respond: IMPACT_RESPONDER(depths) });
+    const grid = await screen.findByRole("treegrid");
+    (within(grid).getAllByTestId("node-row")[1] as HTMLElement).focus();
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByTestId("show-impact"));
+    const select = await screen.findByTestId("impact-depth");
+    expect(Array.from(select.querySelectorAll("option")).map((o) => o.value)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+    ]);
+    expect(select).toHaveValue("2");
+    await user.selectOptions(select, "4");
+    await waitFor(() => expect(depths).toEqual([2, 4]));
+  });
+
+  it("toggles with the I key on the focused row and clears with it", async () => {
+    const user = userEvent.setup();
+    const depths: number[] = [];
+    setup(PATH, { respond: IMPACT_RESPONDER(depths) });
+    const grid = await screen.findByRole("treegrid");
+    const row = within(grid).getAllByTestId("node-row")[1] as HTMLElement;
+    row.focus();
+    await user.keyboard("i");
+    await waitFor(() => expect(within(grid).getAllByTestId("node-row")).toHaveLength(3));
+    expect(screen.getByTestId("show-impact")).toHaveTextContent("Clear impact view");
+    (within(grid).getAllByTestId("node-row")[0] as HTMLElement).focus();
+    await user.keyboard("i");
+    await waitFor(() => expect(within(grid).getAllByTestId("node-row")).toHaveLength(5));
+  });
+
+  it("is operable by keyboard from the button and does not offer impact for a cluster", async () => {
+    const user = userEvent.setup();
+    const depths: number[] = [];
+    setup(PATH, { respond: IMPACT_RESPONDER(depths) });
+    const grid = await screen.findByRole("treegrid");
+    const clusterRow = within(grid).getAllByTestId("node-row")[0] as HTMLElement;
+    clusterRow.focus();
+    await user.keyboard("i"); // a cluster has no impact
+    expect(depths).toEqual([]);
+    await user.keyboard("{Enter}"); // selects (and expands) the cluster
+    expect(screen.getByTestId("show-impact")).toBeDisabled();
+    expect(screen.getByText("Impact is shown for single nodes, not clusters.")).toBeTruthy();
+    (within(grid).getAllByTestId("node-row")[1] as HTMLElement).focus();
+    await user.keyboard("{Enter}");
+    screen.getByTestId("show-impact").focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(depths).toEqual([2]));
+  });
+
+  it("lists affected nodes that are not loaded in the table, as text", async () => {
+    const user = userEvent.setup();
+    const far = node("far:1", "agent", "far-agent", { metrics: OK });
+    setup(PATH, {
+      respond: (url) => {
+        if (isSearch(url)) return searchBody([]);
+        if (isImpact(url)) return impactBody("a1", [{ depth: 1, nodes: [far] }]);
+        return undefined;
+      },
+    });
+    const grid = await screen.findByRole("treegrid");
+    (within(grid).getAllByTestId("node-row")[1] as HTMLElement).focus();
+    await user.keyboard("i");
+    expect((await screen.findByTestId("impact-not-loaded")).textContent).toBe(
+      "1 affected node is not loaded in the table: far-agent. Expand its cluster to load more.",
+    );
+    expect(screen.getByTestId("impact-status").textContent).toContain(
+      "1 dependent affected by support-agent",
+    );
+  });
+
+  it("has no axe violations with the filter bar, search and impact view open", async () => {
+    const user = userEvent.setup();
+    const { container } = setup(PATH, { respond: IMPACT_RESPONDER([]) });
+    const grid = await screen.findByRole("treegrid");
+    (within(grid).getAllByTestId("node-row")[1] as HTMLElement).focus();
+    await user.keyboard("i");
+    await waitFor(() => expect(within(grid).getAllByTestId("node-row")).toHaveLength(3));
     expect((await axe(container)).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 });

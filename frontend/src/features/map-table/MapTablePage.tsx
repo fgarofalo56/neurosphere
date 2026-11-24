@@ -1,12 +1,16 @@
 import {
+  Button,
+  Field,
   makeStyles,
   mergeClasses,
   MessageBar,
   MessageBarBody,
+  Select,
   tokens,
 } from "@fluentui/react-components";
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -29,12 +33,23 @@ import {
 import { ForbiddenError, UnauthorizedError, type ApiError } from "../../api/index.js";
 import { MAP_PATH } from "../map/paths";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
+import { FilterBar } from "../map/filters/FilterBar";
+import { useMapFilters, type MapFilterQuery } from "../map/filters/useMapFilters";
+import {
+  DEFAULT_IMPACT_DEPTH,
+  MAX_IMPACT_DEPTH,
+  MIN_IMPACT_DEPTH,
+  deriveImpact,
+  useMapImpact,
+} from "../map/impact";
+import { SearchBox } from "../map/search/SearchBox";
 import {
   COLUMN_COUNT,
   GridContext,
   rowKeyOf,
   SectionRows,
   type GridContextValue,
+  type ImpactView,
   type SectionData,
 } from "./MapGrid";
 import { NoDataEmptyState } from "../source-status";
@@ -42,13 +57,13 @@ import { useViewport } from "./hooks";
 import {
   coverageText,
   HEALTH_LABEL,
-  KIND_LABEL,
+  kindLabel,
   metricText,
   PROVENANCE_LABEL,
   STRINGS,
   truncationText,
 } from "./strings";
-import type { ViewportEdge, ViewportNode } from "./types";
+import type { SearchMatch, ViewportEdge, ViewportNode } from "./types";
 
 const useStyles = makeStyles({
   table: { borderCollapse: "collapse", width: "100%" },
@@ -79,7 +94,30 @@ const useStyles = makeStyles({
     ":hover": { textDecorationLine: "underline" },
   },
   gap: { marginTop: tokens.spacingVerticalL },
+  controls: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalL,
+    rowGap: tokens.spacingVerticalS,
+    marginBottom: tokens.spacingVerticalM,
+  },
+  note: { color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
 });
+
+/** A search result chosen in the search box; the table focuses its row. */
+interface SearchTarget {
+  readonly match: SearchMatch;
+  readonly nonce: number;
+  /** The filters the choice was made under: a target for other filters is stale. */
+  readonly signature: string;
+}
+
+interface PendingFocus {
+  readonly id: string;
+  readonly label: string;
+  readonly clusterId: string;
+}
 
 function ErrorState({ error }: { readonly error: ApiError }): ReactElement {
   if (error instanceof ForbiddenError) {
@@ -100,7 +138,7 @@ function ErrorState({ error }: { readonly error: ApiError }): ReactElement {
 function nodeSummary(node: ViewportNode, connections: number): string {
   const m = node.metrics;
   const parts = [
-    `${KIND_LABEL[node.kind]} ${node.label}`,
+    `${kindLabel(node.kind)} ${node.label}`,
     `health ${HEALTH_LABEL[m.health]}`,
     `tokens ${metricText(m.tokens)}`,
     `context size ${metricText(m.context_size)}`,
@@ -165,15 +203,48 @@ function ConnectionsTable({
   );
 }
 
-function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
+interface MapTableProps {
+  readonly domainId: string;
+  readonly filters: MapFilterQuery;
+  /** The filters' signature; a search target made under other filters is ignored. */
+  readonly signature: string;
+  readonly target: SearchTarget | null;
+}
+
+function MapTable({ domainId, filters, signature, target }: MapTableProps): ReactElement {
   const styles = useStyles();
   const { treatment } = useUiStyle();
-  const query = useViewport(domainId, null);
+  const query = useViewport(domainId, null, filters);
   const gridRef = useRef<HTMLTableSectionElement>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ key: string; node: ViewportNode } | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [sections, setSections] = useState<ReadonlyMap<string, SectionData>>(new Map());
+  const [impactRoot, setImpactRoot] = useState<{ id: string; label: string } | null>(null);
+  const [depth, setDepth] = useState(DEFAULT_IMPACT_DEPTH);
+  const [searchNote, setSearchNote] = useState("");
+  const [pending, setPending] = useState<PendingFocus | null>(null);
+  const handledNonce = useRef(0);
+
+  const impactQuery = useMapImpact(domainId, impactRoot?.id ?? null, depth);
+  const impactState = useMemo(() => {
+    if (impactRoot === null || impactQuery.data === undefined) return null;
+    if (impactQuery.data.node_id !== impactRoot.id) return null; // a previous node's answer
+    const loaded = new Set<string>();
+    for (const s of sections.values()) for (const n of s.nodes) loaded.add(n.id);
+    return deriveImpact(impactQuery.data, {
+      hasNode: (id) => loaded.has(id),
+      hasEdge: () => false,
+    });
+  }, [impactRoot, impactQuery.data, sections]);
+  const impactView = useMemo<ImpactView | null>(() => {
+    if (impactRoot === null) return null;
+    const depthById = new Map<string, number>();
+    for (const level of impactState?.levels ?? []) {
+      for (const row of level.rows) depthById.set(row.id, row.depth);
+    }
+    return { rootId: impactRoot.id, depthById };
+  }, [impactRoot, impactState]);
 
   const report = useCallback((section: string, data: SectionData | null) => {
     setSections((prev) => {
@@ -224,8 +295,17 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
       });
       setActiveKey(key);
     };
+    const toggleImpact = (key: string, node: ViewportNode): void => {
+      if (node.kind === "cluster") return;
+      setSelected({ key, node });
+      setImpactRoot((prev) => (prev?.id === node.id ? null : { id: node.id, label: node.label }));
+    };
     return {
       domainId,
+      filters,
+      impact: impactView,
+      columnCount: impactView === null ? COLUMN_COUNT : COLUMN_COUNT + 1,
+      toggleImpact,
       activeKey: liveActiveKey,
       selectedKey: selected?.key ?? null,
       expanded,
@@ -244,7 +324,82 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
         }
       },
     };
-  }, [domainId, activeKey, liveActiveKey, selected, expanded, report, focusRow, focusInGrid]);
+  }, [
+    domainId,
+    filters,
+    impactView,
+    activeKey,
+    liveActiveKey,
+    selected,
+    expanded,
+    report,
+    focusRow,
+    focusInGrid,
+  ]);
+
+  // A search result chosen in the search box: take it once.
+  useEffect(() => {
+    if (target === null || target.signature !== signature) return;
+    if (target.nonce === handledNonce.current) return;
+    handledNonce.current = target.nonce;
+    setSearchNote("");
+    setPending({
+      id: target.match.node.id,
+      label: target.match.node.label,
+      clusterId: target.match.cluster_id,
+    });
+  }, [target, signature]);
+
+  // Focus the searched row. A row inside a collapsed cluster opens the cluster first; a row that
+  // is not on a loaded page is said in text (the table pages clusters, it has no neighbourhood
+  // fetch), never silently dropped.
+  useEffect(() => {
+    if (pending === null || query.isPending) return;
+    let found: { key: string; node: ViewportNode } | null = null;
+    for (const [section, data] of sections) {
+      const node = data.nodes.find((n) => n.id === pending.id);
+      if (node !== undefined) {
+        found = { key: rowKeyOf(section, node), node };
+        break;
+      }
+    }
+    if (found !== null) {
+      if (impactRoot !== null && impactView?.depthById.has(pending.id) !== true) {
+        // The impact filter hides this row: searching is explicit navigation, so leave impact.
+        if (impactRoot.id !== pending.id) {
+          setImpactRoot(null);
+          return;
+        }
+      }
+      if (focusRow(found.key)) {
+        setActiveKey(found.key);
+        setSelected(found);
+        setSearchNote(STRINGS.search.focused(pending.label));
+        setPending(null);
+      }
+      return;
+    }
+    const cluster = sections.get("root")?.nodes.find((n) => n.id === pending.clusterId);
+    if (cluster === undefined) {
+      setSearchNote(STRINGS.search.notInTable(pending.label));
+      setPending(null);
+      return;
+    }
+    const clusterKey = rowKeyOf("root", cluster);
+    if (!expanded.has(clusterKey)) {
+      setExpanded((prev) => new Set(prev).add(clusterKey));
+      setSearchNote(STRINGS.search.clusterOpened(cluster.label));
+      return;
+    }
+    const section = sections.get(clusterKey);
+    if (section === undefined) return; // still loading
+    setSearchNote(
+      section.hasNextPage
+        ? STRINGS.search.notLoaded(pending.label, cluster.label)
+        : STRINGS.search.notInTable(pending.label),
+    );
+    setPending(null);
+  }, [pending, query.isPending, sections, expanded, impactRoot, impactView, focusRow]);
 
   const edges = useMemo(() => {
     const seen = new Map<string, ViewportEdge>();
@@ -297,13 +452,76 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
     target?.focus();
   };
 
+  const toggleImpactFor = (sel: { key: string; node: ViewportNode }): void =>
+    ctx.toggleImpact(sel.key, sel.node);
+
   const selectedConnections =
     selected === null
       ? 0
       : edges.filter((e) => e.source === selected.node.id || e.target === selected.node.id).length;
 
+  const canImpact = selected !== null && selected.node.kind !== "cluster";
+  let impactText = "";
+  if (impactRoot !== null) {
+    if (impactQuery.isError) impactText = STRINGS.impact.failed;
+    else if (impactState === null) impactText = STRINGS.impact.loading;
+    else impactText = STRINGS.impact.affected(impactState.total, impactRoot.label);
+  }
+  const offscreen = impactState?.offscreen ?? [];
+
   return (
     <>
+      <div className={styles.controls} role="group" aria-label={STRINGS.impact.heading}>
+        <Button
+          appearance={impactRoot === null ? "primary" : "secondary"}
+          disabled={impactRoot === null && !canImpact}
+          onClick={() => {
+            if (impactRoot !== null) setImpactRoot(null);
+            else if (selected !== null) toggleImpactFor(selected);
+          }}
+          data-testid="show-impact"
+        >
+          {impactRoot === null ? STRINGS.impact.toggle : STRINGS.impact.clear}
+        </Button>
+        {impactRoot !== null ? (
+          <Field label={STRINGS.impact.depthLabel}>
+            <Select
+              value={String(depth)}
+              onChange={(_, data) => setDepth(Number(data.value))}
+              data-testid="impact-depth"
+            >
+              {Array.from({ length: MAX_IMPACT_DEPTH - MIN_IMPACT_DEPTH + 1 }, (_, i) => (
+                <option key={i} value={String(MIN_IMPACT_DEPTH + i)}>
+                  {MIN_IMPACT_DEPTH + i}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
+        <span className={styles.note}>
+          {selected !== null && selected.node.kind === "cluster"
+            ? STRINGS.impact.clusterHint
+            : STRINGS.impact.shortcutNote}
+        </span>
+      </div>
+      <div role="status" aria-live="polite" aria-atomic="true" data-testid="impact-status">
+        {impactText}
+        {impactState?.truncated === true ? ` ${STRINGS.impact.truncated}` : ""}
+      </div>
+      {offscreen.length > 0 ? (
+        <p className={styles.note} data-testid="impact-not-loaded">
+          {STRINGS.impact.notLoaded(offscreen.length, offscreen.map((r) => r.label).join(", "))}
+        </p>
+      ) : null}
+      <div
+        className={styles.note}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="search-note"
+      >
+        {searchNote}
+      </div>
       {last.truncated ? (
         <MessageBar intent="warning" data-testid="truncation-banner">
           <MessageBarBody>{truncationText(last.truncation_reason)}</MessageBarBody>
@@ -330,6 +548,14 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
                   {c}
                 </th>
               ))}
+              {impactRoot !== null ? (
+                <th
+                  scope="col"
+                  className={mergeClasses(styles.th, treatment.uppercaseLabels && styles.upper)}
+                >
+                  {STRINGS.depthColumn}
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody ref={gridRef} onKeyDown={onGridKeyDown}>
@@ -372,8 +598,15 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
 export function MapTablePage(): ReactElement {
   const styles = useStyles();
   const { domainId } = useSelectedDomain();
-  const mapHref =
-    domainId === "" ? MAP_PATH : `${MAP_PATH}?domain_id=${encodeURIComponent(domainId)}`;
+  // Same URL state as the map: a filtered map URL opened here shows the same filters.
+  const filters = useMapFilters();
+  const [target, setTarget] = useState<SearchTarget | null>(null);
+  const nonce = useRef(0);
+  const query = filters.toQuery();
+  const viewKey = `${domainId}|${filters.signature}`;
+  const mapParams = new URLSearchParams(domainId === "" ? "" : { domain_id: domainId });
+  for (const [key, value] of Object.entries(query)) mapParams.set(key, value);
+  const mapHref = mapParams.size === 0 ? MAP_PATH : `${MAP_PATH}?${mapParams.toString()}`;
   return (
     <PageTemplate title={STRINGS.title} description={STRINGS.intro}>
       <p>
@@ -386,7 +619,25 @@ export function MapTablePage(): ReactElement {
           <EmptyState title={STRINGS.domainRequired} />
         </div>
       ) : (
-        <MapTable key={domainId} domainId={domainId} />
+        <>
+          <div className={styles.controls}>
+            <FilterBar domainId={domainId} state={filters} />
+            <SearchBox
+              domainId={domainId}
+              onSelect={(match) => {
+                nonce.current += 1;
+                setTarget({ match, nonce: nonce.current, signature: viewKey });
+              }}
+            />
+          </div>
+          <MapTable
+            key={viewKey}
+            domainId={domainId}
+            filters={query}
+            signature={viewKey}
+            target={target}
+          />
+        </>
       )}
     </PageTemplate>
   );

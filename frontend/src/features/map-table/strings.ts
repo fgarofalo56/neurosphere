@@ -36,6 +36,36 @@ export const STRINGS = {
     frequency: "Frequency",
     latency: "Latency p95",
     health: "Health",
+    environment: "Environment",
+    cloud: "Cloud",
+    errorRate: "Error rate",
+  },
+  depthColumn: "Depth",
+  search: {
+    focused: (label: string) => `Focused ${label} in the table.`,
+    clusterOpened: (cluster: string) => `Opened ${cluster} to find the row.`,
+    notLoaded: (label: string, cluster: string) =>
+      `${label} is in ${cluster} but is not loaded yet. Use "Load more" in ${cluster}.`,
+    notInTable: (label: string) =>
+      `${label} is not in the table with the current filters. Clear the filters or change them.`,
+  },
+  impact: {
+    toggle: "Show impact",
+    clear: "Clear impact view",
+    toggleHint: "Select a row (Enter), then show its dependents. Keyboard shortcut on a row: I.",
+    clusterHint: "Impact is shown for single nodes, not clusters.",
+    depthLabel: "Impact depth (levels)",
+    shortcutNote: "I shows or clears impact for the focused row.",
+    loading: "Loading impact",
+    failed: "The impact could not be loaded. The table is unchanged.",
+    affected: (n: number, label: string) =>
+      `${n} ${n === 1 ? "dependent" : "dependents"} affected by ${label}`,
+    selectedDepth: "Selected",
+    noDepth: "-",
+    notLoaded: (n: number, labels: string) =>
+      `${n} affected ${n === 1 ? "node is" : "nodes are"} not loaded in the table: ${labels}. Expand its cluster to load more.`,
+    truncated: "The impact list is incomplete: more dependents exist than were scanned.",
+    heading: "Impact of the selected node (nodes that depend on it)",
   },
   connections: {
     source: "Source",
@@ -50,8 +80,28 @@ export const KIND_LABEL: Readonly<Record<NodeKind, string>> = {
   sub_agent: "Sub-agent",
   model: "Model",
   source: "Source",
+  service: "Service",
+  tool: "Tool",
+  mcp_server: "MCP server",
   cluster: "Cluster",
 };
+
+/** Text label for a kind; a kind from a newer server shows as its raw name, never blank. */
+export function kindLabel(kind: string): string {
+  return (KIND_LABEL as Readonly<Record<string, string | undefined>>)[kind] ?? kind;
+}
+
+/** Facet text; an absent or unknown value is said, never blank. */
+export function facetText(value: string | null | undefined): string {
+  return value === null || value === undefined || value === ""
+    ? STRINGS.unknown
+    : value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/** Error rate is a 0..1 share; null is "Unknown", never 0%. */
+export function errorRateText(rate: number | null | undefined): string {
+  return rate === null || rate === undefined ? STRINGS.unknown : `${(rate * 100).toFixed(1)}%`;
+}
 
 export const HEALTH_LABEL: Readonly<Record<Health, string>> = {
   ok: "Healthy",

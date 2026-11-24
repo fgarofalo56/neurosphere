@@ -11,12 +11,15 @@ import {
 } from "react";
 import type { ApiError } from "../../api/index.js";
 import { HealthIndicator, LoadingState } from "../../design-system";
+import type { MapFilterQuery } from "../map/filters/useMapFilters";
 import { useViewport } from "./hooks";
 import { KindIcon } from "./icons";
 import {
   coverageText,
+  errorRateText,
+  facetText,
   HEALTH_LABEL,
-  KIND_LABEL,
+  kindLabel,
   membersText,
   metricText,
   STRINGS,
@@ -24,15 +27,30 @@ import {
 } from "./strings";
 import type { ViewportEdge, ViewportNode, ViewportResponse } from "./types";
 
-export const COLUMN_COUNT = 8;
+/** Columns without the impact depth column. */
+export const COLUMN_COUNT = 11;
 
 export interface SectionData {
   readonly nodes: readonly ViewportNode[];
   readonly edges: readonly ViewportEdge[];
+  /** More pages exist for this section (a searched row may still be on one of them). */
+  readonly hasNextPage: boolean;
+}
+
+/** Impact filter: the selected node and its dependents, with the depth of each. */
+export interface ImpactView {
+  readonly rootId: string;
+  readonly depthById: ReadonlyMap<string, number>;
 }
 
 export interface GridContextValue {
   readonly domainId: string;
+  /** The active map filters (URL state), sent with every section request. */
+  readonly filters: MapFilterQuery;
+  /** Non-null while the impact view filters the table to affected rows. */
+  readonly impact: ImpactView | null;
+  readonly columnCount: number;
+  readonly toggleImpact: (key: string, node: ViewportNode) => void;
   readonly activeKey: string | null;
   readonly selectedKey: string | null;
   readonly expanded: ReadonlySet<string>;
@@ -80,6 +98,20 @@ function isCluster(node: ViewportNode): boolean {
   return node.kind === "cluster";
 }
 
+/** With impact on, only the selected node and its dependents (and open clusters) are rows. */
+function isVisible(grid: GridContextValue, node: ViewportNode, rowKey: string): boolean {
+  const { impact } = grid;
+  if (impact === null) return true;
+  if (node.id === impact.rootId || impact.depthById.has(node.id)) return true;
+  return isCluster(node) && grid.expanded.has(rowKey);
+}
+
+function depthText(impact: ImpactView, node: ViewportNode): string {
+  if (node.id === impact.rootId) return STRINGS.impact.selectedDepth;
+  const depth = impact.depthById.get(node.id);
+  return depth === undefined ? STRINGS.impact.noDepth : String(depth);
+}
+
 interface NodeRowProps {
   readonly node: ViewportNode;
   readonly rowKey: string;
@@ -105,6 +137,15 @@ function NodeRow({ node, rowKey, depth, isFirst }: NodeRowProps): ReactElement {
     } else if (e.key === "ArrowLeft" && cluster && isExpanded) {
       e.preventDefault();
       grid.collapse(rowKey);
+    } else if (
+      (e.key === "i" || e.key === "I") &&
+      !cluster &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey
+    ) {
+      e.preventDefault();
+      grid.toggleImpact(rowKey, node);
     }
   };
   return (
@@ -125,7 +166,7 @@ function NodeRow({ node, rowKey, depth, isFirst }: NodeRowProps): ReactElement {
       <td className={styles.cell}>
         <span className={styles.inline} style={{ paddingLeft: `${depth * 20}px` }}>
           <KindIcon kind={node.kind} />
-          <span data-testid="kind-text">{KIND_LABEL[node.kind]}</span>
+          <span data-testid="kind-text">{kindLabel(node.kind)}</span>
         </span>
       </td>
       <td className={styles.cell}>
@@ -144,6 +185,20 @@ function NodeRow({ node, rowKey, depth, isFirst }: NodeRowProps): ReactElement {
           <HealthIndicator state={m.health} label={HEALTH_LABEL[m.health]} />
         </span>
       </td>
+      <td className={styles.cell} data-testid="environment">
+        {facetText(node.facets?.environment)}
+      </td>
+      <td className={styles.cell} data-testid="cloud">
+        {facetText(node.facets?.cloud)}
+      </td>
+      <td className={styles.cell} data-testid="error-rate">
+        {errorRateText(node.facets?.error_rate)}
+      </td>
+      {grid.impact !== null ? (
+        <td className={styles.cell} data-testid="depth">
+          {depthText(grid.impact, node)}
+        </td>
+      ) : null}
     </tr>
   );
 }
@@ -158,11 +213,11 @@ function ClusterSection({
   readonly depth: number;
 }): ReactElement {
   const grid = useGrid();
-  const query = useViewport(grid.domainId, node.id);
+  const query = useViewport(grid.domainId, node.id, grid.filters);
   if (query.isError) {
     return (
       <tr>
-        <td colSpan={COLUMN_COUNT} role="alert" data-testid="section-error">
+        <td colSpan={grid.columnCount} role="alert" data-testid="section-error">
           Could not load the members of {node.label}. This is not an empty result.
         </td>
       </tr>
@@ -171,7 +226,7 @@ function ClusterSection({
   if (query.isPending) {
     return (
       <tr>
-        <td colSpan={COLUMN_COUNT} aria-busy="true">
+        <td colSpan={grid.columnCount} aria-busy="true">
           <LoadingState label={STRINGS.loading} rows={1} />
         </td>
       </tr>
@@ -213,9 +268,10 @@ export function SectionRows({
     report(section, {
       nodes: pages.flatMap((p) => p.nodes),
       edges: pages.flatMap((p) => p.edges),
+      hasNextPage: query.hasNextPage,
     });
     return () => report(section, null);
-  }, [pages, report, section]);
+  }, [pages, report, section, query.hasNextPage]);
 
   // Focus the first newly loaded row once it is committed to the DOM. The "Load more" button may
   // unmount (last page), so focus must never be left on it: fall back to the cluster row.
@@ -242,6 +298,7 @@ export function SectionRows({
   }, [pendingFocus, loadedCount, focusRow, focusInGrid, section, grid.activeKey]);
 
   if (last === undefined) return null;
+  const visible = nodes.filter((n) => isVisible(grid, n, rowKeyOf(section, n)));
 
   const loadMore = async (): Promise<void> => {
     const before = nodes.length;
@@ -255,7 +312,7 @@ export function SectionRows({
 
   return (
     <>
-      {nodes.map((node, i) => {
+      {visible.map((node, i) => {
         const key = rowKeyOf(section, node);
         return (
           <FragmentRow
@@ -269,7 +326,7 @@ export function SectionRows({
       })}
       {showStatus ? (
         <tr>
-          <td colSpan={COLUMN_COUNT} className={styles.note} data-testid="section-status">
+          <td colSpan={grid.columnCount} className={styles.note} data-testid="section-status">
             <span style={{ paddingLeft: `${depth * 20}px` }}>
               {parentLabel}:{" "}
               <span data-testid="section-coverage">{coverageText(last.coverage)}</span>
@@ -287,7 +344,7 @@ export function SectionRows({
       ) : null}
       {query.hasNextPage ? (
         <tr>
-          <td colSpan={COLUMN_COUNT} className={styles.cell}>
+          <td colSpan={grid.columnCount} className={styles.cell}>
             <button
               type="button"
               disabled={query.isFetchingNextPage}
