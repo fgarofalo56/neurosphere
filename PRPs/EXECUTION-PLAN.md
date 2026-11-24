@@ -89,7 +89,7 @@ Gate before the next wave: The hosted profile renders with everything on (offlin
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-74: Live map topology backend (services and tools, facets, topology push, search, impact)](backlog/PRP-74-live-map-topology-backend.md) | sonnet | required | none | PRP-100 | - | `prp-74-live-map-topology-backend` |
+| 1 | [PRP-74: Live map topology backend (services and tools, facets, topology push, search, impact)](active/PRP-74-live-map-topology-backend.md) | sonnet | required | none | PRP-100 | - | `prp-74-live-map-topology-backend` |
 | 2 | [PRP-103: Interaction capture policy and the ingest-edge capture path](backlog/PRP-103-interaction-capture-policy-and-edge.md) | opus | required | PRP-101, PRP-102 | PRP-103, PRP-107 | - | `prp-103-capture-policy-and-edge` |
 | 3 | [PRP-107: Notification channels and subscriptions (a notification that reaches a person)](backlog/PRP-107-notification-channels-and-subscriptions.md) | sonnet | required | PRP-102, PRP-105 | PRP-103, PRP-107 | - | `prp-107-notification-channels` |
 
@@ -644,7 +644,7 @@ Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-105-policy-
 ### PRP-74 (W22)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-74-live-map-topology-backend.md
+/prp:prp-execute PRPs/active/PRP-74-live-map-topology-backend.md
 
 Context for this run: wave W22 of PRPs/EXECUTION-PLAN.md, branch prp-74-live-map-topology-backend cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```

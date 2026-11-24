@@ -1,10 +1,11 @@
 ---
 name: PRP-74-live-map-topology-backend
-status: backlog
+status: active
 priority: P0
 order: 65
 review: required
 created: 2026-11-16
+started: 2026-11-23
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -220,14 +221,16 @@ Per-edge traffic volume or an edge aggregate; service and tool telemetry aggrega
 - [ ] All clarification questions are decided, not guessed (rows 4, 5 and 7 are ASSUMPTIONS for plan approval; PRP-73's `dependents` signature is unverified until it ships)
 
 ## Execution state
-| Item | Status | Branch/worktree | Notes |
-|---|---|---|---|
-| 1 | todo | | node kinds, facets, derived health |
-| 2 | todo | | filter, search, neighbourhood |
-| 3 | todo | | impact route |
-| 4 | todo | | topology source and push, model delta ids |
-| 5 | todo | | authz negatives, timings evidence; serial-after PRP-100 |
-| 6 | todo | | Tier-2, runbook, Tier-3, close-out |
+| Item | Status | Branch/worktree | Model | Evidence | Updated | Notes |
+|---|---|---|---|---|---|---|
+| 1 | in-progress | | sonnet | | 2026-11-23 | node kinds, facets, derived health |
+| 2 | todo | | sonnet | | | filter, search, neighbourhood |
+| 3 | todo | | sonnet | | | impact route |
+| 4 | todo | | sonnet | | | topology source and push, model delta ids |
+| 5 | todo | | sonnet | | | authz negatives, timings evidence; PRP-100 shipped |
+| 6 | todo | | sonnet | | | Tier-2, runbook, Tier-3, close-out |
+
+Plan approved 2026-11-23: waves A(1) -> B(2 || 4) -> C(3) -> D(5) -> one review pass over 1-5 -> E(6). New node kinds are returned by default (the current UI drops unknown kinds safely; PRP-77 draws them). Integration branch `prp-74-live-map-topology-backend` from main 13153e53.
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit:
