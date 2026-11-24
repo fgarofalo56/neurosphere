@@ -4,7 +4,7 @@
 # Runs as uid 10001 and starts under readOnlyRootFilesystem with /tmp as a tmpfs.
 
 # python:3.12-alpine (Python 3.12.16), digest observed 2026-11-02
-FROM python:3.12-alpine@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8 AS builder
+FROM python:3.12-alpine@sha256:c5ba3deef00c7758561a0f03c26f44f10589263d40e732b8748e0d1f38f6dd89 AS builder
 
 # ghcr.io/astral-sh/uv:0.11, digest observed 2026-10-18
 COPY --from=ghcr.io/astral-sh/uv:0.11@sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7 /uv /usr/local/bin/uv
@@ -27,7 +27,7 @@ COPY connectors/reference/aws-bedrock ./connectors/reference/aws-bedrock
 RUN uv sync --frozen --no-dev --no-editable --package neurosphere-workers
 
 # python:3.12-alpine (Python 3.12.16), digest observed 2026-11-02
-FROM python:3.12-alpine@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8
+FROM python:3.12-alpine@sha256:c5ba3deef00c7758561a0f03c26f44f10589263d40e732b8748e0d1f38f6dd89
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
