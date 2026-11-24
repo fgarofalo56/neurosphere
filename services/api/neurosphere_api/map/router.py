@@ -5,6 +5,7 @@
 | GET    | ``/domains/{domain_id}/viewport`` | ``data.read`` |
 | GET    | ``/domains/{domain_id}/search``   | ``data.read`` |
 | GET    | ``/domains/{domain_id}/neighborhood/{node_id}`` | ``data.read`` |
+| POST   | ``/domains/{domain_id}/impact``   | ``data.read`` |
 
 The viewport takes repeatable ``node_type``, ``tag``, ``environment``, ``cloud`` and ``health``
 filters (an unknown value is 422 ``invalid_filter``); ``search`` scans the whole in-scope domain
@@ -29,6 +30,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.auth.scope import Permission, PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogRepository, GraphQuery
+from neurosphere_core.catalog.graph.access import AccessEngine
 from neurosphere_core.errors import NotFoundError
 from neurosphere_core.scope import IdentityScope
 
@@ -38,6 +40,7 @@ from neurosphere_api.map.dependencies import (
     DEFAULT_NODE_BUDGET,
     Clock,
     ViewportLimits,
+    get_access_engine,
     get_aggregate_reader,
     get_clock,
     get_graph,
@@ -46,7 +49,13 @@ from neurosphere_api.map.dependencies import (
     get_pseudonymizer,
     get_repository,
 )
-from neurosphere_api.map.models import SearchResponse, ViewportResponse
+from neurosphere_api.map.impact import build_impact
+from neurosphere_api.map.models import (
+    ImpactRequest,
+    ImpactResponse,
+    SearchResponse,
+    ViewportResponse,
+)
 from neurosphere_api.map.search import MAX_QUERY_LENGTH, MAX_SEARCH_LIMIT, search_domain
 from neurosphere_api.map.service import build_neighborhood, build_viewport, parse_filters
 from neurosphere_api.map.settings import MapSettings
@@ -59,6 +68,7 @@ PREFIX: Final = "/api/v1/map"
 ReadScope = Annotated[
     IdentityScope, Depends(require(Permission.DATA_READ, domain_from_path("domain_id")))
 ]
+Engine = Annotated[AccessEngine, Depends(get_access_engine)]
 Graph = Annotated[GraphQuery, Depends(get_graph)]
 Repository = Annotated[CatalogRepository, Depends(get_repository)]
 Reader = Annotated[AggregateReader, Depends(get_aggregate_reader)]
@@ -188,6 +198,40 @@ def build_router() -> APIRouter:
         )
         if result is None:
             # Missing, out of scope and other-domain nodes share one body.
+            raise NotFoundError("node not found", reason="node_not_found")
+        return result
+
+    @router.post("/domains/{domain_id}/impact", response_model=ImpactResponse)
+    async def post_impact(
+        domain_id: DomainPath,
+        body: ImpactRequest,
+        scope: ReadScope,
+        engine: Engine,
+        graph: Graph,
+        repository: Repository,
+        reader: Reader,
+        pseudonymizer: Pseudonymizer,
+        clock: Now,
+        limits: Limits,
+        settings: Settings,
+    ) -> ImpactResponse:
+        result = await build_impact(
+            scope=scope,
+            domain_id=domain_id,
+            node_id=body.node_id,
+            max_depth=body.max_depth,
+            budget=body.budget,
+            engine=engine,
+            repository=repository,
+            graph=graph,
+            reader=reader,
+            pseudonymizer=pseudonymizer,
+            clock=clock,
+            limits=limits,
+            settings=settings,
+        )
+        if result is None:
+            # Missing, unreadable and other-domain nodes share the neighbourhood route's 404.
             raise NotFoundError("node not found", reason="node_not_found")
         return result
 

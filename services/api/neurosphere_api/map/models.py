@@ -17,6 +17,11 @@ __all__ = [
     "Coverage",
     "CoverageState",
     "Health",
+    "ImpactBudget",
+    "ImpactLevel",
+    "ImpactNode",
+    "ImpactRequest",
+    "ImpactResponse",
     "NodeKind",
     "NodeMetrics",
     "Provenance",
@@ -100,6 +105,51 @@ class ViewportResponse(_Model):
     coverage: Coverage
     filters_applied: ViewportFilters | None = None
     """Set only when at least one filter was given; ``null`` means the unfiltered view."""
+
+
+class ImpactBudget(_Model):
+    """A request budget; it can only lower the server ceilings, never raise them."""
+
+    max_accessors: int | None = Field(default=None, ge=1)
+    timeout_ms: int | None = Field(default=None, ge=1)
+
+
+class ImpactRequest(_Model):
+    """Body of ``POST /domains/{domain_id}/impact`` (PRP-74 item 3)."""
+
+    node_id: str = Field(min_length=1, max_length=512)
+    max_depth: int = Field(default=3, ge=1, le=5)
+    budget: ImpactBudget | None = None
+
+
+class ImpactNode(_Model):
+    """A dependent of the failing node. People are only ever the pseudonym (id and label)."""
+
+    id: str
+    kind: NodeKind
+    label: str
+    domain_id: str
+    health: Health = "unknown"
+    health_inferred: bool = False
+    """True when ``health`` is the dependents fallback rule, not a measured subject point."""
+
+
+class ImpactLevel(_Model):
+    depth: int = Field(ge=1)
+    nodes: list[ImpactNode]
+    edge_ids: list[str]
+
+
+class ImpactResponse(_Model):
+    """Dependents of ``node_id`` (what relies on it), grouped by distance."""
+
+    domain_id: str
+    node_id: str
+    direction: Literal["dependents"] = "dependents"
+    levels: list[ImpactLevel]
+    truncated: bool
+    truncation_reason: TruncationReason | None = None
+    coverage: Coverage
 
 
 class SearchMatch(_Model):
