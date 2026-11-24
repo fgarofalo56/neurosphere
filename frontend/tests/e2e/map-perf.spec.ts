@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { expect, test } from "../e2e-support/fixtures.ts";
 import { DOMAIN_MAP_PERF, MAP_PERF_NODE_COUNT } from "../mock-api/server.ts";
+import { hostInfo, installFakeGateway } from "./map-perf-helpers.ts";
 
 // PRP-18 item 3: render the 2000-node fixture, then measure frames per second with
 // requestAnimationFrame over a fixed window while the camera pans and zooms every frame and the
@@ -24,94 +24,6 @@ test.use({
   reducedMotion: "no-preference",
   viewport: { width: 1280, height: 900 },
 });
-
-// The mock API does not serve the realtime gateway. This init script replaces ONLY the gateway
-// WebSocket (the real client code still runs) with a fake that speaks the wire contract: it
-// requires the `ns.bearer` subprotocol plus a token, answers `subscribe` with `subscribed` and one
-// `delta` for the addressed domain carrying the coverage state below. Test control lives on
-// window.__nsFakeGateway; it exists only in these specs and never ships.
-interface FakeGatewayControl {
-  coverage: string;
-  refuse: boolean;
-  sockets: { dropWith(code: number): void; deliver(state: string): void }[];
-}
-
-function installFakeGateway(initialCoverage: string): void {
-  const RealWebSocket = window.WebSocket;
-  const control: FakeGatewayControl = { coverage: initialCoverage, refuse: false, sockets: [] };
-  let seq = 0;
-
-  class FakeGatewaySocket {
-    onopen: ((e: unknown) => void) | null = null;
-    onmessage: ((e: { data: unknown }) => void) | null = null;
-    onclose: ((e: { code: number }) => void) | null = null;
-    onerror: ((e: unknown) => void) | null = null;
-    private closed = false;
-    private domain = "";
-    private readonly protocols: string[];
-
-    constructor(_url: string, protocols: string[]) {
-      this.protocols = protocols;
-      control.sockets.push(this);
-      setTimeout(() => {
-        if (control.refuse) return this.dropWith(1006);
-        if (this.protocols[0] !== "ns.bearer" || !this.protocols[1]) return this.dropWith(4401);
-        this.onopen?.({});
-      }, 0);
-    }
-
-    private emit(message: object): void {
-      if (!this.closed) this.onmessage?.({ data: JSON.stringify(message) });
-    }
-
-    deliver(state: string): void {
-      seq += 1;
-      this.emit({
-        type: "delta",
-        domain_id: this.domain,
-        seq,
-        nodes: [],
-        edges: [],
-        coverage: { state, lag_seconds: state === "delayed" ? 300 : 0, as_of: null },
-        emitted_at: new Date().toISOString(),
-      });
-    }
-
-    send(data: string): void {
-      const m = JSON.parse(data) as { type?: string; domain_id?: string };
-      if (m.type !== "subscribe" || typeof m.domain_id !== "string") return;
-      this.domain = m.domain_id;
-      this.emit({ type: "subscribed", domain_id: this.domain });
-      this.deliver(control.coverage);
-    }
-
-    dropWith(code: number): void {
-      if (this.closed) return;
-      this.closed = true;
-      this.onclose?.({ code });
-    }
-
-    close(): void {
-      this.closed = true;
-    }
-  }
-
-  window.WebSocket = function (url: string | URL, protocols?: string | string[]) {
-    if (!String(url).includes("/api/v1/realtime/ws")) return new RealWebSocket(url, protocols);
-    return new FakeGatewaySocket(String(url), Array.isArray(protocols) ? protocols : []);
-  } as unknown as typeof WebSocket;
-  (window as unknown as { __nsFakeGateway: unknown }).__nsFakeGateway = {
-    /** Every later connection attempt closes at once (1006): the gateway is gone. */
-    refuseNewConnections: () => {
-      control.refuse = true;
-    },
-    dropAll: (code: number) => control.sockets.forEach((s) => s.dropWith(code)),
-    sendDelta: (state: string) => {
-      control.coverage = state;
-      control.sockets.at(-1)?.deliver(state);
-    },
-  };
-}
 
 // Repo root /temp (gitignored); item 6 copies the result into evidence.
 const OUT_DIR = path.resolve(import.meta.dirname, "../../../temp/map-perf");
@@ -221,7 +133,6 @@ test("renders 2000 nodes and records frames per second", async ({ page }, testIn
     };
   }, WINDOW_MS);
 
-  const cpus = os.cpus();
   const record = {
     prp: "PRP-18 item 3",
     target: `>= ${TARGET_FPS} fps at ${MAP_PERF_NODE_COUNT} visible nodes on documented hardware`,
@@ -254,15 +165,7 @@ test("renders 2000 nodes and records frames per second", async ({ page }, testIn
       webglVendor: m.webgl.vendor,
       webglVersion: m.webgl.version,
     },
-    host: {
-      platform: os.platform(),
-      release: os.release(),
-      arch: os.arch(),
-      cpuModel: cpus[0]?.model ?? "unknown",
-      cpuCount: cpus.length,
-      totalMemBytes: os.totalmem(),
-      node: process.version,
-    },
+    host: hostInfo(),
   };
 
   mkdirSync(OUT_DIR, { recursive: true });
