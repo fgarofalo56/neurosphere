@@ -161,7 +161,8 @@ def _cost(
 
 
 def _latency_and_errors(ctx: _Ctx, contributions: Sequence[Contribution]) -> list[AggregateDoc]:
-    events = [c for c in contributions if c.event is not None]
+    # Only model_call facts: tool/service-only facts (PRP-100) never enter the domain series.
+    events = [c for c in contributions if c.event is not None and c.event.span_kind == "model_call"]
     if not events:
         return []
     watermark = _watermark(events)
@@ -203,17 +204,22 @@ def _subject_point(
     known = [f for f in facts if f.outcome != "unknown"]
     unknown_outcomes = len(facts) - len(known)
     errors = sum(1 for f in known if f.outcome in ERROR_OUTCOMES)
-    ins = [f.input_tokens for f in facts if f.input_tokens is not None]
-    outs = [f.output_tokens for f in facts if f.output_tokens is not None]
+    # Tool and service points never carry tokens (None, not 0); tokens belong to agent/model.
+    with_tokens = kind in ("agent", "model")
+    ins = [f.input_tokens for f in facts if with_tokens and f.input_tokens is not None]
+    outs = [f.output_tokens for f in facts if with_tokens and f.output_tokens is not None]
     tokens_known = sum(
-        1 for f in facts if f.input_tokens is not None or f.output_tokens is not None
+        1
+        for f in facts
+        if with_tokens and (f.input_tokens is not None or f.output_tokens is not None)
     )
+    tokens_complete = tokens_known == len(facts) if with_tokens else True
     return SubjectPoint(
         **ctx.base(
             "subject",
             key,
             _watermark(events),
-            missing == 0 and unknown_outcomes == 0 and tokens_known == len(facts),
+            missing == 0 and unknown_outcomes == 0 and tokens_complete,
         ),
         subject_kind=kind,
         subject_key=key,
@@ -231,10 +237,15 @@ def _subject_point(
 
 
 def _subjects(ctx: _Ctx, contributions: Sequence[Contribution]) -> list[AggregateDoc]:
-    """One point per agent (``agent:<id>``) and per model (``model:<provider>/<model>``).
+    """One point per agent (``agent:<id>``), model (``model:<provider>/<model>``), tool and service.
 
-    Events with no agent id add to no agent series; events without both provider and model add to
-    no model series (they still count in the domain-level latency and error series).
+    Agent and model series count ``model_call`` facts only (unchanged from before PRP-100). Events
+    with no agent id add to no agent series; events without both provider and model add to no model
+    series (they still count in the domain-level latency and error series). Tool series count
+    ``tool_call`` facts with a tool id; service series count any fact with a service id. Tool and
+    service points keep tokens None: tool and service facts carry none, and a service point that
+    also covers model_call spans does not sum their tokens (tokens belong to agent/model points).
+    The per-bucket cap is shared across all four kinds.
     """
     groups: dict[str, tuple[SubjectKind, list[Contribution]]] = {}
     for c in contributions:
@@ -242,10 +253,15 @@ def _subjects(ctx: _Ctx, contributions: Sequence[Contribution]) -> list[Aggregat
         if fact is None:
             continue
         keys: list[tuple[str, SubjectKind]] = []
-        if fact.agent_id:
-            keys.append((subject_series_key("agent", fact.agent_id), "agent"))
-        if fact.provider and fact.model:
-            keys.append((subject_series_key("model", fact.provider, fact.model), "model"))
+        if fact.span_kind == "model_call":
+            if fact.agent_id:
+                keys.append((subject_series_key("agent", fact.agent_id), "agent"))
+            if fact.provider and fact.model:
+                keys.append((subject_series_key("model", fact.provider, fact.model), "model"))
+        if fact.span_kind == "tool_call" and fact.tool_id:
+            keys.append((subject_series_key("tool", fact.tool_id), "tool"))
+        if fact.service_id:
+            keys.append((subject_series_key("service", fact.service_id), "service"))
         for key, kind in keys:
             groups.setdefault(key, (kind, []))[1].append(c)
     ordered = sorted(groups)

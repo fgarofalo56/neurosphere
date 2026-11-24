@@ -134,7 +134,7 @@ jobs:
       - name: Sync workspace
         run: uv sync --frozen --group dev
       - name: Azure login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.NS_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.NS_AZURE_TENANT_ID }}
@@ -311,7 +311,7 @@ jobs:
       - name: Sync workspace
         run: uv sync --frozen --group dev
       - name: Azure login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.NS_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.NS_AZURE_TENANT_ID }}

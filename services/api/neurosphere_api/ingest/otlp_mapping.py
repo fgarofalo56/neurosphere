@@ -29,8 +29,10 @@ or negative values are reported as ignored with a reason code, never dropped sil
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import re
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -42,6 +44,8 @@ from pydantic import ValidationError
 from neurosphere_api.ingest.reasons import ReasonCode
 
 SCHEMA_VERSION: Final = "1.0.0"
+# Tool, service and MCP identity (F1) exist from schema 1.1.0; events that carry none stay 1.0.0.
+SCHEMA_VERSION_IDENTITY: Final = "1.1.0"
 
 # Resource attributes that carry the producer's claims.
 CLAIM_CUSTOMER_ATTR: Final = "neurosphere.customer_id"
@@ -77,6 +81,25 @@ REASONING_TOKEN_ATTRS: Final = (
 REQUEST_ID_ATTRS: Final = ("neurosphere.request_id", "request_id", "x-request-id")
 AGENT_ID_ATTRS: Final = ("gen_ai.agent.id",)
 OPERATION_ATTR: Final = "gen_ai.operation.name"
+
+# Tool, service and MCP identity (docs/connectors/verification/otel-genai-tool-service.md).
+TOOL_NAME_ATTR: Final = "gen_ai.tool.name"
+MCP_METHOD_ATTR: Final = "mcp.method.name"
+SERVER_ADDRESS_ATTR: Final = "server.address"
+# Called-service sources in precedence order: (name attribute, namespace attribute).
+SPAN_SERVICE_ATTRS: Final = (
+    ("server.service.name", "server.service.namespace"),
+    ("service.peer.name", "service.peer.namespace"),
+    ("peer.service", None),
+)
+RESOURCE_SERVICE_ATTRS: Final = ("service.name", "service.namespace")
+TOOL_NAME_MAX: Final = 128
+SERVICE_ID_MAX: Final = 256
+HOST_MAX: Final = 253
+# Conservative identifier: starts alphanumeric, then letters, digits and ``._-/:``. Whitespace,
+# ``?``, ``#``, ``@`` and ``%`` never match; ``://`` is rejected explicitly.
+_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._\-/:]*")
+_HOST_LABEL = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?")
 
 _OPERATION_KIND: Final = {
     "chat": "model_call",
@@ -176,6 +199,89 @@ def _first_text(attrs: Mapping[str, Any], names: Sequence[str]) -> str | None:
     return None
 
 
+def _identifier(value: Any, limit: int) -> tuple[str | None, str | None]:
+    """(clean value, None) or (None, reason)."""
+    if not isinstance(value, str):
+        return None, "invalid"
+    text = value.strip()
+    if not text:
+        return None, "invalid"
+    if len(text) > limit:
+        return None, "too_long"
+    if "://" in text or not _IDENTIFIER.fullmatch(text):
+        return None, "invalid"
+    return text, None
+
+
+def _count_drop(drops: Counter[str] | None, attr: str, reason: str) -> None:
+    if drops is not None:
+        drops[f"{attr}:{reason}"] += 1  # names the attribute and reason, never the value
+
+
+def _tool_identity(
+    attrs: Mapping[str, Any], kind: str, drops: Counter[str] | None
+) -> dict[str, str] | None:
+    value = attrs.get(TOOL_NAME_ATTR)
+    if kind != "tool_call" or not isinstance(value, str) or not value:
+        return None
+    name, reason = _identifier(value, TOOL_NAME_MAX)
+    if name is None:
+        _count_drop(drops, TOOL_NAME_ATTR, reason or "invalid")
+        return None
+    return {"tool_name": name, "external_tool_id": name}
+
+
+def _service_candidate(
+    attrs: Mapping[str, Any], name_attr: str, ns_attr: str | None, drops: Counter[str] | None
+) -> str | None:
+    raw = attrs.get(name_attr)
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    raw = raw.strip()
+    if raw == "unknown_service" or raw.startswith("unknown_service:"):
+        return None  # SDK default: treated as absent
+    namespace = attrs.get(ns_attr) if ns_attr else None
+    if isinstance(namespace, str) and namespace.strip():
+        raw = f"{namespace.strip()}/{raw}"
+    value, reason = _identifier(raw, SERVICE_ID_MAX)
+    if value is None:
+        # An invalid value is counted and the next source is tried.
+        _count_drop(drops, name_attr, reason or "invalid")
+    return value
+
+
+def _service_identity(
+    attrs: Mapping[str, Any], resource_attrs: Mapping[str, Any], drops: Counter[str] | None
+) -> dict[str, str] | None:
+    for name_attr, ns_attr in SPAN_SERVICE_ATTRS:
+        found = _service_candidate(attrs, name_attr, ns_attr, drops)
+        if found:
+            return {"external_service_id": found}
+    found = _service_candidate(resource_attrs, *RESOURCE_SERVICE_ATTRS, drops)
+    return {"external_service_id": found} if found else None
+
+
+def _valid_host(value: str) -> bool:
+    if len(value) > HOST_MAX:
+        return False
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        pass
+    return all(_HOST_LABEL.fullmatch(label) for label in value.split("."))
+
+
+def _mcp_server_ref(attrs: Mapping[str, Any], drops: Counter[str] | None) -> str | None:
+    if MCP_METHOD_ATTR not in attrs or attrs.get(SERVER_ADDRESS_ATTR) is None:
+        return None
+    value = attrs[SERVER_ADDRESS_ATTR]
+    if isinstance(value, str) and _valid_host(value):
+        return value
+    _count_drop(drops, SERVER_ADDRESS_ATTR, "invalid")
+    return None
+
+
 def _as_count(value: Any) -> int | None:
     """Non-negative integer or None. Accepts JSON ints, int64 strings and integral doubles."""
     if isinstance(value, bool):
@@ -227,7 +333,14 @@ def _validate(data: dict[str, Any]) -> TelemetryEvent:
         raise MappingError(ReasonCode.INVALID_EVENT) from exc
 
 
-def map_span(span: Any, scope: Scope, ingestion_time: str) -> TelemetryEvent:
+def map_span(
+    span: Any,
+    scope: Scope,
+    ingestion_time: str,
+    *,
+    resource: Any = None,
+    drops: Counter[str] | None = None,
+) -> TelemetryEvent:
     if not isinstance(span, Mapping):
         raise MappingError(ReasonCode.INVALID_EVENT)
     trace_id, span_id = span.get("traceId"), span.get("spanId")
@@ -253,9 +366,26 @@ def map_span(span: Any, scope: Scope, ingestion_time: str) -> TelemetryEvent:
     }
     parent = span.get("parentSpanId")
     operation = attrs.get(OPERATION_ATTR)
+    span_kind = (
+        _OPERATION_KIND.get(operation, "unknown") if isinstance(operation, str) else "unknown"
+    )
+    resource_attrs = attributes_to_dict(
+        resource.get("attributes") if isinstance(resource, Mapping) else None
+    )
+    identity: dict[str, Any] = {}
+    tool = _tool_identity(attrs, span_kind, drops)
+    if tool is not None:
+        identity["tool"] = tool
+    service = _service_identity(attrs, resource_attrs, drops)
+    if service is not None:
+        identity["service"] = service
+    mcp_ref = _mcp_server_ref(attrs, drops)
+    if mcp_ref is not None:
+        identity["mcp_server_ref"] = mcp_ref
     return _validate(
         {
-            "schema_version": SCHEMA_VERSION,
+            **identity,
+            "schema_version": SCHEMA_VERSION_IDENTITY if identity else SCHEMA_VERSION,
             "event_id": f"{trace_id}:{span_id}",
             "event_time": format_nanos(start),
             "ingestion_time": ingestion_time,
@@ -267,9 +397,7 @@ def map_span(span: Any, scope: Scope, ingestion_time: str) -> TelemetryEvent:
             "trace_id": trace_id,
             "span_id": span_id,
             "parent_span_id": parent if isinstance(parent, str) and parent else None,
-            "span_kind": _OPERATION_KIND.get(operation, "unknown")
-            if isinstance(operation, str)
-            else "unknown",
+            "span_kind": span_kind,
             "provider": _first_text(attrs, PROVIDER_ATTRS),
             "model": _first_text(attrs, MODEL_ATTRS),
             "outcome": _STATUS_OUTCOME.get(code, "unknown"),

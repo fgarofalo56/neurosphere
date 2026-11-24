@@ -9,6 +9,7 @@ item (invalid items rejected individually) -> publish the valid ones -> result.
 from __future__ import annotations
 
 import json
+from collections import Counter
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -201,6 +202,7 @@ class IngestService:
         messages: list[HubMessage] = []
         rejected: list[RejectedItem] = []
         index = 0
+        identity_drops: Counter[str] = Counter()
         for resource_spans in self._list_of(doc, "resourceSpans"):
             resource = (
                 resource_spans.get("resource") if isinstance(resource_spans, Mapping) else None
@@ -209,13 +211,17 @@ class IngestService:
             for scope_spans in self._list_of(resource_spans, "scopeSpans"):
                 for span in self._list_of(scope_spans, "spans"):
                     try:
-                        event = om.map_span(span, scope, received_at)
+                        event = om.map_span(
+                            span, scope, received_at, resource=resource, drops=identity_drops
+                        )
                         messages.append(
                             self._telemetry_message(producer, scope, event, received_at)
                         )
                     except om.MappingError as exc:
                         rejected.append(RejectedItem(index=index, reason_code=exc.reason))
                     index += 1
+        for key, count in identity_drops.items():
+            dropped[key] = dropped.get(key, 0) + count
         return await self._finish(messages, rejected, [], dropped)
 
     # -- OTLP metrics ----------------------------------------------------------------------
