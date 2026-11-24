@@ -225,9 +225,9 @@ Per-edge traffic volume or an edge aggregate; service and tool telemetry aggrega
 |---|---|---|---|---|---|---|
 | 1 | merged | prp-74-item-1 | sonnet | ruff/format/pyright clean; map+realtime+openapi_drift+authz 323 passed on integration; item 52a48072, merge 45b2d92b | 2026-11-23 | node kinds, facets, derived health. MCP servers have no subject key and no dependents edge type, so they read `unknown`; `last_error_at` null (SubjectPoint has no timestamp) |
 | 2 | merged | prp-74-item-2 | sonnet | ruff/format/pyright clean; map+map_topology_api+realtime+openapi_drift+authz 367 passed on integration; item fd1f3224, merge ce3d0142 | 2026-11-23 | filter, search, neighbourhood. `invalid_filter` is the `reason` on a 422 `invalid_schema` problem; `health` filter matches measured health only (review point) |
-| 3 | in-progress | prp-74-item-3 | sonnet | | 2026-11-23 | impact route |
+| 3 | merged | prp-74-item-3 | sonnet | ruff/format/pyright clean, openapi regen identical; map+map_topology_api+realtime+openapi_drift+authz 396 passed on integration; item 38c144fc | 2026-11-23 | impact route over `AccessEngine.dependents` (no `impact_paths` fallback needed); unreadable detected by `get_entity` before the engine; node listed once at shallowest depth; `max_depth` default 3 |
 | 4 | merged | prp-74-item-4 | sonnet | ruff/format/pyright clean; same suites 384 passed on integration; item 5a7931d7, merge 3ac74fb2 (add/add on test helper resolved: item 4 helpers moved to `topology_push_helpers.py`) | 2026-11-23 | topology source and push, model delta ids mapped at deliver time from the session-scoped snapshot; with topology disabled, model delta nodes are dropped |
-| 5 | todo | | sonnet | | | authz negatives, timings evidence; PRP-100 shipped |
+| 5 | in-progress | prp-74-item-5 | sonnet | | 2026-11-23 | authz negatives, timings evidence; PRP-100 shipped |
 | 6 | todo | | sonnet | | | Tier-2, runbook, Tier-3, close-out |
 
 Plan approved 2026-11-23: waves A(1) -> B(2 || 4) -> C(3) -> D(5) -> one review pass over 1-5 -> E(6). New node kinds are returned by default (the current UI drops unknown kinds safely; PRP-77 draws them). Integration branch `prp-74-live-map-topology-backend` from main 13153e53.
