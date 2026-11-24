@@ -238,7 +238,7 @@ A 50k-node browser rendering mode or a raised client cap; client-side search ove
 | 3 | merged | item e69ff310, merge acac2b14 (sonnet) | 2026-11-24: typecheck + lint green, vitest 124/124, map e2e 12/12. Camera centring needs `renderer.centreOn` (renderer.ts is item 4's) - carried into item 4 |
 | 4 | merged | item d02250b3, merge 2a5a4fbf (sonnet; first agent lost to an auth expiry, resumed from its snapshot) | 2026-11-24: typecheck + lint green, vitest 145/145, map e2e incl. map-perf 13/13. Includes renderer `centreOn` and SDF shapes for service/tool/mcp_server; shortcut `i`; ring + dim, not colour only |
 | 5 | merged | item 46428e36, merge f93f39a0 (sonnet) | 2026-11-24: typecheck + lint green, vitest 162/162, map e2e 12/12 (keyboard spec unchanged). Deviation: a search hit not on a loaded table page is reported as text, not fetched (table is cluster-paged, no merge path) |
-| 6 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 | mock API, e2e, a11y |
+| 6 | merged | item 3894854a (sonnet) | 2026-11-24: typecheck + lint green, vitest 216/216 (incl. tests/mock-api), Playwright map-live + a11y + map specs 744 passed / 2 failed under load beside the item 7 lane (incident canvas highlight, axe /map ops-console high-contrast); both 3/3 in isolation. registry.test.ts +1 line (pins the handler list) |
 | 7 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 beside item 5 (deps 1-4 met, disjoint files) | interaction-latency measurement and evidence; orchestrator replaces the headless file with a headed run |
 | 8 | todo | | Tier-2, runbook, Tier-3, close-out |
 
