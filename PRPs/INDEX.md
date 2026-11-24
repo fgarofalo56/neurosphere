@@ -4,15 +4,13 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-74-live-map-topology-backend](active/PRP-74-live-map-topology-backend.md) | P0 | 6/6 (100%) | merged 6 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-77-live-map-filters-search-and-incident-view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 68 | PRP-74-live-map-topology-backend | PRP-74-live-map-topology-backend (active) | sonnet / sonnet | required |
+| [PRP-77-live-map-filters-search-and-incident-view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 68 | PRP-74-live-map-topology-backend | - | sonnet / sonnet | required |
 | [PRP-82-hosted-profile-everything-on](backlog/PRP-82-hosted-profile-everything-on.md) | P0 | 72 | PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-60-search-indexing-hardening, PRP-139-hosted-environment-real-tenant-data | PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-101-sensitive-information-detectors-and-redaction](backlog/PRP-101-sensitive-information-detectors-and-redaction.md) | P0 | 101 | PRP-70-contracts-revision-restored-scope, PRP-99-governance-contracts-a | - | opus / opus | required |
 | [PRP-102-encrypted-interaction-store-and-retention](backlog/PRP-102-encrypted-interaction-store-and-retention.md) | P0 | 102 | PRP-99-governance-contracts-a | - | opus / opus | required |
@@ -85,6 +83,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [PRP-100-telemetry-tool-service-identity-and-aggregates](shipped/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | 2026-11-23 | #391 |
+| [PRP-74-live-map-topology-backend](shipped/PRP-74-live-map-topology-backend.md) | 2026-11-23 | #402 |
 | [PRP-78-copilot-graph-timeline-and-recommender-tools](shipped/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | 2026-11-23 | #383 |
 | [PRP-99-governance-contracts-a](shipped/PRP-99-governance-contracts-a.md) | 2026-11-23 | #387 |
 | [PRP-137-telemetry-agent-identity-resolution](shipped/PRP-137-telemetry-agent-identity-resolution.md) | 2026-11-22 | #375 |

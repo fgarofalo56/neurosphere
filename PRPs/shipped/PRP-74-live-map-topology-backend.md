@@ -1,11 +1,13 @@
 ---
 name: PRP-74-live-map-topology-backend
-status: active
+status: shipped
 priority: P0
 order: 65
 review: required
 created: 2026-11-16
 started: 2026-11-23
+shipped: 2026-11-23
+pr: 402
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -15,7 +17,7 @@ depends_on: [PRP-70-contracts-revision-restored-scope, PRP-71-realistic-seeded-w
 wave: W22
 branch: prp-74-live-map-topology-backend
 allow_parallel: true
-issues: []
+issues: [403, 404]
 ---
 
 # PRP-74: Live map topology backend (services and tools, facets, topology push, search, impact)
@@ -34,20 +36,20 @@ Out of scope: every pixel of UI, the filter bar, jump-to-node, the impact highli
 - Freshness today is proven only for metric deltas after aggregation (2.0 s); a 2000-node page took about 15 s server-side in the 2026-11-04 audit and the re-measure is OPEN (PRP-18 completion note, PRP-49 follow-up 4). The new routes need their own measured server timings.
 
 ## Acceptance criteria
-- [ ] Given a domain with a service, a tool and an MCP server in the catalog, When `GET /api/v1/map/domains/{domain_id}/viewport` runs, Then they appear as nodes of kind `service`, `tool` and `mcp_server`, in their own clusters when over the node budget, and edges to and from them appear when both endpoints are in the response (orphan edges are still dropped).
-- [ ] Every viewport node carries `facets` (the PRP-70 `MapNodeFacets`): `entity_type`, `environment`, `cloud`, `tags`, `lifecycle_status`, `health`, `error_rate`, `error_count`, `request_count`, `last_error_at`, `sensitivity_categories`, `residency_geography`. Unknown stays null or `unknown`, never 0; people carry facets without any real name; a cluster node carries `entity_type` null.
-- [ ] Given agent telemetry with errors in the last hour, Then the agent node's `error_rate` and `error_count` equal the subject point values and `health` equals `health_for_error_rate`; a model node shows model-level values; a node with no point stays unknown.
-- [ ] Given PRP-71's incident (a failing service with downstream agents), Then the service node reports `degraded` or `failing` from its own PRP-100 service subject point (measured error rate) and, only if it has no point, by the fallback dependents rule in clarification 5; the downstream agents report their own aggregate health (OTLP agents through PRP-137's resolved ids); unrelated agents stay `ok`.
-- [ ] Given a connected, subscribed session and a catalog write that adds an agent, an edge or a tag change, When the next topology poll runs, Then the session receives a `topology` message (the PRP-70 `MapTopologyChange` shape: `domain_id`, `changed_at`, `change_kinds`, up to 50 `entity_ids`, `refetch`, `truncated`) within `NS_MAP_TOPOLOGY_POLL_SECONDS` (default 3, so within 5 s of the catalog change); an unchanged graph sends nothing except the existing heartbeat.
-- [ ] Topology messages follow the delta rules: filtered by the session's CURRENT scope at send time, dropped with `scope_narrowed` when the domain is no longer readable, closed on revocation, counted in the existing counters, and never carry an id the session's scope cannot read. Two sessions with different scopes never share a cached snapshot (cache key is `scope_cache_key(scope, namespace="map-topology")`).
-- [ ] Given `GET /api/v1/map/domains/{domain_id}/search?q=&node_type=&tag=&environment=&cloud=&health=`, Then the result is a bounded list (limit 1 to 50, default 20) of matches over the WHOLE in-scope domain scan (up to `NS_MAP_SEARCH_SCAN_PAGES` pages of 500, default 100, so 50k entities) with `truncated` and `truncation_reason` (`scan_limit`, `timeout_ms`) when the scan stopped, per-kind and per-facet counts, and each match's `node` plus its `cluster_id`; a person is only ever found by pseudonym.
-- [ ] Given a filter on the viewport route (`node_type`, `tag`, `environment`, `cloud`, `health`, repeatable), Then cluster counts and pages reflect only matching entities, the response says which filters applied, and an unknown filter value is 422 `invalid_filter`.
-- [ ] Given `GET /api/v1/map/domains/{domain_id}/neighborhood/{node_id}`, Then the response is a `ViewportResponse` holding that node plus its direct neighbours (both directions, node budget and edge budget clamped as the viewport route), `truncated` when over budget; a node outside the caller's scope is 404, the same body as a missing node.
-- [ ] Given `POST /api/v1/map/domains/{domain_id}/impact` with `node_id` and `max_depth` 1 to 5, Then the response lists affected in-scope entities grouped by depth with the edge ids of the path, each affected node's current `health`, and `truncated` with a reason at the budget; depth 6 is 422; a person is only ever shown by pseudonym; a node the caller cannot read is 404.
-- [ ] Given a caller without `data.read` on the domain, Then viewport, search, neighbourhood and impact return 403 with a denial record; every new route is in the route inventories and boots under `verify_route_permissions`.
-- [ ] Model-node deltas apply: the delta source maps `model:<provider>/<model>` to every deployment id of the topology snapshot (PRP-49 follow-up 2), or sends no model node when no snapshot exists; a test asserts ids equal the viewport's model node ids.
-- [ ] Server timings are recorded: viewport at 2000 nodes, search over a seeded 50k-entity domain, impact at depth 5 and one topology poll, each with hardware stated, in `docs/evidence/G07/map/server-timings.json`, plus the number of Cosmos reads per call on the emulator. No target is asserted in CI; the numbers are reported, and anything over 2 s is listed as a follow-up.
-- PRP exit: touched suites, `tests/security/authz`, ruff, pyright and `validate_planning.py` pass; PR open with CI green; `services/api/openapi.json` regenerated.
+- [x] Given a domain with a service, a tool and an MCP server in the catalog, When `GET /api/v1/map/domains/{domain_id}/viewport` runs, Then they appear as nodes of kind `service`, `tool` and `mcp_server`, in their own clusters when over the node budget, and edges to and from them appear when both endpoints are in the response (orphan edges are still dropped). Evidence: services/api/tests/map/test_service_tool_nodes.py.
+- [x] Every viewport node carries `facets` (the PRP-70 `MapNodeFacets`): `entity_type`, `environment`, `cloud`, `tags`, `lifecycle_status`, `health`, `error_rate`, `error_count`, `request_count`, `last_error_at`, `sensitivity_categories`, `residency_geography`. Unknown stays null or `unknown`, never 0; people carry facets without any real name; a cluster node carries `entity_type` null. Evidence: services/api/tests/map/test_facets.py.
+- [x] Given agent telemetry with errors in the last hour, Then the agent node's `error_rate` and `error_count` equal the subject point values and `health` equals `health_for_error_rate`; a model node shows model-level values; a node with no point stays unknown. Evidence: services/api/tests/map/test_facets.py (agent and model points; no point stays unknown).
+- [x] Given PRP-71's incident (a failing service with downstream agents), Then the service node reports `degraded` or `failing` from its own PRP-100 service subject point (measured error rate) and, only if it has no point, by the fallback dependents rule in clarification 5; the downstream agents report their own aggregate health (OTLP agents through PRP-137's resolved ids); unrelated agents stay `ok`. Evidence: services/api/tests/map/test_derived_health.py (incident twin; measured point wins, fallback only without a point).
+- [x] Given a connected, subscribed session and a catalog write that adds an agent, an edge or a tag change, When the next topology poll runs, Then the session receives a `topology` message (the PRP-70 `MapTopologyChange` shape: `domain_id`, `changed_at`, `change_kinds`, up to 50 `entity_ids`, `refetch`, `truncated`) within `NS_MAP_TOPOLOGY_POLL_SECONDS` (default 3, so within 5 s of the catalog change); an unchanged graph sends nothing except the existing heartbeat. Evidence: services/api/tests/realtime/test_topology_push.py, services/api/tests/map_topology_api/test_topology_source.py (in-process; the hand-run socket check on the compose stack was not done).
+- [x] Topology messages follow the delta rules: filtered by the session's CURRENT scope at send time, dropped with `scope_narrowed` when the domain is no longer readable, closed on revocation, counted in the existing counters, and never carry an id the session's scope cannot read. Two sessions with different scopes never share a cached snapshot (cache key is `scope_cache_key(scope, namespace="map-topology")`). Evidence: services/api/tests/realtime/test_topology_push.py, tests/security/authz/test_map_topology_secrecy.py (two-scope isolation).
+- [x] Given `GET /api/v1/map/domains/{domain_id}/search?q=&node_type=&tag=&environment=&cloud=&health=`, Then the result is a bounded list (limit 1 to 50, default 20) of matches over the WHOLE in-scope domain scan (up to `NS_MAP_SEARCH_SCAN_PAGES` pages of 500, default 100, so 50k entities) with `truncated` and `truncation_reason` (`scan_limit`, `timeout_ms`) when the scan stopped, per-kind and per-facet counts, and each match's `node` plus its `cluster_id`; a person is only ever found by pseudonym. Evidence: services/api/tests/map_topology_api/test_search.py, test_search_people.py, tests/load/map_topology/test_map_topology_shape.py (50k in-memory). On the Cosmos emulator the scan stops at `timeout_ms` after about 3 pages and returns 0 matches, correctly labelled; performance is issue #403.
+- [x] Given a filter on the viewport route (`node_type`, `tag`, `environment`, `cloud`, `health`, repeatable), Then cluster counts and pages reflect only matching entities, the response says which filters applied, and an unknown filter value is 422 `invalid_filter`. Evidence: services/api/tests/map_topology_api/test_filters.py.
+- [x] Given `GET /api/v1/map/domains/{domain_id}/neighborhood/{node_id}`, Then the response is a `ViewportResponse` holding that node plus its direct neighbours (both directions, node budget and edge budget clamped as the viewport route), `truncated` when over budget; a node outside the caller's scope is 404, the same body as a missing node. Evidence: services/api/tests/map_topology_api/test_neighborhood.py.
+- [x] Given `POST /api/v1/map/domains/{domain_id}/impact` with `node_id` and `max_depth` 1 to 5, Then the response lists affected in-scope entities grouped by depth with the edge ids of the path, each affected node's current `health`, and `truncated` with a reason at the budget; depth 6 is 422; a person is only ever shown by pseudonym; a node the caller cannot read is 404. Evidence: services/api/tests/map_topology_api/test_impact.py, test_impact_scope.py.
+- [x] Given a caller without `data.read` on the domain, Then viewport, search, neighbourhood and impact return 403 with a denial record; every new route is in the route inventories and boots under `verify_route_permissions`. Evidence: tests/security/authz/test_map_topology.py (30 cases); services/api/tests/authz route inventory and startup check pass (derive from the app).
+- [x] Model-node deltas apply: the delta source maps `model:<provider>/<model>` to every deployment id of the topology snapshot (PRP-49 follow-up 2), or sends no model node when no snapshot exists; a test asserts ids equal the viewport's model node ids. Evidence: services/api/tests/map_topology_api/test_model_delta_ids.py.
+- [x] Server timings are recorded: viewport at 2000 nodes, search over a seeded 50k-entity domain, impact at depth 5 and one topology poll, each with hardware stated, in `docs/evidence/G07/map/server-timings.json`, plus the number of Cosmos reads per call on the emulator. No target is asserted in CI; the numbers are reported, and anything over 2 s is listed as a follow-up. Evidence: docs/evidence/G07/map/server-timings.json (emulator, hardware stated; all five over 2 s, follow-up #403).
+- [x] PRP exit: touched suites, `tests/security/authz`, ruff, pyright and `validate_planning.py` pass; PR open with CI green; `services/api/openapi.json` regenerated. Evidence: integration-branch runs per item (Execution state), repo-wide ruff format and pyright clean, `prp_status.py --check` OK, `validate_planning.py` PASS, openapi.json regenerated and drift test green, PR #402 CI.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -218,7 +220,7 @@ Per-edge traffic volume or an edge aggregate; service and tool telemetry aggrega
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 4, 5 and 7 are ASSUMPTIONS for plan approval; PRP-73's `dependents` signature is unverified until it ships)
+- [x] All clarification questions are decided, not guessed (rows 4, 5 and 7 were ASSUMPTIONS approved with the plan on 2026-11-23; PRP-73's `dependents(scope, node_id, max_depth, budget)` signature verified against `packages/core/neurosphere_core/catalog/graph/access.py` before dispatch)
 
 ## Execution state
 | Item | Status | Branch/worktree | Model | Evidence | Updated | Notes |
