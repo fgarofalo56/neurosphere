@@ -224,9 +224,9 @@ Per-edge traffic volume or an edge aggregate; service and tool telemetry aggrega
 | Item | Status | Branch/worktree | Model | Evidence | Updated | Notes |
 |---|---|---|---|---|---|---|
 | 1 | merged | prp-74-item-1 | sonnet | ruff/format/pyright clean; map+realtime+openapi_drift+authz 323 passed on integration; item 52a48072, merge 45b2d92b | 2026-11-23 | node kinds, facets, derived health. MCP servers have no subject key and no dependents edge type, so they read `unknown`; `last_error_at` null (SubjectPoint has no timestamp) |
-| 2 | in-progress | prp-74-item-2 | sonnet | | 2026-11-23 | filter, search, neighbourhood |
-| 3 | todo | | sonnet | | | impact route |
-| 4 | in-progress | prp-74-item-4 | sonnet | | 2026-11-23 | topology source and push, model delta ids |
+| 2 | merged | prp-74-item-2 | sonnet | ruff/format/pyright clean; map+map_topology_api+realtime+openapi_drift+authz 367 passed on integration; item fd1f3224, merge ce3d0142 | 2026-11-23 | filter, search, neighbourhood. `invalid_filter` is the `reason` on a 422 `invalid_schema` problem; `health` filter matches measured health only (review point) |
+| 3 | in-progress | prp-74-item-3 | sonnet | | 2026-11-23 | impact route |
+| 4 | merged | prp-74-item-4 | sonnet | ruff/format/pyright clean; same suites 384 passed on integration; item 5a7931d7, merge 3ac74fb2 (add/add on test helper resolved: item 4 helpers moved to `topology_push_helpers.py`) | 2026-11-23 | topology source and push, model delta ids mapped at deliver time from the session-scoped snapshot; with topology disabled, model delta nodes are dropped |
 | 5 | todo | | sonnet | | | authz negatives, timings evidence; PRP-100 shipped |
 | 6 | todo | | sonnet | | | Tier-2, runbook, Tier-3, close-out |
 
