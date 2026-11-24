@@ -234,8 +234,8 @@ A 50k-node browser rendering mode or a raised client cap; client-side search ove
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | item 4cd4f337, merge 1e6ff91e (sonnet) | 2026-11-24: typecheck + lint green, vitest 98/98, map e2e 12/12. Canvas shapes for service/tool/mcp_server fall back until item 4 registers SDFs in renderer.ts; node_removed clears only on reload |
-| 2 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 | filter bar, URL state |
-| 3 | todo | | search and jump-to-node |
+| 2 | merged | item 93af01cc, merge 07ee9822 (sonnet) | 2026-11-24: typecheck + lint green, vitest 109/109, map e2e 12/12. One value per filter (API client comma-joins arrays); counts from search `q=&limit=1` unfiltered |
+| 3 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 | search and jump-to-node |
 | 4 | todo | | incident view |
 | 5 | todo | | table parity |
 | 6 | todo | | mock API, e2e, a11y |
