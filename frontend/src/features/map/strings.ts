@@ -54,6 +54,19 @@ export const STRINGS = {
   panelClose: "Close",
   expandCluster: "Expand cluster",
   members: (n: number) => `${n} members`,
+  facetsHeading: "Attributes",
+  recentErrors: "Recent errors",
+  recentErrorsNone: "No errors recorded in the window",
+  recentErrorsUnknown: "Error data unknown",
+  errorCount: (n: number) => `${n} failed ${n === 1 ? "request" : "requests"}`,
+  errorRate: (rate: number) => `error rate ${(rate * 100).toFixed(1)}%`,
+  lastErrorAt: (at: string) => `last error ${formatAbsoluteTime(at)}`,
+  facetEnvironment: "Environment",
+  facetCloud: "Cloud",
+  facetTags: "Tags",
+  facetHealth: "Health",
+  facetNone: "none",
+  healthInferred: "inferred from dependents",
   linksHeading: "Related views",
   linkCost: "Cost dashboard",
   linkLatency: "Latency dashboard",
@@ -78,7 +91,22 @@ export const KIND_LABEL: Readonly<Record<NodeKind, string>> = {
   sub_agent: "Sub-agent",
   model: "Model",
   source: "Source",
+  service: "Service",
+  tool: "Tool",
+  mcp_server: "MCP server",
   cluster: "Cluster",
+};
+
+/** Text label for a kind; a kind from a newer server shows as its raw name, never blank. */
+export function kindLabel(kind: string): string {
+  return (KIND_LABEL as Readonly<Record<string, string | undefined>>)[kind] ?? kind;
+}
+
+/** Shape name for the legend and screen readers, per map-only kind. */
+export const KIND_SHAPE_TEXT: Readonly<Record<"service" | "tool" | "mcp_server", string>> = {
+  service: "pentagon",
+  tool: "cross",
+  mcp_server: "octagon",
 };
 
 export const SIZE_METRIC_LABEL: Readonly<Record<SizeMetric, string>> = {
@@ -86,6 +114,7 @@ export const SIZE_METRIC_LABEL: Readonly<Record<SizeMetric, string>> = {
   context_size: "Context size",
   frequency: "Frequency",
   latency_p95_ms: "Latency (p95 ms)",
+  error_rate: "Error rate",
 };
 
 export const HEALTH_LABEL: Readonly<Record<Health, string>> = {

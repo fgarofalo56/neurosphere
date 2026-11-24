@@ -13,6 +13,7 @@ import { handle as executionControl } from "./execution-control.ts";
 import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
 import { handle as compliance } from "./compliance.ts";
+import { handle as mapTopology } from "./map-topology.ts";
 import { handle as roleMapping } from "./role-mapping.ts";
 import { handle as sourceStatus } from "./sourceStatus.ts";
 import { FEATURE_HANDLERS, dispatchFeatureMocks } from "./index.ts";
@@ -38,6 +39,7 @@ describe("feature mock registry", () => {
       adminSources,
       sourceStatus,
       adminCore,
+      mapTopology,
     ]);
     expect(new Set(FEATURE_HANDLERS).size).toBe(FEATURE_HANDLERS.length);
     expect(FEATURE_HANDLERS.indexOf(curation)).toBeLessThan(FEATURE_HANDLERS.indexOf(catalog));

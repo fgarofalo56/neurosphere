@@ -54,6 +54,8 @@ interface FakeRenderer {
   setEdgeOffset: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
   fit: ReturnType<typeof vi.fn>;
+  centreOn: ReturnType<typeof vi.fn>;
+  setImpact: ReturnType<typeof vi.fn>;
   theme: unknown;
   setReducedMotion: ReturnType<typeof vi.fn>;
   kill: ReturnType<typeof vi.fn>;
@@ -74,6 +76,8 @@ vi.mock("./renderer", () => ({
         update: vi.fn(),
         setEdgeOffset: vi.fn(),
         select: vi.fn(),
+        centreOn: vi.fn(),
+        setImpact: vi.fn(),
         setReducedMotion: vi.fn(),
         kill: vi.fn(),
       };
@@ -308,8 +312,15 @@ afterEach(() => {
 // ---------------------------------------------------------------------------------------------
 describe("appearance", () => {
   it("gives every kind a distinct shape, from the PRP-04 icon set", () => {
-    const shapes = NODE_KINDS.map((k) => kindSigmaShape(k));
-    expect(new Set(shapes).size).toBe(NODE_KINDS.length);
+    expect(new Set(NODE_KINDS.map((k) => kindShape(k))).size).toBe(NODE_KINDS.length);
+    // The canvas registers nine SDF shapes (renderer.ts): every kind has its own sigma slug.
+    expect(new Set(NODE_KINDS.map((k) => kindSigmaShape(k))).size).toBe(NODE_KINDS.length);
+    expect(kindSigmaShape("service")).toBe("pentagon");
+    expect(kindSigmaShape("tool")).toBe("cross");
+    expect(kindSigmaShape("mcp_server")).toBe("octagon");
+    expect(kindShape("service")).toBe("pentagon");
+    expect(kindShape("tool")).toBe("cross");
+    expect(kindShape("mcp_server")).toBe("octagon");
     expect(kindShape("person")).toBe("circle");
     expect(kindShape("agent")).toBe("hexagon");
     expect(kindShape("sub_agent")).toBe("diamond");
@@ -832,7 +843,7 @@ describe("MapView", () => {
       within(sizeBy)
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toEqual(["Tokens", "Context size", "Frequency", "Latency (p95 ms)"]);
+    ).toEqual(["Tokens", "Context size", "Frequency", "Latency (p95 ms)", "Error rate"]);
     const health = within(within(legend).getByTestId("health-legend"));
     for (const word of ["Healthy", "Degraded", "Failing", "Unknown"]) health.getByText(word);
     const kinds = within(within(legend).getByTestId("kind-legend"));
@@ -1164,6 +1175,139 @@ describe("MapView", () => {
     );
     expect(screen.getByTestId("node-count")).toHaveTextContent("5 nodes");
     expect(screen.getByTestId("coverage-label")).toHaveAttribute("data-coverage-state", "delayed");
+  });
+
+  it("shows service nodes with a text kind, facet lines and a recent-errors line", async () => {
+    const user = userEvent.setup();
+    await mount({
+      top: {
+        ...TOP,
+        nodes: [
+          ...TOP.nodes,
+          node("svc1", "service", "billing-api", {
+            facets: {
+              environment: "production",
+              cloud: "government",
+              tags: ["tier-1"],
+              health: "failing",
+              error_rate: 0.125,
+              error_count: 5,
+              last_error_at: "2026-11-24T10:00:00Z",
+            },
+          }),
+          node("svc2", "mcp_server", "tools-hub"),
+        ],
+      },
+    });
+    await screen.findByTestId("map-canvas");
+    const legend = screen.getByTestId("kind-legend");
+    expect(within(legend).getByText("Service (pentagon)")).toBeInTheDocument();
+    expect(within(legend).getByText("Tool (cross)")).toBeInTheDocument();
+    expect(within(legend).getByText("MCP server (octagon)")).toBeInTheDocument();
+    expect(within(screen.getByTestId("size-legend")).getByTestId("size-min")).toBeInTheDocument();
+
+    act(() => lastRenderer().callbacks.onSelect("svc1"));
+    const panel = await screen.findByTestId("node-panel");
+    expect(within(panel).getByTestId("panel-kind")).toHaveTextContent("Service");
+    expect(within(panel).getByTestId("panel-recent-errors")).toHaveTextContent(
+      "5 failed requests, error rate 12.5%, last error",
+    );
+    expect(within(panel).getByTestId("facet-environment")).toHaveTextContent("production");
+    expect(within(panel).getByTestId("facet-cloud")).toHaveTextContent("government");
+    expect(within(panel).getByTestId("facet-tags")).toHaveTextContent("tier-1");
+    expect(within(panel).getByTestId("facet-health")).toHaveTextContent("Failing");
+
+    act(() => lastRenderer().callbacks.onSelect("svc2"));
+    expect(
+      within(await screen.findByTestId("node-panel")).getByTestId("panel-recent-errors"),
+    ).toHaveTextContent("Error data unknown");
+
+    // Error rate is a size option.
+    await user.selectOptions(screen.getByRole("combobox", { name: "Size by" }), "error_rate");
+    expect(screen.getByTestId("size-min")).toHaveTextContent("0.13");
+  });
+
+  it("refetches once per burst of topology messages, keeping selection and camera", async () => {
+    const topology = (seq: number, over: Record<string, unknown> = {}) => ({
+      type: "topology",
+      domain_id: "d1",
+      seq,
+      changed_at: "2026-11-24T10:00:00Z",
+      change_kinds: ["node_added"],
+      entity_ids: ["commercial:c:s:agent:new-1"],
+      refetch: true,
+      truncated: false,
+      emitted_at: "2026-11-24T10:00:01Z",
+      ...over,
+    });
+    const responses: Record<string, ViewportResponse> = {};
+    const { requested } = await mount(responses);
+    await screen.findByTestId("map-canvas");
+    await waitFor(() => expect(FakeSocket.instances).toHaveLength(1));
+    const socket = FakeSocket.instances[0] as FakeSocket;
+    act(() => socket.open());
+    act(() => socket.receive({ type: "subscribed", domain_id: "d1" }));
+    act(() => lastRenderer().callbacks.onSelect("a1"));
+    await screen.findByTestId("node-panel");
+    expect(screen.getByTestId("node-count")).toHaveTextContent("4 nodes");
+    const viewportCalls = () => requested.filter((u) => u.pathname.endsWith("/viewport")).length;
+    expect(viewportCalls()).toBe(1);
+
+    // The server now has a new agent; a topology notice must make it appear without a reload.
+    responses["top"] = { ...TOP, nodes: [...TOP.nodes, node("new-1", "agent", "fresh-agent")] };
+    act(() => socket.receive(topology(1)));
+    act(() => socket.receive(topology(2)));
+    act(() => socket.receive(topology(3, { change_kinds: ["edge_added"] })));
+    // Another domain and a notice without refetch must not trigger anything.
+    act(() => socket.receive(topology(4, { domain_id: "other" })));
+    act(() => socket.receive(topology(5, { refetch: false })));
+
+    await waitFor(() => expect(screen.getByTestId("node-count")).toHaveTextContent("5 nodes"));
+    expect(viewportCalls()).toBe(2); // one refetch for the whole burst
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(viewportCalls()).toBe(2);
+    // Selection and camera are untouched.
+    expect(within(screen.getByTestId("node-panel")).getByTestId("panel-label")).toHaveTextContent(
+      "support-agent",
+    );
+    expect(lastRenderer().fit).not.toHaveBeenCalled();
+  });
+
+  it("refetches every open cluster section with the top level on a topology notice", async () => {
+    const user = userEvent.setup();
+    const { requested } = await mount({ "cluster:agents|": CLUSTER_PAGE_1 });
+    await screen.findByTestId("map-canvas");
+    await waitFor(() => expect(FakeSocket.instances).toHaveLength(1));
+    const socket = FakeSocket.instances[0] as FakeSocket;
+    act(() => socket.open());
+    act(() => socket.receive({ type: "subscribed", domain_id: "d1" }));
+    act(() => lastRenderer().callbacks.onSelect("cluster:agents"));
+    await user.click(
+      within(await screen.findByTestId("node-panel")).getByRole("button", {
+        name: "Expand cluster",
+      }),
+    );
+    await waitFor(() => expect(screen.getByTestId("node-count")).toHaveTextContent("6 nodes"));
+    const before = requested.length;
+    act(() =>
+      socket.receive({
+        type: "topology",
+        domain_id: "d1",
+        seq: 1,
+        changed_at: "t",
+        change_kinds: ["node_added"],
+        entity_ids: [],
+        refetch: true,
+        truncated: false,
+        emitted_at: "t",
+      }),
+    );
+    await waitFor(() => expect(requested.length).toBe(before + 2));
+    const fresh = requested.slice(before);
+    expect(fresh.filter((u) => u.searchParams.get("cluster_id") === null)).toHaveLength(1);
+    expect(fresh.filter((u) => u.searchParams.get("cluster_id") === "cluster:agents")).toHaveLength(
+      1,
+    );
   });
 
   it("shows a clear revoked state on 4403 and does not reconnect", async () => {

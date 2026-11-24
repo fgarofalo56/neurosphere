@@ -1,0 +1,66 @@
+{
+  "prp": "PRP-77 item 7",
+  "method": "page-side performance.now() at the dispatched input event to the second requestAnimationFrame after it; Playwright performs the input; show_impact waits for the dependents list",
+  "measured_at": "2026-11-24T16:59:30.945Z",
+  "target_p95_ms": 200,
+  "meets_target": true,
+  "enforced": false,
+  "mode": "headed",
+  "browser": {
+    "name": "chromium",
+    "version": "159.0.8154.6",
+    "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 (0x00002B85) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "host": {
+    "os": "win32 10.0.26300 x64",
+    "cpu_model": "AMD Ryzen 9 5950X 16-Core Processor            ",
+    "logical_cores": 32,
+    "ram_bytes": 137333514240,
+    "node": "v26.13.0"
+  },
+  "scene": {
+    "nodes": 2000,
+    "edges": 4000
+  },
+  "interactions": {
+    "pan": {
+      "samples": 30,
+      "p50_ms": 50.9,
+      "p95_ms": 55.4,
+      "max_ms": 58.8,
+      "meets_target": true
+    },
+    "wheel_zoom": {
+      "samples": 30,
+      "p50_ms": 54.7,
+      "p95_ms": 58.9,
+      "max_ms": 60,
+      "meets_target": true
+    },
+    "node_hover": {
+      "samples": 30,
+      "p50_ms": 82.7,
+      "p95_ms": 86.6,
+      "max_ms": 87.7,
+      "meets_target": true,
+      "node_targeting": "sigma node event raised from the page after the real mouse input (no GPU picking)"
+    },
+    "node_click": {
+      "samples": 30,
+      "p50_ms": 77.6,
+      "p95_ms": 104.2,
+      "max_ms": 109.6,
+      "meets_target": true,
+      "node_targeting": "sigma node event raised from the page after the real mouse input (no GPU picking)"
+    },
+    "show_impact": {
+      "samples": 30,
+      "p50_ms": 134.4,
+      "p95_ms": 168.5,
+      "max_ms": 218,
+      "meets_target": true,
+      "node_targeting": "sigma node event raised from the page after the real mouse input (no GPU picking)"
+    }
+  },
+  "note": "Headed run on the hardware above. The 200 ms p95 figure is reported for this hardware and 2000 nodes only; no claim is made about 50k nodes."
+}

@@ -31,21 +31,30 @@ import {
 import { NoDataEmptyState } from "../source-status";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { MAP_TABLE_PATH } from "../map-table/paths";
-import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
+import { FilterBar } from "./filters/FilterBar";
+import { useMapFilters } from "./filters/useMapFilters";
+import { createBurstDebouncer, fetchViewport, useLiveUpdates, useViewport } from "./hooks";
+import { ImpactPanel } from "./impact/ImpactPanel";
+import { IMPACT_STRINGS } from "./impact/strings";
+import { useIncidentView } from "./impact/useIncidentView";
 import { Legend } from "./Legend";
-import { MapCanvas } from "./MapCanvas";
+import { MapCanvas, type MapCanvasHandle } from "./MapCanvas";
+import { SearchBox } from "./search/SearchBox";
+import { useJumpToNode } from "./search/useJumpToNode";
 import { MapGraph, worstCoverage } from "./mapGraph";
 import { buildMapTheme, createDomResolver, type MapTheme } from "./mapTheme";
 import { animationGate, useReducedMotion, type AnimationGate } from "./motion";
 import { NodePanel, type ClusterExpansion } from "./NodePanel";
 import type { Scheduler } from "./animator";
 import { STRINGS, TRUNCATION_REASON_LABEL, coverageText } from "./strings";
-import type {
-  Coverage,
-  DeltaMessage,
-  SizeMetric,
-  TruncationReason,
-  ViewportResponse,
+import {
+  NODE_BUDGET,
+  type Coverage,
+  type DeltaMessage,
+  type SizeMetric,
+  type TopologyMessage,
+  type TruncationReason,
+  type ViewportResponse,
 } from "./types";
 import type { LiveStatus } from "./realtime";
 
@@ -146,11 +155,16 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   const styles = useStyles();
   const client = useApiClient();
   const motion = useReducedMotion();
-  const initial = useViewport({ domainId });
+  const filterState = useMapFilters();
+  const filterQuery = filterState.toQuery();
+  const filterSignature = filterState.signature;
+  const initial = useViewport({ domainId, filters: filterQuery });
   const uiStyle = useUiStyle();
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [theme, setTheme] = useState<MapTheme>(() => buildMapTheme(uiStyle, null));
   const [fitRequest, setFitRequest] = useState(0);
+  const canvasRef = useRef<MapCanvasHandle | null>(null);
+  const [centreTarget, setCentreTarget] = useState<{ id: string; n: number } | null>(null);
   const loaded = initial.isSuccess;
 
   // The canvas needs concrete colours: resolve the Fluent tokens against the live DOM (inside
@@ -196,24 +210,103 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
 
   // First page. Applied once per response object.
   const appliedRef = useRef<ViewportResponse | null>(null);
+  const appliedSignatureRef = useRef(filterSignature);
+  // Every later page (refetch, load more, cluster expansion) carries the active filters.
+  const filterQueryRef = useRef(filterQuery);
+  filterQueryRef.current = filterQuery;
   useEffect(() => {
     const data = initial.data;
-    if (data === undefined || appliedRef.current === data) return;
+    if (data === undefined || initial.isPlaceholderData || appliedRef.current === data) return;
     appliedRef.current = data;
+    if (appliedSignatureRef.current !== filterSignature) {
+      // The filters changed: this page is a different slice of the domain. Drop the old slice so
+      // counts and clusters reflect only matching nodes; camera and bar state are untouched.
+      appliedSignatureRef.current = filterSignature;
+      mapGraph.clear();
+      setSources({});
+      setExpansions({});
+      setSelectedId(null);
+    }
     applyPage("top:first", data);
     setTopCursor(data.next_cursor);
-  }, [initial.data, applyPage]);
+  }, [initial.data, initial.isPlaceholderData, filterSignature, mapGraph, applyPage]);
+
+  // Incident view: dependents of one node, highlighted and listed, kept current by live changes.
+  const incident = useIncidentView({ domainId, mapGraph, selectedId, version });
+  const { handleDelta: incidentOnDelta, onTopology: incidentOnTopology } = incident;
 
   const onDelta = useCallback(
     (delta: DeltaMessage) => {
       if (revokedRef.current) return; // a delta racing the 4403 close must not re-add nodes
-      mapGraph.applyDelta(delta.nodes, delta.edges);
+      incidentOnDelta(delta.nodes, () => mapGraph.applyDelta(delta.nodes, delta.edges));
       setLiveCoverage(delta.coverage);
       bump();
     },
-    [mapGraph, bump],
+    [mapGraph, bump, incidentOnDelta],
   );
-  const live = useLiveUpdates(domainId, initial.isSuccess, onDelta);
+  // A topology notice means nodes or edges came or went. Refetch the top level and every cluster
+  // the user has opened, once per burst. Pages are merged (upsert), so camera, selection and the
+  // positions of nodes already on screen are untouched; only new nodes get a slot.
+  const expansionsRef = useRef(expansions);
+  expansionsRef.current = expansions;
+  const refetchBusyRef = useRef(false);
+  const refetchQueuedRef = useRef(false);
+  const refetchTopology = useCallback(async () => {
+    if (revokedRef.current) return;
+    if (refetchBusyRef.current) {
+      refetchQueuedRef.current = true; // one more pass after the current one, never a pile-up
+      return;
+    }
+    refetchBusyRef.current = true;
+    try {
+      const openClusters = Object.entries(expansionsRef.current)
+        .filter(([, e]) => e.nextCursor !== undefined)
+        .map(([id]) => id);
+      const results = await Promise.allSettled([
+        fetchViewport(client, {
+          domainId,
+          nodeBudget: NODE_BUDGET,
+          filters: filterQueryRef.current,
+        }),
+        ...openClusters.map((clusterId) =>
+          fetchViewport(client, {
+            domainId,
+            clusterId,
+            nodeBudget: NODE_BUDGET,
+            filters: filterQueryRef.current,
+          }),
+        ),
+      ]);
+      results.forEach((result, i) => {
+        if (result.status !== "fulfilled") return; // keep the last good view; no blanking
+        const clusterId = i === 0 ? null : openClusters[i - 1];
+        applyPage(clusterId === null ? "top:first" : `cluster:${clusterId}:first`, result.value);
+      });
+    } finally {
+      refetchBusyRef.current = false;
+      if (refetchQueuedRef.current) {
+        refetchQueuedRef.current = false;
+        void refetchTopology();
+      }
+    }
+  }, [client, domainId, applyPage]);
+  const refetchTopologyRef = useRef(refetchTopology);
+  refetchTopologyRef.current = refetchTopology;
+  const topologyBurst = useMemo(
+    () => createBurstDebouncer(() => void refetchTopologyRef.current()),
+    [],
+  );
+  useEffect(() => () => topologyBurst.cancel(), [topologyBurst]);
+  const onTopology = useCallback(
+    (message: TopologyMessage) => {
+      if (revokedRef.current || message.domain_id !== domainId) return;
+      if (message.refetch || message.truncated) topologyBurst.trigger();
+      incidentOnTopology();
+    },
+    [domainId, topologyBurst, incidentOnTopology],
+  );
+
+  const live = useLiveUpdates(domainId, initial.isSuccess, onDelta, onTopology);
   const revoked = live.status === "revoked";
 
   const coverage = useMemo(
@@ -265,6 +358,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
         domainId,
         cursor: topCursor,
         nodeBudget: mapGraph.remainingBudget,
+        filters: filterQueryRef.current,
       });
       applyPage(`top:${topCursor}`, page);
       setTopCursor(page.next_cursor);
@@ -293,6 +387,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           clusterId,
           ...(cursor !== undefined && { cursor }),
           nodeBudget: mapGraph.remainingBudget,
+          filters: filterQueryRef.current,
         });
         applyPage(`cluster:${clusterId}:${cursor ?? "first"}`, page);
         setExpansions((prev) => ({
@@ -309,6 +404,22 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     [client, domainId, expansions, mapGraph, applyPage],
   );
 
+  // Search jump (also the impact list's "show on map"): select, open the panel and centre once the
+  // redraw (which indexes new nodes) ran.
+  const jumper = useJumpToNode({
+    domainId,
+    mapGraph,
+    selectedId,
+    onGraphChanged: bump,
+    onJump: (id) => {
+      setSelectedId(id);
+      setCentreTarget((prev) => ({ id, n: (prev?.n ?? 0) + 1 }));
+    },
+  });
+  useEffect(() => {
+    if (centreTarget !== null) canvasRef.current?.centreOn(centreTarget.id);
+  }, [centreTarget]);
+
   const onActivate = useCallback(
     (id: string) => {
       const attrs = mapGraph.graph.hasNode(id) ? mapGraph.graph.getNodeAttributes(id) : undefined;
@@ -317,7 +428,9 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     [mapGraph, expandCluster],
   );
 
-  if (initial.isError) return <ErrorState error={initial.error} />;
+  // With filters active the bar must stay reachable (a rejected filter is cleared from it), so the
+  // error is shown inline below; without filters it replaces the page as before.
+  if (initial.isError && filterState.activeCount === 0) return <ErrorState error={initial.error} />;
   if (initial.isPending) {
     return (
       <div aria-busy="true" data-testid="map-loading">
@@ -369,7 +482,33 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           <span className={styles.muted} data-testid="node-count">
             {STRINGS.nodeCount(mapGraph.nodeCount, mapGraph.edgeCount)}
           </span>
+          <FilterBar domainId={domainId} state={filterState} />
+          <SearchBox domainId={domainId} onSelect={jumper.jump} />
         </div>
+        {jumper.note !== "" ? (
+          <div role="status" className={styles.muted} data-testid="map-search-jump-note">
+            {jumper.note}
+          </div>
+        ) : null}
+
+        {initial.isError ? <ErrorState error={initial.error} /> : null}
+
+        {incident.banner !== null && !revoked ? (
+          <MessageBar intent="warning" data-testid="impact-banner">
+            <MessageBarBody>
+              {IMPACT_STRINGS.bannerText(incident.banner.label)}{" "}
+              <Button
+                size="small"
+                onClick={() => incident.banner !== null && incident.start(incident.banner.nodeId)}
+              >
+                {IMPACT_STRINGS.bannerShow}
+              </Button>{" "}
+              <Button size="small" appearance="subtle" onClick={incident.dismissBanner}>
+                {IMPACT_STRINGS.bannerDismiss}
+              </Button>
+            </MessageBarBody>
+          </MessageBar>
+        ) : null}
 
         <div role="status" data-testid="live-status" data-live-status={live.status}>
           <StatusPill
@@ -423,18 +562,23 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           </MessageBar>
         ) : null}
 
-        {initial.data.nodes.length === 0 && mapGraph.nodeCount === 0 && !revoked ? (
+        {initial.data !== undefined &&
+        initial.data.nodes.length === 0 &&
+        mapGraph.nodeCount === 0 &&
+        !revoked ? (
           <div data-testid="empty-state">
             <NoDataEmptyState what={STRINGS.empty} sources={["foundry", "apim_gateway"]} />
           </div>
         ) : null}
 
         <MapCanvas
+          ref={canvasRef}
           mapGraph={mapGraph}
           version={version}
           reducedMotion={motion.reduced}
           animateEdges={animateEdges}
           selectedId={selectedId}
+          impact={incident.highlight}
           theme={theme}
           fitRequest={fitRequest}
           onSelect={setSelectedId}
@@ -453,6 +597,20 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
             budgetExhausted={budgetExhausted}
             onExpand={(id) => void expandCluster(id)}
             onClose={() => setSelectedId(null)}
+            onShowImpact={() => incident.start(selectedId)}
+            impactShown={incident.target === selectedId}
+          />
+        ) : null}
+        {incident.target !== null ? (
+          <ImpactPanel
+            rootLabel={incident.targetLabel}
+            depth={incident.depth}
+            onDepth={incident.setDepth}
+            state={incident.state}
+            loading={incident.loading}
+            failed={incident.failed}
+            onClear={incident.clear}
+            onShowOnMap={(row) => jumper.jump(incident.matchFor(row))}
           />
         ) : null}
         <Legend

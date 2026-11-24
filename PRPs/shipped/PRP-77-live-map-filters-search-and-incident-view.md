@@ -1,6 +1,11 @@
 ---
 name: PRP-77-live-map-filters-search-and-incident-view
-status: backlog
+status: shipped
+shipped: 2026-11-24
+pr: 405
+started: 2026-11-24
+execution: session
+max_lanes: 2
 priority: P0
 order: 68
 review: required
@@ -32,17 +37,17 @@ Out of scope: every server route, node field, push message and the whole-graph s
 - NS-05 requires "text/table alternative, reduced motion, keyboard navigation and non-color status indicators" (`docs/PRD.md:26`): every new control and the impact highlight need a table and a text form, not color alone.
 
 ## Acceptance criteria
-- [ ] Given the map, When the user sets node type, tag, environment, cloud or health in the filter bar, Then the viewport is refetched with the PRP-74 query parameters, counts and clusters reflect only matching nodes, the filters are in the URL (shareable, back button works), and a "N filters applied, clear all" control is present; an invalid tag is rejected in the field before a request.
-- [ ] Given the search box, When the user types at least 2 characters, Then results come from the server search route (debounced, in-flight request cancelled on the next keystroke), are announced to screen readers (result count in a polite live region), are operable by keyboard (combobox: arrow keys, Enter, Escape), and show kind, environment and health as text; a result for a person shows the pseudonym only.
-- [ ] Given a search result, When selected, Then the neighbourhood route is fetched, merged into the graph without exceeding the 2000-node client cap, the camera centres on the node, the node is selected and its panel opens; a result already on screen just selects and centres; the table view focuses the matching row.
-- [ ] Given a selected node, When the user presses "Show impact" (or the keyboard shortcut documented in the panel), Then the impact route is called with a depth control 1 to 5 (default 2), every dependent node and edge on screen is highlighted and everything else is dimmed, the panel lists affected nodes by depth as text with their health, and nodes not currently on screen are listed with a "show on map" action; clearing restores the previous view.
-- [ ] Given incident view is on for a node and a live delta turns it, or a node on its dependents list, to `failing`, Then the impact is recomputed (debounced 2 s) and the highlight and list update without user action, an aria-live polite message says how many dependents are affected, and a node that newly turns `failing` while selected starts the impact view automatically.
-- [ ] Given a `topology` message for the subscribed domain, When `refetch` is true, Then the viewport (and every open cluster section) is refetched once per burst (debounced, not once per message), the camera and selection do not reset, and an existing node keeps its position; a new agent from the PRP-71 demo world appears within 5 s of the server message without a reload.
-- [ ] Given a delta that omits a metric (null), Then the client keeps the last known value; given the model delta ids now match viewport ids (PRP-74), Then a model node's metrics update live. Both are asserted in `mapGraphDelta.test.ts`.
-- [ ] Service, tool and MCP server nodes have their own shape and text label (non-color), and the legend explains them; an error-rate size option and a "recent errors" line in the node panel use the server facets; every status is conveyed by text or shape as well as color.
-- [ ] Given the table view, Then it offers the same filters and search (same URL state), columns for kind, environment, cloud, health and error rate, an impact toggle that adds a depth column and filters to affected rows, and works by keyboard alone (existing `map-table-keyboard.spec.ts` still passes).
-- [ ] Interaction latency: `map-latency.spec.ts` renders the 2000-node fixture and measures, over at least 30 samples each, the time from input event to the next painted frame for pan, wheel zoom, node hover, node click and "Show impact" highlight; it writes `docs/evidence/G07/map/interaction-latency.json` with p50, p95, max, sample counts, browser, headless or headed, GL renderer string, OS, CPU and RAM. The target 200 ms (p95) is asserted only with `NS_MAP_LATENCY_ENFORCE=1`; the committed file states the hardware and says whether the target held on it. No claim about 50k nodes is made anywhere.
-- [ ] No new control is mouse-only; the axe sample for `/map` and `/map/table` passes with the filter bar open and the impact view on; reduced-motion keeps highlights without animation.
+- [x] Given the map, When the user sets node type, tag, environment, cloud or health in the filter bar, Then the viewport is refetched with the PRP-74 query parameters, counts and clusters reflect only matching nodes, the filters are in the URL (shareable, back button works), and a "N filters applied, clear all" control is present; an invalid tag is rejected in the field before a request.
+- [x] Given the search box, When the user types at least 2 characters, Then results come from the server search route (debounced, in-flight request cancelled on the next keystroke), are announced to screen readers (result count in a polite live region), are operable by keyboard (combobox: arrow keys, Enter, Escape), and show kind, environment and health as text; a result for a person shows the pseudonym only.
+- [x] Given a search result, When selected, Then the neighbourhood route is fetched, merged into the graph without exceeding the 2000-node client cap, the camera centres on the node, the node is selected and its panel opens; a result already on screen just selects and centres; the table view focuses the matching row.
+- [x] Given a selected node, When the user presses "Show impact" (or the keyboard shortcut documented in the panel), Then the impact route is called with a depth control 1 to 5 (default 2), every dependent node and edge on screen is highlighted and everything else is dimmed, the panel lists affected nodes by depth as text with their health, and nodes not currently on screen are listed with a "show on map" action; clearing restores the previous view.
+- [x] Given incident view is on for a node and a live delta turns it, or a node on its dependents list, to `failing`, Then the impact is recomputed (debounced 2 s) and the highlight and list update without user action, an aria-live polite message says how many dependents are affected, and a node that newly turns `failing` while selected starts the impact view automatically.
+- [x] Given a `topology` message for the subscribed domain, When `refetch` is true, Then the viewport (and every open cluster section) is refetched once per burst (debounced, not once per message), the camera and selection do not reset, and an existing node keeps its position; a new agent from the PRP-71 demo world appears within 5 s of the server message without a reload.
+- [x] Given a delta that omits a metric (null), Then the client keeps the last known value; given the model delta ids now match viewport ids (PRP-74), Then a model node's metrics update live. Both are asserted in `mapGraphDelta.test.ts`.
+- [x] Service, tool and MCP server nodes have their own shape and text label (non-color), and the legend explains them; an error-rate size option and a "recent errors" line in the node panel use the server facets; every status is conveyed by text or shape as well as color.
+- [x] Given the table view, Then it offers the same filters and search (same URL state), columns for kind, environment, cloud, health and error rate, an impact toggle that adds a depth column and filters to affected rows, and works by keyboard alone (existing `map-table-keyboard.spec.ts` still passes).
+- [x] Interaction latency: `map-latency.spec.ts` renders the 2000-node fixture and measures, over at least 30 samples each, the time from input event to the next painted frame for pan, wheel zoom, node hover, node click and "Show impact" highlight; it writes `docs/evidence/G07/map/interaction-latency.json` with p50, p95, max, sample counts, browser, headless or headed, GL renderer string, OS, CPU and RAM. The target 200 ms (p95) is asserted only with `NS_MAP_LATENCY_ENFORCE=1`; the committed file states the hardware and says whether the target held on it. No claim about 50k nodes is made anywhere.
+- [x] No new control is mouse-only; the axe sample for `/map` and `/map/table` passes with the filter bar open and the impact view on; reduced-motion keeps highlights without animation.
 - PRP exit: `pnpm` typecheck, lint, unit and the touched Playwright specs pass; the recorded latency file is committed; PR open with CI green; visual baselines regenerated through the Docker flow (Tier 3).
 
 ## Clarifications (decided)
@@ -230,21 +235,41 @@ A 50k-node browser rendering mode or a raised client cap; client-side search ove
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | types, delta fix, new kinds, topology refetch |
-| 2 | todo | | filter bar, URL state |
-| 3 | todo | | search and jump-to-node |
-| 4 | todo | | incident view |
-| 5 | todo | | table parity |
-| 6 | todo | | mock API, e2e, a11y |
-| 7 | todo | | interaction-latency measurement and evidence |
-| 8 | todo | | Tier-2, runbook, Tier-3, close-out |
+| 1 | merged | item 4cd4f337, merge 1e6ff91e (sonnet) | 2026-11-24: typecheck + lint green, vitest 98/98, map e2e 12/12. Canvas shapes for service/tool/mcp_server fall back until item 4 registers SDFs in renderer.ts; node_removed clears only on reload |
+| 2 | merged | item 93af01cc, merge 07ee9822 (sonnet) | 2026-11-24: typecheck + lint green, vitest 109/109, map e2e 12/12. One value per filter (API client comma-joins arrays); counts from search `q=&limit=1` unfiltered |
+| 3 | merged | item e69ff310, merge acac2b14 (sonnet) | 2026-11-24: typecheck + lint green, vitest 124/124, map e2e 12/12. Camera centring needs `renderer.centreOn` (renderer.ts is item 4's) - carried into item 4 |
+| 4 | merged | item d02250b3, merge 2a5a4fbf (sonnet; first agent lost to an auth expiry, resumed from its snapshot) | 2026-11-24: typecheck + lint green, vitest 145/145, map e2e incl. map-perf 13/13. Includes renderer `centreOn` and SDF shapes for service/tool/mcp_server; shortcut `i`; ring + dim, not colour only |
+| 5 | merged | item 46428e36, merge f93f39a0 (sonnet) | 2026-11-24: typecheck + lint green, vitest 162/162, map e2e 12/12 (keyboard spec unchanged). Deviation: a search hit not on a loaded table page is reported as text, not fetched (table is cluster-paged, no merge path) |
+| 6 | merged | item 3894854a (sonnet) | 2026-11-24: typecheck + lint green, vitest 216/216 (incl. tests/mock-api), Playwright map-live + a11y + map specs 744 passed / 2 failed under load beside the item 7 lane (incident canvas highlight, axe /map ops-console high-contrast); both 3/3 in isolation. registry.test.ts +1 line (pins the handler list) |
+| 7 | merged | item 7fbccd04, merge b2eed3bd (sonnet) | 2026-11-24: typecheck + lint green, map-latency + map-perf 2/2 headless. Orchestrator headed run (RTX 5090) committed: all five p95 <= 200 ms with emitted node events; pointer-mode picking got 0 click samples (harness issue, #406) |
+| 8 | merged | orchestrator, 2026-11-24 | runbook sections (usage, latency evidence), changelog fragment, 8 map/map-table visual baselines regenerated in Docker (86 passed), board, completion note. mkdocs and real-stack route lists already carried the runbook and `/map`, `/map/table`: no Tier-2 edit needed |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
+- Date, PR, merge commit: 2026-11-24, PR #405 (merge commit recorded on main at merge).
+- CI: PR #405 head 013a7db5, 31 check runs success, 1 skipped (Pages deploy), 2026-11-24.
+- Review: one independent pass (sonnet), APPROVE, no blocking defect; it read `features/map/**`, and the `features/map-table/**` diff is covered by tests only. Six non-blocking findings are in #406.
+- Acceptance criteria evidence (all ticked):
+  - Filters: `frontend/src/features/map/filters/filters.test.tsx`, `frontend/tests/e2e/map-live/filters.spec.ts`.
+  - Search: `frontend/src/features/map/search/search.test.tsx`, `map-live/search.spec.ts`.
+  - Jump to node: `search.test.tsx`, `frontend/src/features/map/mapGraphMerge.test.ts`, `map-live/search.spec.ts`; table row focus in `frontend/src/features/map-table/map-table.test.tsx` (unloaded table rows reported as text, see deviations).
+  - Show impact and incident view: `frontend/src/features/map/impact/impact.test.tsx`, `impactState.test.ts`, `map-live/incident.spec.ts`.
+  - Topology refetch: `frontend/src/features/map/realtime.test.ts`, `map-live/topology-push.spec.ts` (fake gateway; the PRP-71 demo-world run on the compose stack is OPEN below).
+  - Delta null-merge and model metrics: `frontend/src/features/map/mapGraphDelta.test.ts`.
+  - Node shapes, legend, error-rate size, recent errors: `frontend/src/features/map/map.test.tsx`, the 8 regenerated map visual baselines.
+  - Table parity: `map-table.test.tsx` (32 tests), `map-live/table-parity.spec.ts`, `frontend/tests/e2e/map-table-keyboard.spec.ts` unchanged and green.
+  - Interaction latency: `frontend/tests/e2e/map-latency.spec.ts`, `docs/evidence/G07/map/interaction-latency.json` (headed, hardware below).
+  - Accessibility: `map-live/a11y.spec.ts` (axe with filters set and impact on, reduced motion), two filtered samples in `frontend/tests/e2e/a11y/route-samples.ts`.
 - Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (headed and hosted re-measure via PRP-66):
-- Env vars for the operator (`NS_MAP_LATENCY_ENFORCE`, `NS_MAP_PERF_HEADED`):
-- Recorded interaction latency (p95 per interaction) and hardware:
-- Follow-up issue numbers:
-- Product check (can an SRE find the failing service and see its dependents highlighted without leaving the map?):
+  - Items 3 and 4 were sequenced as planned; camera centring (item 3) and the service/tool/MCP server canvas shapes (item 1) needed `renderer.ts`, which item 4 owns, so both landed in item 4.
+  - One value per filter: the server accepts up to 10, but the shared API client comma-joins arrays (multi-select needs a `frontend/src/api` change, #406).
+  - Table search: a hit on a loaded row is focused, one in a closed cluster is expanded and focused, one not on a loaded page is reported as text; the cluster-paged table has no neighbourhood merge path.
+  - Topology refetch upserts pages, so `node_removed` clears only on reload (#406).
+  - Latency spec: node hover, click and "Show impact" selection use the real input followed by the sigma node event raised from the page (`node_targeting` in the file), because the harness's pointer picking never selected a node on the 2000-node perf fixture (headless or headed). The spec skips in CI unless `NS_MAP_LATENCY_RUN=1` (11 to 26 min headless).
+  - Item 4's first implementer was cut off by an auth expiry; its uncommitted work was snapshotted and finished by a fresh agent.
+  - The single review pass read `features/map/**` only; `features/map-table/**` is covered by tests.
+- Descoped items: none.
+- OPEN gates (headed and hosted re-measure via PRP-66): the PRP-66 re-measure with GPU pointer picking (after the harness fix in #406) and against a real hosted API; the local real-stack check (`make demo-up`, filter, search, impact on the failing service, new agent without reload) was not run in this session; the stories are covered by the mock-API `map-live` e2e specs.
+- Env vars for the operator (`NS_MAP_LATENCY_ENFORCE`, `NS_MAP_PERF_HEADED`): `NS_MAP_PERF_HEADED`, `NS_MAP_LATENCY_WRITE_EVIDENCE`, `NS_MAP_LATENCY_ENFORCE`, `NS_MAP_LATENCY_SAMPLES`, `NS_MAP_LATENCY_NODE_INPUT`, `NS_MAP_LATENCY_RUN`; see `docs/runbooks/live-map.md` "Interaction-latency evidence".
+- Recorded interaction latency (p95 per interaction) and hardware: headed Chromium 159, ANGLE D3D11 on NVIDIA GeForce RTX 5090, AMD Ryzen 9 5950X (32 logical cores), 128 GiB RAM, Windows 11 (10.0.26300), 2000 nodes and 4000 edges, 30 samples each: pan 55.4 ms, wheel zoom 58.9 ms, node hover 86.6 ms, node click 104.2 ms, show impact 168.5 ms (max 218 ms). The 200 ms p95 target held on this hardware for all five; not enforced in the committed run. Nothing is claimed for 50k nodes.
+- Follow-up issue numbers: #406.
+- Product check (can an SRE find the failing service and see its dependents highlighted without leaving the map?): yes against the mock API: `map-live/incident.spec.ts` selects the failing service, shows impact, lists dependents by depth with health text, rings them on the canvas and updates on a live health flip; not yet run on the compose stack (OPEN above).

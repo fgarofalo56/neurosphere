@@ -8,6 +8,7 @@ import {
 } from "../../mock-api/server.ts";
 import { AUDIT_DOMAIN_FINANCE } from "../../mock-api/features/audit.ts";
 import { ADMIN_PRINCIPAL_ID } from "../../mock-api/features/admin-core.ts";
+import { DOMAIN_MAP_INCIDENT } from "../../mock-api/features/map-topology.ts";
 
 // PRP-24 item 3: one or more concrete URLs for EVERY pattern in src/app/route-manifest.json. The
 // spec fails when a manifest pattern has no sample here (or a sample names a pattern that is not
@@ -356,6 +357,21 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     url: "/admin/review-policy",
     ready: "[data-testid='effective-policy']",
     persona: "admin",
+  },
+  // PRP-77: the map and the table with the filter bar SET (the filters live in the URL). The
+  // impact view has no URL state, so axe runs on it in map-live/a11y.spec.ts. Appended after the
+  // first sample of each pattern, so `find` by pattern in the theme and visual specs is unchanged.
+  {
+    pattern: "/map",
+    name: "map filtered",
+    url: `/map?domain_id=${encodeURIComponent(DOMAIN_MAP_INCIDENT)}&environment=production&cloud=commercial`,
+    ready: "[data-testid='map-canvas'][data-node-count]:not([data-node-count='0'])",
+  },
+  {
+    pattern: "/map/table",
+    name: "map table filtered",
+    url: `/map/table?domain_id=${encodeURIComponent(DOMAIN_MAP_INCIDENT)}&environment=production&cloud=commercial`,
+    ready: "[role='treegrid']",
   },
 ];
 

@@ -6,25 +6,62 @@
  */
 import { nodeTypeShape, type NodeShape, type NodeType } from "../../design-system";
 import type { MapTheme } from "./mapTheme";
-import type { NodeKind, NodeMetrics, Provenance, SizeMetric } from "./types";
+import type { MapNodeFacets, NodeKind, NodeMetrics, Provenance, SizeMetric } from "./types";
+
+/** Kinds with a PRP-04 icon. Service, tool and MCP server nodes have a map shape only. */
+export type CoreNodeKind = "person" | "agent" | "sub_agent" | "model" | "source";
+
+const CORE_KINDS: ReadonlySet<string> = new Set([
+  "person",
+  "agent",
+  "sub_agent",
+  "model",
+  "source",
+]);
+
+export function isCoreKind(kind: NodeKind): kind is CoreNodeKind {
+  return CORE_KINDS.has(kind);
+}
 
 /** Kind -> PRP-04 node-type icon type. Clusters are a map-only aggregate with no icon. */
-export function kindToNodeType(kind: Exclude<NodeKind, "cluster">): NodeType {
+export function kindToNodeType(kind: CoreNodeKind): NodeType {
   return kind === "sub_agent" ? "sub-agent" : kind;
 }
+
+/** Map-only shapes for the PRP-70 kinds; each differs from every core shape and the cluster. */
+export type ExtraShape = "pentagon" | "octagon" | "cross";
+
+const EXTRA_SHAPE: Readonly<Record<"service" | "tool" | "mcp_server", ExtraShape>> = {
+  service: "pentagon",
+  tool: "cross",
+  mcp_server: "octagon",
+};
 
 /**
  * Container shape per kind, taken from the PRP-04 icon set so the canvas and the icons agree.
  * Clusters get their own shape ("triangle") so they never look like a member.
  */
-export function kindShape(kind: NodeKind): NodeShape | "triangle" {
-  return kind === "cluster" ? "triangle" : nodeTypeShape(kindToNodeType(kind));
+export function kindShape(kind: NodeKind): NodeShape | "triangle" | ExtraShape {
+  if (kind === "cluster") return "triangle";
+  if (isCoreKind(kind)) return nodeTypeShape(kindToNodeType(kind));
+  // A kind from a newer server is a generic node: a plain circle with its label.
+  return (EXTRA_SHAPE as Readonly<Record<string, ExtraShape | undefined>>)[kind] ?? "circle";
 }
 
 /** sigma shape slug registered by the renderer for each container shape. */
-export type SigmaShapeSlug = "circle" | "hexagon" | "diamond" | "square" | "rectangle" | "triangle";
+export type SigmaShapeSlug =
+  | "circle"
+  | "hexagon"
+  | "diamond"
+  | "square"
+  | "rectangle"
+  | "triangle"
+  | "pentagon"
+  | "cross"
+  | "octagon";
 
-export function sigmaShapeSlug(shape: NodeShape | "triangle"): SigmaShapeSlug {
+/** The canvas registers one SDF shape per slug (renderer.ts); only the pill maps to another slug. */
+export function sigmaShapeSlug(shape: NodeShape | "triangle" | ExtraShape): SigmaShapeSlug {
   return shape === "pill" ? "rectangle" : shape;
 }
 
@@ -48,8 +85,12 @@ export interface MetricRange {
   readonly max: number;
 }
 
-export function metricValue(metrics: NodeMetrics, metric: SizeMetric): number | null {
-  const value = metrics[metric];
+export function metricValue(
+  metrics: NodeMetrics,
+  metric: SizeMetric,
+  facets?: MapNodeFacets | null,
+): number | null {
+  const value = metric === "error_rate" ? facets?.error_rate : metrics[metric];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
@@ -90,6 +131,7 @@ export function nodeAppearance(
   range: MetricRange | null,
   memberRange: MetricRange | null,
   theme: MapTheme,
+  facets?: MapNodeFacets | null,
 ): NodeAppearance {
   const health = theme.health[metrics.health];
   const base = {
@@ -108,7 +150,7 @@ export function nodeAppearance(
       sizeUnknown: false,
     };
   }
-  const value = metricValue(metrics, sizeBy);
+  const value = metricValue(metrics, sizeBy, facets);
   if (value === null || range === null) {
     return { ...base, size: UNKNOWN_SIZE, opacity: UNKNOWN_OPACITY, sizeUnknown: true };
   }

@@ -4,7 +4,7 @@
  * unknown type are ignored (the gateway also sends subscribed/unsubscribed/pong). Close 4403
  * (forbidden or revoked) is final: this client never reconnects after it.
  */
-import type { Coverage, DeltaMessage } from "./types";
+import type { Coverage, DeltaMessage, TopologyMessage } from "./types";
 import { parseEdge, parseNode } from "./mapGraph";
 
 export const REALTIME_PATH = "/api/v1/realtime/ws";
@@ -50,6 +50,7 @@ export function realtimeUrl(apiBaseUrl: string): string {
 export type ServerMessage =
   | { kind: "subscribed" }
   | { kind: "delta"; delta: DeltaMessage }
+  | { kind: "topology"; topology: TopologyMessage }
   | { kind: "error"; code: string }
   | { kind: "ignored" };
 
@@ -101,6 +102,33 @@ export function parseServerMessage(data: unknown): ServerMessage {
         },
       };
     }
+    case "topology": {
+      if (typeof m["domain_id"] !== "string" || typeof m["seq"] !== "number") {
+        return { kind: "ignored" };
+      }
+      const changeKinds = Array.isArray(m["change_kinds"])
+        ? m["change_kinds"].filter((k): k is string => typeof k === "string")
+        : [];
+      const entityIds = Array.isArray(m["entity_ids"])
+        ? m["entity_ids"].filter((id): id is string => typeof id === "string")
+        : [];
+      // A notice we cannot read is treated as "refetch": a missed change must never go unseen.
+      const unreadable = typeof m["refetch"] !== "boolean" || changeKinds.length === 0;
+      return {
+        kind: "topology",
+        topology: {
+          type: "topology",
+          domain_id: m["domain_id"],
+          seq: m["seq"],
+          changed_at: typeof m["changed_at"] === "string" ? m["changed_at"] : "",
+          change_kinds: changeKinds as TopologyMessage["change_kinds"],
+          entity_ids: entityIds,
+          refetch: unreadable ? true : m["refetch"] === true,
+          truncated: m["truncated"] === true,
+          emitted_at: typeof m["emitted_at"] === "string" ? m["emitted_at"] : "",
+        },
+      };
+    }
     default:
       return { kind: "ignored" };
   }
@@ -112,6 +140,8 @@ export interface LiveClientOptions {
   readonly getToken: () => Promise<string>;
   readonly onStatus: (status: LiveStatus) => void;
   readonly onDelta: (delta: DeltaMessage) => void;
+  /** A topology change notice for the subscribed domain (refetch when `refetch` is true). */
+  readonly onTopology?: (topology: TopologyMessage) => void;
   readonly onError?: (code: string) => void;
   readonly socketFactory?: SocketFactory;
   /** Injected so tests run without real timers. */
@@ -203,6 +233,13 @@ export function createLiveClient(options: LiveClientOptions): LiveClient {
           if (message.delta.seq <= lastSeq) break;
           lastSeq = message.delta.seq;
           options.onDelta(message.delta);
+          break;
+        case "topology":
+          if (message.topology.domain_id !== options.domainId) break;
+          // Topology shares the delta sequence; a replayed frame is dropped the same way.
+          if (message.topology.seq <= lastSeq) break;
+          lastSeq = message.topology.seq;
+          options.onTopology?.(message.topology);
           break;
         case "error":
           options.onError?.(message.code);
