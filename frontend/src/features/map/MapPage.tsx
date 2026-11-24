@@ -35,7 +35,9 @@ import { FilterBar } from "./filters/FilterBar";
 import { useMapFilters } from "./filters/useMapFilters";
 import { createBurstDebouncer, fetchViewport, useLiveUpdates, useViewport } from "./hooks";
 import { Legend } from "./Legend";
-import { MapCanvas } from "./MapCanvas";
+import { MapCanvas, type MapCanvasHandle } from "./MapCanvas";
+import { SearchBox } from "./search/SearchBox";
+import { useJumpToNode } from "./search/useJumpToNode";
 import { MapGraph, worstCoverage } from "./mapGraph";
 import { buildMapTheme, createDomResolver, type MapTheme } from "./mapTheme";
 import { animationGate, useReducedMotion, type AnimationGate } from "./motion";
@@ -158,6 +160,8 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [theme, setTheme] = useState<MapTheme>(() => buildMapTheme(uiStyle, null));
   const [fitRequest, setFitRequest] = useState(0);
+  const canvasRef = useRef<MapCanvasHandle | null>(null);
+  const [centreTarget, setCentreTarget] = useState<{ id: string; n: number } | null>(null);
   const loaded = initial.isSuccess;
 
   // The canvas needs concrete colours: resolve the Fluent tokens against the live DOM (inside
@@ -392,6 +396,21 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     [client, domainId, expansions, mapGraph, applyPage],
   );
 
+  // Search jump: select, open the panel and centre once the redraw (which indexes new nodes) ran.
+  const jumper = useJumpToNode({
+    domainId,
+    mapGraph,
+    selectedId,
+    onGraphChanged: bump,
+    onJump: (id) => {
+      setSelectedId(id);
+      setCentreTarget((prev) => ({ id, n: (prev?.n ?? 0) + 1 }));
+    },
+  });
+  useEffect(() => {
+    if (centreTarget !== null) canvasRef.current?.centreOn(centreTarget.id);
+  }, [centreTarget]);
+
   const onActivate = useCallback(
     (id: string) => {
       const attrs = mapGraph.graph.hasNode(id) ? mapGraph.graph.getNodeAttributes(id) : undefined;
@@ -455,7 +474,13 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
             {STRINGS.nodeCount(mapGraph.nodeCount, mapGraph.edgeCount)}
           </span>
           <FilterBar domainId={domainId} state={filterState} />
+          <SearchBox domainId={domainId} onSelect={jumper.jump} />
         </div>
+        {jumper.note !== "" ? (
+          <div role="status" className={styles.muted} data-testid="map-search-jump-note">
+            {jumper.note}
+          </div>
+        ) : null}
 
         {initial.isError ? <ErrorState error={initial.error} /> : null}
 
@@ -521,6 +546,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
         ) : null}
 
         <MapCanvas
+          ref={canvasRef}
           mapGraph={mapGraph}
           version={version}
           reducedMotion={motion.reduced}

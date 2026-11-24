@@ -1,5 +1,12 @@
 import { makeStyles, mergeClasses, shorthands, tokens } from "@fluentui/react-components";
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactElement,
+  type Ref,
+} from "react";
 import { useUiStyle } from "../../design-system";
 import { browserScheduler, createEdgeAnimator, type Scheduler } from "./animator";
 import type { MapGraph } from "./mapGraph";
@@ -29,7 +36,20 @@ const useStyles = makeStyles({
   unavailable: { padding: tokens.spacingHorizontalL },
 });
 
+/** Imperative camera control for the page (search jump). */
+export interface MapCanvasHandle {
+  /** Centres the camera on a node; no animated move when reduced motion is on. */
+  centreOn(nodeId: string): void;
+}
+
+/**
+ * Camera centring is provided by the renderer (`centreOn`, which honours reduced motion there).
+ * It is declared optional here until renderer.ts (owned by another work item) gains the method.
+ */
+type CentringRenderer = MapRenderer & { centreOn?: (id: string) => void };
+
 export interface MapCanvasProps {
+  readonly ref?: Ref<MapCanvasHandle>;
   readonly mapGraph: MapGraph;
   /** Bumped whenever the graph changed; triggers a redraw. */
   readonly version: number;
@@ -54,6 +74,7 @@ export interface MapCanvasProps {
  * data-edge-animation (on|off), data-animated-edges, data-animation-frames, data-node-count.
  */
 export function MapCanvas({
+  ref,
   mapGraph,
   version,
   reducedMotion,
@@ -74,6 +95,19 @@ export function MapCanvas({
   callbacks.current = { onSelect, onActivate };
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      centreOn: (nodeId: string) => {
+        const renderer = rendererRef.current as CentringRenderer | null;
+        if (renderer === null || renderer.centreOn === undefined) return;
+        renderer.update(); // new nodes must be indexed before their display position exists
+        renderer.centreOn(nodeId);
+      },
+    }),
+    [],
+  );
 
   // Create the renderer once per graph and theme; tear down on unmount. sigma styles are fixed at
   // construction, so a style or colour-mode switch rebuilds the renderer (the camera starts fitted).
