@@ -31,6 +31,8 @@ import {
 import { NoDataEmptyState } from "../source-status";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { MAP_TABLE_PATH } from "../map-table/paths";
+import { FilterBar } from "./filters/FilterBar";
+import { useMapFilters } from "./filters/useMapFilters";
 import { createBurstDebouncer, fetchViewport, useLiveUpdates, useViewport } from "./hooks";
 import { Legend } from "./Legend";
 import { MapCanvas } from "./MapCanvas";
@@ -148,7 +150,10 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   const styles = useStyles();
   const client = useApiClient();
   const motion = useReducedMotion();
-  const initial = useViewport({ domainId });
+  const filterState = useMapFilters();
+  const filterQuery = filterState.toQuery();
+  const filterSignature = filterState.signature;
+  const initial = useViewport({ domainId, filters: filterQuery });
   const uiStyle = useUiStyle();
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [theme, setTheme] = useState<MapTheme>(() => buildMapTheme(uiStyle, null));
@@ -198,13 +203,26 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
 
   // First page. Applied once per response object.
   const appliedRef = useRef<ViewportResponse | null>(null);
+  const appliedSignatureRef = useRef(filterSignature);
+  // Every later page (refetch, load more, cluster expansion) carries the active filters.
+  const filterQueryRef = useRef(filterQuery);
+  filterQueryRef.current = filterQuery;
   useEffect(() => {
     const data = initial.data;
-    if (data === undefined || appliedRef.current === data) return;
+    if (data === undefined || initial.isPlaceholderData || appliedRef.current === data) return;
     appliedRef.current = data;
+    if (appliedSignatureRef.current !== filterSignature) {
+      // The filters changed: this page is a different slice of the domain. Drop the old slice so
+      // counts and clusters reflect only matching nodes; camera and bar state are untouched.
+      appliedSignatureRef.current = filterSignature;
+      mapGraph.clear();
+      setSources({});
+      setExpansions({});
+      setSelectedId(null);
+    }
     applyPage("top:first", data);
     setTopCursor(data.next_cursor);
-  }, [initial.data, applyPage]);
+  }, [initial.data, initial.isPlaceholderData, filterSignature, mapGraph, applyPage]);
 
   const onDelta = useCallback(
     (delta: DeltaMessage) => {
@@ -234,9 +252,18 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
         .filter(([, e]) => e.nextCursor !== undefined)
         .map(([id]) => id);
       const results = await Promise.allSettled([
-        fetchViewport(client, { domainId, nodeBudget: NODE_BUDGET }),
+        fetchViewport(client, {
+          domainId,
+          nodeBudget: NODE_BUDGET,
+          filters: filterQueryRef.current,
+        }),
         ...openClusters.map((clusterId) =>
-          fetchViewport(client, { domainId, clusterId, nodeBudget: NODE_BUDGET }),
+          fetchViewport(client, {
+            domainId,
+            clusterId,
+            nodeBudget: NODE_BUDGET,
+            filters: filterQueryRef.current,
+          }),
         ),
       ]);
       results.forEach((result, i) => {
@@ -319,6 +346,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
         domainId,
         cursor: topCursor,
         nodeBudget: mapGraph.remainingBudget,
+        filters: filterQueryRef.current,
       });
       applyPage(`top:${topCursor}`, page);
       setTopCursor(page.next_cursor);
@@ -347,6 +375,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           clusterId,
           ...(cursor !== undefined && { cursor }),
           nodeBudget: mapGraph.remainingBudget,
+          filters: filterQueryRef.current,
         });
         applyPage(`cluster:${clusterId}:${cursor ?? "first"}`, page);
         setExpansions((prev) => ({
@@ -371,7 +400,9 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     [mapGraph, expandCluster],
   );
 
-  if (initial.isError) return <ErrorState error={initial.error} />;
+  // With filters active the bar must stay reachable (a rejected filter is cleared from it), so the
+  // error is shown inline below; without filters it replaces the page as before.
+  if (initial.isError && filterState.activeCount === 0) return <ErrorState error={initial.error} />;
   if (initial.isPending) {
     return (
       <div aria-busy="true" data-testid="map-loading">
@@ -423,7 +454,10 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           <span className={styles.muted} data-testid="node-count">
             {STRINGS.nodeCount(mapGraph.nodeCount, mapGraph.edgeCount)}
           </span>
+          <FilterBar domainId={domainId} state={filterState} />
         </div>
+
+        {initial.isError ? <ErrorState error={initial.error} /> : null}
 
         <div role="status" data-testid="live-status" data-live-status={live.status}>
           <StatusPill
@@ -477,7 +511,10 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           </MessageBar>
         ) : null}
 
-        {initial.data.nodes.length === 0 && mapGraph.nodeCount === 0 && !revoked ? (
+        {initial.data !== undefined &&
+        initial.data.nodes.length === 0 &&
+        mapGraph.nodeCount === 0 &&
+        !revoked ? (
           <div data-testid="empty-state">
             <NoDataEmptyState what={STRINGS.empty} sources={["foundry", "apim_gateway"]} />
           </div>

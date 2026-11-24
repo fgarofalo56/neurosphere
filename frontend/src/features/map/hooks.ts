@@ -1,7 +1,9 @@
+import { keepPreviousData, useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useContext, useEffect, useRef, useState } from "react";
-import { createQueryHook, type ApiClient } from "../../api/index.js";
+import { useApiClient, type ApiClient, type ApiError } from "../../api/index.js";
 import { ConfigContext } from "../../app/ConfigContext";
 import { getToken } from "../../auth/token";
+import type { MapFilterQuery } from "./filters/useMapFilters";
 import { createLiveClient, realtimeUrl, type LiveStatus } from "./realtime";
 import {
   NODE_BUDGET,
@@ -24,6 +26,8 @@ export interface ViewportParams {
   readonly cursor?: string;
   /** Never above NODE_BUDGET; the server clamps as well. */
   readonly nodeBudget?: number;
+  /** The active PRP-74 filters (node_type, tag, environment, cloud, health); each is single-valued. */
+  readonly filters?: MapFilterQuery;
 }
 
 export function fetchViewport(
@@ -35,6 +39,7 @@ export function fetchViewport(
   return client.get<ViewportResponse>(
     viewportPath(params.domainId),
     {
+      ...params.filters,
       node_budget: budget,
       ...(params.clusterId !== undefined && { cluster_id: params.clusterId }),
       ...(params.cursor !== undefined && { cursor: params.cursor }),
@@ -43,10 +48,19 @@ export function fetchViewport(
   );
 }
 
-export const useViewport = createQueryHook<ViewportParams, ViewportResponse>({
-  key: "map-viewport",
-  fetcher: (client, params, signal) => fetchViewport(client, params, signal),
-});
+/**
+ * The first viewport page. The cache is keyed by the whole params object, so a changed filter is a
+ * new request. The previous page stays as placeholder while the new one loads, so the toolbar and
+ * canvas do not unmount (and the filter field keeps focus) on every filter change.
+ */
+export function useViewport(params: ViewportParams): UseQueryResult<ViewportResponse, ApiError> {
+  const client = useApiClient();
+  return useQuery<ViewportResponse, ApiError>({
+    queryKey: ["map-viewport", params],
+    queryFn: ({ signal }) => fetchViewport(client, params, signal),
+    placeholderData: keepPreviousData,
+  });
+}
 
 /** Quiet time after the last topology message before the map refetches. */
 export const TOPOLOGY_DEBOUNCE_MS = 400;
