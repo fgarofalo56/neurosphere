@@ -52,6 +52,10 @@ Out of scope: running detectors on the ingest path or anywhere else (PRP-103); e
 | 6 | Quality gate | report only; gate some detectors | Decided by the owner 2026-11-16 (GD-19): only the credential detectors and Luhn-valid payment cards are gated at recall 1.0 on the synthetic corpus; the other detectors report measured recall without a gate |
 | 7 | Unicode evasion | detect on raw text; normalize first | ASSUMPTION: NFKC normalization and removal of zero-width characters before detection; the redacted output is the normalized text |
 | 8 | Rewrite the four existing rule sets | consolidate now; follow-up | Follow-up issue (design PRP-101 scope) |
+| 9 | Category for long opaque runs (item 2 `opaque_secret` is not a PRP-99 `DetectedCategory`) | `other` always redacted; `vendor_api_key`; drop | Decided by the owner 2026-11-24: detector id `opaque_secret`, category `other`, confidence low, always `replaced` (engine forces it regardless of policy); not under the recall 1.0 gate |
+| 10 | Category for a SAS `sig=` parameter | `connection_string`; `url_with_credentials` | Orchestrator 2026-11-24: `connection_string` (a SAS signature is shared-access key material) |
+
+Plan approved by the owner 2026-11-24 (session s-8c3599): rows 5-7 ASSUMPTIONS accepted as written; one independent review pass per code item (items 6 and 7 share one).
 
 ## Context manifest
 
@@ -214,7 +218,7 @@ None. No external call is made; the model-based detector is not built (GD-6).
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | in-progress | | dispatched 2026-11-24 (s-8c3599) |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
