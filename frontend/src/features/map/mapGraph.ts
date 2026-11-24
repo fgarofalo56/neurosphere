@@ -16,10 +16,10 @@ import { DEFAULT_MAP_THEME, type MapTheme } from "./mapTheme";
 import {
   HEALTHS,
   NODE_BUDGET,
-  NODE_KINDS,
   PROVENANCES,
   type Coverage,
   type CoverageState,
+  type MapNodeFacets,
   type NodeKind,
   type NodeMetrics,
   type SizeMetric,
@@ -27,13 +27,11 @@ import {
   type ViewportNode,
 } from "./types";
 
-/** Kinds a delta may only update (never create): the viewport API owns their labels. */
-const METRICS_ONLY_KINDS: ReadonlySet<NodeKind> = new Set<NodeKind>([
-  "agent",
-  "sub_agent",
-  "model",
-  "source",
-]);
+/**
+ * Kinds a delta may create: the domain cluster and people. Every other kind (including a kind this
+ * client does not know yet) is only ever updated: the viewport API owns its label and cluster.
+ */
+const DELTA_CREATES_KINDS: ReadonlySet<string> = new Set<string>(["cluster", "person"]);
 
 export interface MapNodeAttributes {
   x: number;
@@ -52,6 +50,7 @@ export interface MapNodeAttributes {
   clusterId: string | null;
   memberCount: number | null;
   metrics: NodeMetrics;
+  facets: MapNodeFacets | null;
   sizeUnknown: boolean;
   [key: string]: unknown;
 }
@@ -145,14 +144,37 @@ function numOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/** Validates an untrusted node (a realtime delta); returns null when it is not usable. */
+const FACET_STRINGS = ["entity_type", "environment", "cloud", "lifecycle_status", "discovery"];
+const FACET_NUMBERS = ["error_rate", "error_count", "request_count"];
+
+/** Keeps only well-typed facet members; an unknown shape is dropped, never trusted. */
+function parseFacets(raw: unknown): MapNodeFacets | null {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of FACET_STRINGS) {
+    if (typeof r[key] === "string") out[key] = r[key];
+  }
+  for (const key of FACET_NUMBERS) {
+    if (typeof r[key] === "number" && Number.isFinite(r[key])) out[key] = r[key];
+  }
+  if ((HEALTHS as readonly unknown[]).includes(r["health"])) out["health"] = r["health"];
+  if (typeof r["last_error_at"] === "string") out["last_error_at"] = r["last_error_at"];
+  if (Array.isArray(r["tags"])) {
+    out["tags"] = r["tags"].filter((t): t is string => typeof t === "string");
+  }
+  return out as MapNodeFacets;
+}
+
+/**
+ * Validates an untrusted node (a realtime delta or a response from a newer server); returns null
+ * when it is not usable. An unknown `kind` is kept as a generic node with its label.
+ */
 export function parseNode(raw: unknown): ViewportNode | null {
   if (typeof raw !== "object" || raw === null) return null;
   const r = raw as Record<string, unknown>;
   if (typeof r["id"] !== "string" || r["id"] === "") return null;
-  if (typeof r["kind"] !== "string" || !(NODE_KINDS as readonly string[]).includes(r["kind"])) {
-    return null;
-  }
+  if (typeof r["kind"] !== "string" || r["kind"] === "") return null;
   const m =
     typeof r["metrics"] === "object" && r["metrics"] !== null
       ? (r["metrics"] as Record<string, unknown>)
@@ -160,6 +182,7 @@ export function parseNode(raw: unknown): ViewportNode | null {
   const health = (HEALTHS as readonly unknown[]).includes(m["health"])
     ? (m["health"] as NodeMetrics["health"])
     : "unknown";
+  const facets = parseFacets(r["facets"]);
   return {
     id: r["id"],
     kind: r["kind"] as NodeKind,
@@ -173,6 +196,18 @@ export function parseNode(raw: unknown): ViewportNode | null {
       latency_p95_ms: numOrNull(m["latency_p95_ms"]),
       health,
     },
+    ...(facets !== null && { facets }),
+  };
+}
+
+/** A metric the delta leaves null keeps its last known value; it is never blanked. */
+function mergeMetrics(previous: NodeMetrics, next: NodeMetrics): NodeMetrics {
+  return {
+    tokens: next.tokens ?? previous.tokens,
+    context_size: next.context_size ?? previous.context_size,
+    frequency: next.frequency ?? previous.frequency,
+    latency_p95_ms: next.latency_p95_ms ?? previous.latency_p95_ms,
+    health: next.health,
   };
 }
 
@@ -240,6 +275,7 @@ export class MapGraph {
         clusterId: node.cluster_id,
         memberCount: node.member_count,
         metrics: node.metrics,
+        facets: node.facets ?? null,
         shape: kindSigmaShape(node.kind),
       };
       if (existing) {
@@ -312,7 +348,9 @@ export class MapGraph {
     this.animatedCache = null;
     const g = this.graph;
     const range: MetricRange | null = metricRange(
-      g.mapNodes((_, a) => (a.kind === "cluster" ? null : metricValue(a.metrics, settings.sizeBy))),
+      g.mapNodes((_, a) =>
+        a.kind === "cluster" ? null : metricValue(a.metrics, settings.sizeBy, a.facets),
+      ),
     );
     const memberRange: MetricRange | null = metricRange(
       g.mapNodes((_, a) => (a.kind === "cluster" ? a.memberCount : null)),
@@ -327,6 +365,7 @@ export class MapGraph {
         range,
         memberRange,
         settings.theme,
+        a.facets,
       );
       g.mergeNodeAttributes(id, {
         size: look.size,
@@ -370,7 +409,9 @@ export class MapGraph {
   /** Min/max of the known values of a metric, for the size legend. */
   sizeRange(metric: SizeMetric): MetricRange | null {
     return metricRange(
-      this.graph.mapNodes((_, a) => (a.kind === "cluster" ? null : metricValue(a.metrics, metric))),
+      this.graph.mapNodes((_, a) =>
+        a.kind === "cluster" ? null : metricValue(a.metrics, metric, a.facets),
+      ),
     );
   }
 
@@ -385,8 +426,9 @@ export class MapGraph {
   /**
    * Applies one realtime delta: validated shapes only. A delta node whose id is already in the
    * graph changes only its `metrics` (the server's label, cluster and member count are not
-   * authoritative for a node the viewport API described). Agent, sub_agent, model and source
-   * nodes the graph does not know are ignored; the domain cluster node (and people) still upsert.
+   * authoritative for a node the viewport API described) and a metric the delta leaves null keeps
+   * its last known value. Nodes the graph does not know are ignored unless they are the domain
+   * cluster or a person; the topology message makes the client refetch for anything new.
    */
   applyDelta(rawNodes: readonly unknown[], rawEdges: readonly unknown[]): void {
     const nodes = rawNodes.map(parseNode).filter((n): n is ViewportNode => n !== null);
@@ -396,8 +438,9 @@ export class MapGraph {
       if (node.kind === "cluster") {
         upserts.push(node);
       } else if (this.graph.hasNode(node.id)) {
-        this.graph.mergeNodeAttributes(node.id, { metrics: node.metrics });
-      } else if (!METRICS_ONLY_KINDS.has(node.kind)) {
+        const previous = this.graph.getNodeAttribute(node.id, "metrics");
+        this.graph.mergeNodeAttributes(node.id, { metrics: mergeMetrics(previous, node.metrics) });
+      } else if (DELTA_CREATES_KINDS.has(node.kind)) {
         upserts.push(node);
       }
     }

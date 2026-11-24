@@ -31,7 +31,7 @@ import {
 import { NoDataEmptyState } from "../source-status";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { MAP_TABLE_PATH } from "../map-table/paths";
-import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
+import { createBurstDebouncer, fetchViewport, useLiveUpdates, useViewport } from "./hooks";
 import { Legend } from "./Legend";
 import { MapCanvas } from "./MapCanvas";
 import { MapGraph, worstCoverage } from "./mapGraph";
@@ -40,12 +40,14 @@ import { animationGate, useReducedMotion, type AnimationGate } from "./motion";
 import { NodePanel, type ClusterExpansion } from "./NodePanel";
 import type { Scheduler } from "./animator";
 import { STRINGS, TRUNCATION_REASON_LABEL, coverageText } from "./strings";
-import type {
-  Coverage,
-  DeltaMessage,
-  SizeMetric,
-  TruncationReason,
-  ViewportResponse,
+import {
+  NODE_BUDGET,
+  type Coverage,
+  type DeltaMessage,
+  type SizeMetric,
+  type TopologyMessage,
+  type TruncationReason,
+  type ViewportResponse,
 } from "./types";
 import type { LiveStatus } from "./realtime";
 
@@ -213,7 +215,59 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     },
     [mapGraph, bump],
   );
-  const live = useLiveUpdates(domainId, initial.isSuccess, onDelta);
+  // A topology notice means nodes or edges came or went. Refetch the top level and every cluster
+  // the user has opened, once per burst. Pages are merged (upsert), so camera, selection and the
+  // positions of nodes already on screen are untouched; only new nodes get a slot.
+  const expansionsRef = useRef(expansions);
+  expansionsRef.current = expansions;
+  const refetchBusyRef = useRef(false);
+  const refetchQueuedRef = useRef(false);
+  const refetchTopology = useCallback(async () => {
+    if (revokedRef.current) return;
+    if (refetchBusyRef.current) {
+      refetchQueuedRef.current = true; // one more pass after the current one, never a pile-up
+      return;
+    }
+    refetchBusyRef.current = true;
+    try {
+      const openClusters = Object.entries(expansionsRef.current)
+        .filter(([, e]) => e.nextCursor !== undefined)
+        .map(([id]) => id);
+      const results = await Promise.allSettled([
+        fetchViewport(client, { domainId, nodeBudget: NODE_BUDGET }),
+        ...openClusters.map((clusterId) =>
+          fetchViewport(client, { domainId, clusterId, nodeBudget: NODE_BUDGET }),
+        ),
+      ]);
+      results.forEach((result, i) => {
+        if (result.status !== "fulfilled") return; // keep the last good view; no blanking
+        const clusterId = i === 0 ? null : openClusters[i - 1];
+        applyPage(clusterId === null ? "top:first" : `cluster:${clusterId}:first`, result.value);
+      });
+    } finally {
+      refetchBusyRef.current = false;
+      if (refetchQueuedRef.current) {
+        refetchQueuedRef.current = false;
+        void refetchTopology();
+      }
+    }
+  }, [client, domainId, applyPage]);
+  const refetchTopologyRef = useRef(refetchTopology);
+  refetchTopologyRef.current = refetchTopology;
+  const topologyBurst = useMemo(
+    () => createBurstDebouncer(() => void refetchTopologyRef.current()),
+    [],
+  );
+  useEffect(() => () => topologyBurst.cancel(), [topologyBurst]);
+  const onTopology = useCallback(
+    (message: TopologyMessage) => {
+      if (revokedRef.current || message.domain_id !== domainId) return;
+      if (message.refetch || message.truncated) topologyBurst.trigger();
+    },
+    [domainId, topologyBurst],
+  );
+
+  const live = useLiveUpdates(domainId, initial.isSuccess, onDelta, onTopology);
   const revoked = live.status === "revoked";
 
   const coverage = useMemo(

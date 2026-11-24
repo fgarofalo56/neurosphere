@@ -3,11 +3,11 @@ import type { ReactElement } from "react";
 import { Link } from "react-router";
 import { HealthIndicator, NodeTypeIcon } from "../../design-system";
 import { useCardClasses } from "./card";
-import { kindToNodeType } from "./appearance";
+import { isCoreKind as isCore, kindToNodeType } from "./appearance";
 import { formatMetric } from "./Legend";
 import type { MapNodeAttributes } from "./mapGraph";
-import { HEALTH_LABEL, KIND_LABEL, SIZE_METRIC_LABEL, STRINGS } from "./strings";
-import { SIZE_METRICS } from "./types";
+import { HEALTH_LABEL, SIZE_METRIC_LABEL, STRINGS, kindLabel } from "./strings";
+import { METRIC_KEYS, type MapNodeFacets } from "./types";
 
 const useStyles = makeStyles({
   heading: { margin: 0, fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold },
@@ -42,6 +42,55 @@ export interface NodePanelProps {
   readonly onClose: () => void;
 }
 
+/** "Recent errors" as text: count, rate and last time; unknown is said, never shown as zero. */
+function RecentErrors({ facets }: { readonly facets: MapNodeFacets | null }): ReactElement {
+  const count = facets?.error_count ?? null;
+  const rate = facets?.error_rate ?? null;
+  const lastAt = facets?.last_error_at ?? null;
+  const parts: string[] = [];
+  if (count !== null) parts.push(STRINGS.errorCount(count));
+  if (rate !== null) parts.push(STRINGS.errorRate(rate));
+  if (lastAt !== null) parts.push(STRINGS.lastErrorAt(lastAt));
+  const text = parts.length > 0 ? parts.join(", ") : STRINGS.recentErrorsUnknown;
+  return (
+    <p data-testid="panel-recent-errors">
+      <strong>{STRINGS.recentErrors}:</strong> {text}
+    </p>
+  );
+}
+
+/** Environment, cloud, tags and health from the facets, as text. Hidden without facets. */
+function FacetLines({ facets }: { readonly facets: MapNodeFacets | null }): ReactElement | null {
+  const styles = useStyles();
+  if (facets === null) return null;
+  const tags = facets.tags ?? [];
+  const health = facets.health;
+  return (
+    <dl className={styles.metrics} data-testid="panel-facets" aria-label={STRINGS.facetsHeading}>
+      <dt className={styles.term}>{STRINGS.facetEnvironment}</dt>
+      <dd className={styles.value} data-testid="facet-environment">
+        {facets.environment ?? STRINGS.unknown}
+      </dd>
+      <dt className={styles.term}>{STRINGS.facetCloud}</dt>
+      <dd className={styles.value} data-testid="facet-cloud">
+        {facets.cloud ?? STRINGS.unknown}
+      </dd>
+      <dt className={styles.term}>{STRINGS.facetTags}</dt>
+      <dd className={styles.value} data-testid="facet-tags">
+        {tags.length > 0 ? tags.join(", ") : STRINGS.facetNone}
+      </dd>
+      {health !== undefined ? (
+        <>
+          <dt className={styles.term}>{STRINGS.facetHealth}</dt>
+          <dd className={styles.value} data-testid="facet-health">
+            {HEALTH_LABEL[health]}
+          </dd>
+        </>
+      ) : null}
+    </dl>
+  );
+}
+
 function domainLink(path: string, domainId: string): string {
   return `${path}?${new URLSearchParams({ domain_id: domainId }).toString()}`;
 }
@@ -65,13 +114,10 @@ export function NodePanel({
     <aside className={card.card} aria-label={STRINGS.panelHeading} data-testid="node-panel">
       <h2 className={card.title}>{STRINGS.panelHeading}</h2>
       <div>
-        {isCluster ? (
-          <strong>{KIND_LABEL.cluster}</strong>
+        {isCore(attrs.kind) ? (
+          <NodeTypeIcon type={kindToNodeType(attrs.kind)} showLabel />
         ) : (
-          <NodeTypeIcon
-            type={kindToNodeType(attrs.kind as Exclude<typeof attrs.kind, "cluster">)}
-            showLabel
-          />
+          <strong data-testid="panel-kind">{kindLabel(attrs.kind)}</strong>
         )}
       </div>
       <p className={styles.name} data-testid="panel-label">
@@ -86,7 +132,7 @@ export function NodePanel({
         </p>
       ) : null}
       <dl className={styles.metrics} data-testid="panel-metrics">
-        {SIZE_METRICS.map((m) => (
+        {METRIC_KEYS.map((m) => (
           <div key={m} style={{ display: "contents" }}>
             <dt className={styles.term}>{SIZE_METRIC_LABEL[m]}</dt>
             <dd className={styles.value} data-testid={`metric-${m}`}>
@@ -102,6 +148,9 @@ export function NodePanel({
           />
         </dd>
       </dl>
+
+      <RecentErrors facets={attrs.facets} />
+      <FacetLines facets={attrs.facets} />
 
       {isCluster ? (
         <div>

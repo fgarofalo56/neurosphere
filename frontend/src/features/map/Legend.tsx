@@ -4,7 +4,14 @@ import { HealthIndicator, NODE_TYPES, NodeTypeIcon, useUiStyle } from "../../des
 import { UNKNOWN_OPACITY, type MetricRange } from "./appearance";
 import { useCardClasses } from "./card";
 import { EDGE_TOKEN } from "./mapTheme";
-import { HEALTH_LABEL, KIND_LABEL, PROVENANCE_LABEL, SIZE_METRIC_LABEL, STRINGS } from "./strings";
+import {
+  HEALTH_LABEL,
+  KIND_LABEL,
+  KIND_SHAPE_TEXT,
+  PROVENANCE_LABEL,
+  SIZE_METRIC_LABEL,
+  STRINGS,
+} from "./strings";
 import { HEALTHS, PROVENANCES, SIZE_METRICS, type Provenance, type SizeMetric } from "./types";
 
 const useStyles = makeStyles({
@@ -26,6 +33,17 @@ export function formatMetric(value: number | null): string {
   if (value === null) return STRINGS.unknown;
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
+
+type ExtraKind = "service" | "tool" | "mcp_server";
+
+const EXTRA_KINDS: readonly ExtraKind[] = ["service", "tool", "mcp_server"];
+
+/** Outline of each map-only kind (32x32 box): pentagon, plus-shaped cross, octagon. */
+const EXTRA_POINTS: Readonly<Record<ExtraKind, string>> = {
+  service: "16,4 28,13 23.5,27 8.5,27 4,13",
+  tool: "12,4 20,4 20,12 28,12 28,20 20,20 20,28 12,28 12,20 4,20 4,12 12,12",
+  mcp_server: "11,4 21,4 28,11 28,21 21,28 11,28 4,21 4,11",
+};
 
 const DASH: Readonly<Record<Provenance, string | undefined>> = {
   observed: undefined,
@@ -122,6 +140,22 @@ export function Legend({ sizeBy, onSizeBy, range, unknownCount }: LegendProps): 
           {NODE_TYPES.map((t) => (
             <li key={t}>
               <NodeTypeIcon type={t} showLabel />
+            </li>
+          ))}
+          {EXTRA_KINDS.map((kind) => (
+            <li key={kind} className={styles.item} data-kind={kind}>
+              <svg width="32" height="32" aria-hidden="true" focusable="false">
+                <polygon
+                  points={EXTRA_POINTS[kind]}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>
+                {KIND_LABEL[kind]} ({KIND_SHAPE_TEXT[kind]})
+              </span>
             </li>
           ))}
           <li className={styles.item}>

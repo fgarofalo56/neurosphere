@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MapGraph, NULL_METRICS } from "./mapGraph";
+import { MapGraph, NULL_METRICS, parseNode } from "./mapGraph";
 import type { ViewportNode } from "./types";
 
 function node(
@@ -84,5 +84,98 @@ describe("MapGraph.applyDelta (PRP-49)", () => {
     expect(metrics.tokens).toBeNull();
     expect(metrics.latency_p95_ms).toBeNull();
     expect(metrics.health).toBe("ok");
+  });
+});
+
+describe("MapGraph.applyDelta merge and new kinds (PRP-77)", () => {
+  const FULL = { tokens: 500, context_size: 8192, frequency: 3, latency_p95_ms: 120, health: "ok" };
+
+  it("keeps the last known value when a delta metric is null or absent", () => {
+    const g = build();
+    g.applyDelta([{ id: "a1", kind: "agent", label: "a", metrics: FULL }], []);
+    g.applyDelta(
+      [{ id: "a1", kind: "agent", label: "a", metrics: { context_size: null, tokens: 900 } }],
+      [],
+    );
+    const m = g.graph.getNodeAttribute("a1", "metrics");
+    expect(m.context_size).toBe(8192);
+    expect(m.tokens).toBe(900);
+    expect(m.frequency).toBe(3);
+    expect(m.latency_p95_ms).toBe(120);
+  });
+
+  it("updates a model node's metrics live from a delta carrying its viewport id", () => {
+    const g = build();
+    g.applyDelta([{ id: "m1", kind: "model", label: "ignored", metrics: FULL }], []);
+    expect(g.graph.getNodeAttribute("m1", "metrics")).toMatchObject({ tokens: 500, health: "ok" });
+    expect(g.graph.getNodeAttribute("m1", "label")).toBe("gpt-4o deployment");
+    expect(g.graph.getNodeAttribute("m1", "sizeUnknown")).toBe(false);
+  });
+
+  it("parses the new kinds and the facets", () => {
+    const facets = {
+      environment: "production",
+      cloud: "government",
+      tags: ["pii", "tier-1"],
+      health: "failing",
+      error_rate: 0.25,
+      error_count: 5,
+      last_error_at: "2026-11-24T10:00:00Z",
+      bogus: "dropped",
+    };
+    for (const kind of ["service", "tool", "mcp_server"]) {
+      const parsed = parseNode({ id: `x-${kind}`, kind, label: kind, facets });
+      expect(parsed?.kind).toBe(kind);
+      expect(parsed?.facets).toEqual({
+        environment: "production",
+        cloud: "government",
+        tags: ["pii", "tier-1"],
+        health: "failing",
+        error_rate: 0.25,
+        error_count: 5,
+        last_error_at: "2026-11-24T10:00:00Z",
+      });
+    }
+    expect(parseNode({ id: "a", kind: "agent" })?.facets).toBeUndefined();
+  });
+
+  it("treats an unknown kind as a generic node with its label, never dropping it", () => {
+    const parsed = parseNode({ id: "z1", kind: "quantum_widget", label: "Widget" });
+    expect(parsed).toMatchObject({ id: "z1", kind: "quantum_widget", label: "Widget" });
+    const g = new MapGraph();
+    g.upsertNodes([parsed as ViewportNode]);
+    g.restyle();
+    expect(g.graph.getNodeAttribute("z1", "label")).toBe("Widget");
+    expect(g.graph.getNodeAttribute("z1", "shape")).toBe("circle");
+  });
+
+  it("sizes by error rate from the facets, and marks a node without one unknown", () => {
+    const g = new MapGraph();
+    g.upsertNodes([
+      node("s1", "service", "api", { facets: { error_rate: 0.5 } }),
+      node("s2", "service", "db", { facets: { error_rate: 0.1 } }),
+      node("s3", "tool", "search"),
+    ]);
+    g.restyle({ ...g.getSettings(), sizeBy: "error_rate" });
+    expect(g.sizeRange("error_rate")).toEqual({ min: 0.1, max: 0.5 });
+    expect(g.graph.getNodeAttribute("s1", "size")).toBeGreaterThan(
+      g.graph.getNodeAttribute("s2", "size"),
+    );
+    expect(g.graph.getNodeAttribute("s3", "sizeUnknown")).toBe(true);
+  });
+
+  it("does not create service, tool, mcp_server or unknown nodes from a delta", () => {
+    const g = build();
+    const before = g.nodeCount;
+    g.applyDelta(
+      ["service", "tool", "mcp_server", "alien"].map((kind) => ({
+        id: `new-${kind}`,
+        kind,
+        label: "new",
+        metrics: FULL,
+      })),
+      [],
+    );
+    expect(g.nodeCount).toBe(before);
   });
 });
