@@ -226,6 +226,14 @@ def test_match_rejects_bad_offsets_without_echoing(start: int, end: int) -> None
     assert str(excinfo.value) == "match offsets must satisfy 0 <= start < end"
 
 
+def test_match_rejects_unknown_category_and_confidence() -> None:
+    # A detector bug (typo'd category) fails at the source, not silently in the engine.
+    with pytest.raises(ValueError, match="known detected category"):
+        Match(start=0, end=3, category="bogus", confidence="low", detector_id="x")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="high, medium or low"):
+        Match(start=0, end=3, category="guid", confidence="certain", detector_id="x")  # type: ignore[arg-type]
+
+
 # --- Finding ------------------------------------------------------------------------------
 
 

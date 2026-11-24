@@ -151,6 +151,7 @@ nav:
       - runbooks/migration.md
       - runbooks/dr.md
       - runbooks/security.md
+      - runbooks/content-classification.md
       - runbooks/new-user-test.md
   - Walkthroughs:
       - walkthroughs/admin.md

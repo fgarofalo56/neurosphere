@@ -218,7 +218,7 @@ None. No external call is made; the model-based detector is not built (GD-6).
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | | dispatched 2026-11-24 (s-8c3599) |
+| 1 | merged | worktree-agent-aed05eadf2560d344 @ 69df73fb | review APPROVE; gates green (content_detectors + import boundaries + tests/docs 228 passed); orchestrator added Match category/confidence validation and pulled the mkdocs nav line forward from item 8 |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |

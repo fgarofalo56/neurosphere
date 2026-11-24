@@ -199,6 +199,10 @@ class Match:
     def __post_init__(self) -> None:
         if self.start < 0 or self.end <= self.start:
             raise ValueError("match offsets must satisfy 0 <= start < end")
+        if self.category not in ALL_CATEGORIES:
+            raise ValueError("match category is not a known detected category")
+        if self.confidence not in get_args(Confidence):
+            raise ValueError("match confidence must be high, medium or low")
 
 
 _DetectorId = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,63}$")]
