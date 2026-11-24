@@ -230,6 +230,8 @@ Per-edge traffic volume or an edge aggregate; service and tool telemetry aggrega
 | 5 | in-progress | prp-74-item-5 | sonnet | | 2026-11-23 | authz negatives, timings evidence; PRP-100 shipped |
 | 6 | todo | | sonnet | | | Tier-2, runbook, Tier-3, close-out |
 
+Review 2026-11-23 (one pass, application code of items 1-4 at 99ffd7d8): APPROVED, no blockers; 73 targeted tests run by the reviewer. Non-blocking, for follow-up issues: (1) `health` filter matches measured health only, so an inferred-failing node is excluded by `health=failing` (document in runbook); (2) topology scan stops silently at `NS_MAP_TOPOLOGY_SCAN_PAGES` (20 pages, 10k entities), changes beyond are never notified; (3) gateway retries a failed topology snapshot every pump tick, no backoff; (4) topology entries with no snapshot are evicted only by the 1024 cap; (5) `search.py` calls private `_Builder._filter`/`_in_domain`; (6) search holds up to 50k matches in memory per request; (7) neighbourhood has no filters (as specified). Item 5 (tests and evidence only) is checked by the orchestrator at merge.
+
 Plan approved 2026-11-23: waves A(1) -> B(2 || 4) -> C(3) -> D(5) -> one review pass over 1-5 -> E(6). New node kinds are returned by default (the current UI drops unknown kinds safely; PRP-77 draws them). Integration branch `prp-74-live-map-topology-backend` from main 13153e53.
 
 ## Completion note (filled at ship)
