@@ -9850,6 +9850,221 @@
         "title": "IgnoredItem",
         "type": "object"
       },
+      "ImpactBudget": {
+        "additionalProperties": false,
+        "description": "A request budget; it can only lower the server ceilings, never raise them.",
+        "properties": {
+          "max_accessors": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Accessors"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Ms"
+          }
+        },
+        "title": "ImpactBudget",
+        "type": "object"
+      },
+      "ImpactLevel": {
+        "additionalProperties": false,
+        "properties": {
+          "depth": {
+            "minimum": 1.0,
+            "title": "Depth",
+            "type": "integer"
+          },
+          "edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Edge Ids",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/ImpactNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "depth",
+          "nodes",
+          "edge_ids"
+        ],
+        "title": "ImpactLevel",
+        "type": "object"
+      },
+      "ImpactNode": {
+        "additionalProperties": false,
+        "description": "A dependent of the failing node. People are only ever the pseudonym (id and label).",
+        "properties": {
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "health": {
+            "default": "unknown",
+            "enum": [
+              "ok",
+              "degraded",
+              "failing",
+              "unknown"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "health_inferred": {
+            "default": false,
+            "title": "Health Inferred",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "agent",
+              "sub_agent",
+              "model",
+              "source",
+              "service",
+              "tool",
+              "mcp_server",
+              "cluster"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "domain_id"
+        ],
+        "title": "ImpactNode",
+        "type": "object"
+      },
+      "ImpactRequest": {
+        "additionalProperties": false,
+        "description": "Body of ``POST /domains/{domain_id}/impact`` (PRP-74 item 3).",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImpactBudget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_depth": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "node_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id"
+        ],
+        "title": "ImpactRequest",
+        "type": "object"
+      },
+      "ImpactResponse": {
+        "additionalProperties": false,
+        "description": "Dependents of ``node_id`` (what relies on it), grouped by distance.",
+        "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/neurosphere_api__map__models__Coverage"
+          },
+          "direction": {
+            "const": "dependents",
+            "default": "dependents",
+            "title": "Direction",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/ImpactLevel"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncation_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "node_budget",
+                  "edge_budget",
+                  "scan_limit",
+                  "traversal_incomplete",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncation Reason"
+          }
+        },
+        "required": [
+          "domain_id",
+          "node_id",
+          "levels",
+          "truncated",
+          "coverage"
+        ],
+        "title": "ImpactResponse",
+        "type": "object"
+      },
       "ImportItemResult": {
         "additionalProperties": false,
         "properties": {
@@ -30783,6 +30998,60 @@
         "summary": "Status",
         "tags": [
           "lifecycle"
+        ]
+      }
+    },
+    "/api/v1/map/domains/{domain_id}/impact": {
+      "post": {
+        "operationId": "post_impact_api_v1_map_domains__domain_id__impact_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Impact",
+        "tags": [
+          "map"
         ]
       }
     },

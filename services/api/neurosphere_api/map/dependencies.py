@@ -22,6 +22,7 @@ from fastapi import Request
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogRepository, GraphQuery
+from neurosphere_core.catalog.graph.access import AccessEngine
 from neurosphere_core.errors import DependencyTransientError
 
 from neurosphere_api.map.settings import MapSettings
@@ -33,6 +34,7 @@ __all__ = [
     "MAX_VIEWPORT_NODES",
     "Clock",
     "ViewportLimits",
+    "get_access_engine",
     "get_aggregate_reader",
     "get_clock",
     "get_graph",
@@ -101,6 +103,11 @@ def get_pseudonymizer(request: Request) -> PrincipalPseudonymizer:
             "pseudonymizer is not configured", reason="pseudonymizer_unconfigured"
         )
     return pseudonymizer
+
+
+def get_access_engine(request: Request) -> AccessEngine:
+    """The PRP-73 ``AccessEngine`` over the map's own repository and graph (tests override it)."""
+    return AccessEngine(get_repository(request), get_graph(request))
 
 
 def get_limits(request: Request) -> ViewportLimits:
