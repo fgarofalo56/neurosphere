@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-74-live-map-topology-backend](active/PRP-74-live-map-topology-backend.md) | P0 | 5/6 (83%) | in-progress 1, merged 5 | sonnet / sonnet | required |
+| [PRP-74-live-map-topology-backend](active/PRP-74-live-map-topology-backend.md) | P0 | 6/6 (100%) | merged 6 | sonnet / sonnet | required |
 
 ## Backlog
 
