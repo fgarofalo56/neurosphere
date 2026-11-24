@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-77-live-map-filters-search-and-incident-view](active/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 8/9 (88%) | merged 8 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
@@ -23,7 +21,7 @@
 | [PRP-108-agent-approval-gate-and-platform-control-actions](backlog/PRP-108-agent-approval-gate-and-platform-control-actions.md) | P0 | 108 | PRP-99-governance-contracts-a, PRP-105-policy-engine-core, PRP-103-interaction-capture-policy-and-edge | PRP-105-policy-engine-core (backlog); PRP-103-interaction-capture-policy-and-edge (backlog) | opus / opus | required |
 | [PRP-109-north-star-scenario-acceptance](backlog/PRP-109-north-star-scenario-acceptance.md) | P0 | 109 | PRP-100-telemetry-tool-service-identity-and-aggregates, PRP-101-sensitive-information-detectors-and-redaction, PRP-102-encrypted-interaction-store-and-retention, PRP-103-interaction-capture-policy-and-edge, PRP-104-interaction-explorer-and-export, PRP-105-policy-engine-core, PRP-106-policy-violations-and-exceptions-ui, PRP-107-notification-channels-and-subscriptions, PRP-108-agent-approval-gate-and-platform-control-actions, PRP-82-hosted-profile-everything-on, PRP-63-delivery-pipeline-to-hosted, PRP-71-realistic-seeded-world-and-demo-profile | PRP-101-sensitive-information-detectors-and-redaction (backlog); PRP-102-encrypted-interaction-store-and-retention (backlog); PRP-103-interaction-capture-policy-and-edge (backlog); PRP-104-interaction-explorer-and-export (backlog); PRP-105-policy-engine-core (backlog); PRP-106-policy-violations-and-exceptions-ui (backlog); PRP-107-notification-channels-and-subscriptions (backlog); PRP-108-agent-approval-gate-and-platform-control-actions (backlog); PRP-82-hosted-profile-everything-on (backlog) | opus / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector, PRP-78-copilot-graph-timeline-and-recommender-tools, PRP-80-copilot-docs-retrieval-and-groundedness | PRP-80-copilot-docs-retrieval-and-groundedness (backlog) | sonnet / sonnet | required |
-| [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-84-ingest-throughput-and-autoscaling, PRP-82-hosted-profile-everything-on, PRP-77-live-map-filters-search-and-incident-view, PRP-109-north-star-scenario-acceptance | PRP-67-hosted-environment-hardening (backlog); PRP-84-ingest-throughput-and-autoscaling (backlog); PRP-82-hosted-profile-everything-on (backlog); PRP-77-live-map-filters-search-and-incident-view (active); PRP-109-north-star-scenario-acceptance (backlog) | sonnet / sonnet | required |
+| [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-84-ingest-throughput-and-autoscaling, PRP-82-hosted-profile-everything-on, PRP-77-live-map-filters-search-and-incident-view, PRP-109-north-star-scenario-acceptance | PRP-67-hosted-environment-hardening (backlog); PRP-84-ingest-throughput-and-autoscaling (backlog); PRP-82-hosted-profile-everything-on (backlog); PRP-109-north-star-scenario-acceptance (backlog) | sonnet / sonnet | required |
 | [PRP-76-catalog-registration-completeness](backlog/PRP-76-catalog-registration-completeness.md) | P1 | 67 | PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-sensitivity-questions, PRP-108-agent-approval-gate-and-platform-control-actions, PRP-105-policy-engine-core | PRP-108-agent-approval-gate-and-platform-control-actions (backlog); PRP-105-policy-engine-core (backlog) | sonnet / sonnet | required |
 | [PRP-79-agent-sdk-and-telemetry-onboarding](backlog/PRP-79-agent-sdk-and-telemetry-onboarding.md) | P1 | 70 | PRP-58-hosted-data-path-and-environment-hardening | - | sonnet / sonnet | required |
 | [PRP-80-copilot-docs-retrieval-and-groundedness](backlog/PRP-80-copilot-docs-retrieval-and-groundedness.md) | P1 | 73 | PRP-78-copilot-graph-timeline-and-recommender-tools, PRP-60-search-indexing-hardening | - | opus / sonnet | required |
@@ -83,6 +81,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [PRP-77-live-map-filters-search-and-incident-view](shipped/PRP-77-live-map-filters-search-and-incident-view.md) | 2026-11-24 | #405 |
 | [PRP-100-telemetry-tool-service-identity-and-aggregates](shipped/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | 2026-11-23 | #391 |
 | [PRP-74-live-map-topology-backend](shipped/PRP-74-live-map-topology-backend.md) | 2026-11-23 | #402 |
 | [PRP-78-copilot-graph-timeline-and-recommender-tools](shipped/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | 2026-11-23 | #383 |
