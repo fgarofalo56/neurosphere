@@ -54,6 +54,8 @@ interface FakeRenderer {
   setEdgeOffset: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
   fit: ReturnType<typeof vi.fn>;
+  centreOn: ReturnType<typeof vi.fn>;
+  setImpact: ReturnType<typeof vi.fn>;
   theme: unknown;
   setReducedMotion: ReturnType<typeof vi.fn>;
   kill: ReturnType<typeof vi.fn>;
@@ -74,6 +76,8 @@ vi.mock("./renderer", () => ({
         update: vi.fn(),
         setEdgeOffset: vi.fn(),
         select: vi.fn(),
+        centreOn: vi.fn(),
+        setImpact: vi.fn(),
         setReducedMotion: vi.fn(),
         kill: vi.fn(),
       };
@@ -309,10 +313,11 @@ afterEach(() => {
 describe("appearance", () => {
   it("gives every kind a distinct shape, from the PRP-04 icon set", () => {
     expect(new Set(NODE_KINDS.map((k) => kindShape(k))).size).toBe(NODE_KINDS.length);
-    // The canvas registers six SDF shapes today; service, tool and MCP server share the nearest
-    // registered one until renderer.ts adds theirs (kind stays visible as text everywhere).
-    const registered = NODE_KINDS.filter((k) => !["service", "tool", "mcp_server"].includes(k));
-    expect(new Set(registered.map((k) => kindSigmaShape(k))).size).toBe(registered.length);
+    // The canvas registers nine SDF shapes (renderer.ts): every kind has its own sigma slug.
+    expect(new Set(NODE_KINDS.map((k) => kindSigmaShape(k))).size).toBe(NODE_KINDS.length);
+    expect(kindSigmaShape("service")).toBe("pentagon");
+    expect(kindSigmaShape("tool")).toBe("cross");
+    expect(kindSigmaShape("mcp_server")).toBe("octagon");
     expect(kindShape("service")).toBe("pentagon");
     expect(kindShape("tool")).toBe("cross");
     expect(kindShape("mcp_server")).toBe("octagon");

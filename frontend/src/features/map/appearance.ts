@@ -49,25 +49,20 @@ export function kindShape(kind: NodeKind): NodeShape | "triangle" | ExtraShape {
 }
 
 /** sigma shape slug registered by the renderer for each container shape. */
-export type SigmaShapeSlug = "circle" | "hexagon" | "diamond" | "square" | "rectangle" | "triangle";
+export type SigmaShapeSlug =
+  | "circle"
+  | "hexagon"
+  | "diamond"
+  | "square"
+  | "rectangle"
+  | "triangle"
+  | "pentagon"
+  | "cross"
+  | "octagon";
 
-/**
- * The canvas registers six SDF shapes (renderer.ts). Until it registers the extra ones, a
- * service, tool or MCP server draws with the nearest registered slug; its own shape is the one
- * the legend shows, and its kind is always stated in text (panel, table, legend).
- */
-const EXTRA_SIGMA_FALLBACK: Readonly<Record<ExtraShape, SigmaShapeSlug>> = {
-  pentagon: "hexagon",
-  octagon: "circle",
-  cross: "diamond",
-};
-
+/** The canvas registers one SDF shape per slug (renderer.ts); only the pill maps to another slug. */
 export function sigmaShapeSlug(shape: NodeShape | "triangle" | ExtraShape): SigmaShapeSlug {
-  if (shape === "pill") return "rectangle";
-  if (shape === "pentagon" || shape === "octagon" || shape === "cross") {
-    return EXTRA_SIGMA_FALLBACK[shape];
-  }
-  return shape;
+  return shape === "pill" ? "rectangle" : shape;
 }
 
 export function kindSigmaShape(kind: NodeKind): SigmaShapeSlug {

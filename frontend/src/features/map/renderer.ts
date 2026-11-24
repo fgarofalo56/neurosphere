@@ -23,6 +23,11 @@ export interface RendererCallbacks {
   onActivate(id: string): void;
 }
 
+export interface ImpactHighlight {
+  readonly nodeIds: readonly string[];
+  readonly edgeIds: readonly string[];
+}
+
 export interface MapRenderer {
   /** The graph's nodes, edges or attributes changed: re-index and redraw. */
   update(): void;
@@ -31,6 +36,13 @@ export interface MapRenderer {
   select(id: string | null): void;
   /** Zoom-to-fit: reset the camera so the whole graph is in view. */
   fit(): void;
+  /** Move the camera to a node (instant under reduced motion). Nodes must be indexed first. */
+  centreOn(id: string): void;
+  /**
+   * Incident view: highlight these nodes and edges (ring and heavier edge, not colour alone) and
+   * dim everything else. null restores the normal view. Ids not on screen are ignored.
+   */
+  setImpact(impact: ImpactHighlight | null): void;
   /** Reduced motion: no camera inertia or animated zoom. */
   setReducedMotion(reduced: boolean): void;
   kill(): void;
@@ -55,12 +67,76 @@ float sdf_hexagon(vec2 uv, float size) {
   };
 }
 
+/** Regular pentagon (service). `size` is the circumradius; the SDF takes the apothem. */
+function sdfPentagon(): SDFShape {
+  return {
+    name: "pentagon",
+    glsl: /*glsl*/ `
+float sdf_pentagon(vec2 uv, float size) {
+  const vec3 k = vec3(0.809016994, 0.587785252, 0.726542528);
+  float r = size * 0.809016994;
+  vec2 p = vec2(abs(uv.x), uv.y);
+  p -= 2.0 * min(dot(vec2(-k.x, k.y), p), 0.0) * vec2(-k.x, k.y);
+  p -= 2.0 * min(dot(vec2(k.x, k.y), p), 0.0) * vec2(k.x, k.y);
+  p -= vec2(clamp(p.x, -r * k.z, r * k.z), r);
+  return length(p) * sign(p.y);
+}
+`,
+    uniforms: [],
+    inradiusFactor: 0.809016994,
+  };
+}
+
+/** Regular octagon (MCP server). */
+function sdfOctagon(): SDFShape {
+  return {
+    name: "octagon",
+    glsl: /*glsl*/ `
+float sdf_octagon(vec2 uv, float size) {
+  const vec3 k = vec3(-0.9238795325, 0.3826834323, 0.4142135623);
+  float r = size * 0.9238795325;
+  vec2 p = abs(uv);
+  p -= 2.0 * min(dot(vec2(k.x, k.y), p), 0.0) * vec2(k.x, k.y);
+  p -= 2.0 * min(dot(vec2(-k.x, k.y), p), 0.0) * vec2(-k.x, k.y);
+  p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
+  return length(p) * sign(p.y);
+}
+`,
+    uniforms: [],
+    inradiusFactor: 0.9238795325,
+  };
+}
+
+/** Plus-shaped cross (tool): two bars, each a third as thick as it is long. */
+function sdfCross(): SDFShape {
+  return {
+    name: "cross",
+    glsl: /*glsl*/ `
+float sdf_cross(vec2 uv, float size) {
+  vec2 p = abs(uv);
+  p = (p.y > p.x) ? p.yx : p;
+  vec2 b = vec2(size, size * 0.33);
+  vec2 q = p - b;
+  float k = max(q.y, q.x);
+  vec2 w = (k > 0.0) ? q : vec2(b.y - p.x, -k);
+  return sign(k) * length(max(w, vec2(0.0)));
+}
+`,
+    uniforms: [],
+    inradiusFactor: 0.5,
+  };
+}
+
 const SOURCE_ASPECT_RATIO = 1.6;
 /** Up to this many nodes every label is shown; beyond it sigma thins labels by density. */
 const LABEL_ALL_NODES_MAX = 200;
 /** Opacity of everything outside the hovered node's neighbourhood. */
 const DIM_NODE_OPACITY = 0.35;
 const DIM_EDGE_OPACITY = 0.12;
+/** Incident view: the ring around an affected node and the extra weight of an affected edge. */
+const IMPACT_RING_WIDTH = 3;
+const IMPACT_EDGE_SIZE_FACTOR = 2.5;
+const IMPACT_NODE_SIZE_FACTOR = 1.4;
 
 export function createMapRenderer(
   container: HTMLElement,
@@ -73,6 +149,9 @@ export function createMapRenderer(
   /** Neighbourhood highlighted by hover (nodes and edges), cleared on leave. */
   let hoverNodes: string[] = [];
   let hoverEdges: string[] = [];
+  /** Nodes and edges currently carrying the incident-view state. */
+  let impactNodes: string[] = [];
+  let impactEdges: string[] = [];
 
   const labelStyle = (n: number): { threshold: number; density: number } =>
     n <= LABEL_ALL_NODES_MAX ? { threshold: 0, density: 3 } : { threshold: 8, density: 0.35 };
@@ -80,6 +159,10 @@ export function createMapRenderer(
   let appliedLabels = initialLabels;
 
   const sigma = new Sigma(graph, container, {
+    // Incident view state: set by setImpact, read by the style functions below.
+    customNodeState: { isAffected: false },
+    customEdgeState: { isAffected: false },
+    customGraphState: { hasImpact: false },
     primitives: {
       nodes: {
         shapes: [
@@ -89,6 +172,9 @@ export function createMapRenderer(
           sdfSquare(),
           sdfRectangle({ aspectRatio: SOURCE_ASPECT_RATIO }),
           sdfTriangle(),
+          sdfPentagon(),
+          sdfCross(),
+          sdfOctagon(),
         ],
       },
       edges: {
@@ -106,11 +192,17 @@ export function createMapRenderer(
       nodes: {
         x: { attribute: "x" },
         y: { attribute: "y" },
-        size: { attribute: "size", defaultValue: 4 },
+        // An affected node is also drawn larger, so the incident highlight survives even where the
+        // backdrop ring is not painted (it is colour-independent either way).
+        size: (attrs, state) => {
+          const own = typeof attrs["size"] === "number" ? attrs["size"] : 4;
+          return state.isAffected ? own * IMPACT_NODE_SIZE_FACTOR : own;
+        },
         color: { attribute: "color", defaultValue: theme.health.unknown.icon },
         // Everything outside the hovered neighbourhood dims while a node is hovered.
         opacity: (attrs, state, graphState) => {
           const own = typeof attrs["opacity"] === "number" ? attrs["opacity"] : 1;
+          if (graphState.hasImpact) return state.isAffected ? own : own * DIM_NODE_OPACITY;
           return graphState.hasHovered && !state.isHovered && !state.isHighlighted
             ? own * DIM_NODE_OPACITY
             : own;
@@ -132,7 +224,7 @@ export function createMapRenderer(
         // The health halo: always on for small graphs (the halo attribute), emphasised on
         // hover and selection.
         backdropVisibility: {
-          whenState: ["isHovered", "isHighlighted"],
+          whenState: ["isHovered", "isHighlighted", "isAffected"],
           then: "visible",
           else: { attribute: "halo", defaultValue: "hidden" },
         },
@@ -142,13 +234,20 @@ export function createMapRenderer(
         backdropPadding: 6,
         backdropArea: "node",
         backdropBorderColor: theme.edge.observed,
-        backdropBorderWidth: { whenState: ["isHovered", "isHighlighted"], then: 2, else: 0 },
+        // An affected node carries a thick ring: the incident highlight is a shape, not a colour.
+        backdropBorderWidth: (_attrs, state) =>
+          state.isAffected ? IMPACT_RING_WIDTH : state.isHovered || state.isHighlighted ? 2 : 0,
       },
       edges: {
-        size: { attribute: "size", defaultValue: 1 },
+        size: (attrs, state) => {
+          const own = typeof attrs["size"] === "number" ? attrs["size"] : 1;
+          return state.isAffected ? own * IMPACT_EDGE_SIZE_FACTOR : own;
+        },
         color: { attribute: "color", defaultValue: theme.edge.inferred },
-        opacity: (_attrs, state, graphState) =>
-          graphState.hasHovered && !state.isHighlighted ? DIM_EDGE_OPACITY : 1,
+        opacity: (_attrs, state, graphState) => {
+          if (graphState.hasImpact) return state.isAffected ? 1 : DIM_EDGE_OPACITY;
+          return graphState.hasHovered && !state.isHighlighted ? DIM_EDGE_OPACITY : 1;
+        },
         visibility: { whenState: "isHidden", then: "hidden", else: "visible" },
       },
     },
@@ -220,6 +319,24 @@ export function createMapRenderer(
       }
       selected = id;
       if (id !== null && graph.hasNode(id)) sigma.setNodeState(id, { isHighlighted: true });
+    },
+    centreOn(id) {
+      const d = graph.hasNode(id) ? sigma.getNodeDisplayData(id) : undefined;
+      if (d === undefined) return;
+      void sigma.getCamera().animate({ x: d.x, y: d.y }, { duration: reduced ? 0 : 300 });
+    },
+    setImpact(impact) {
+      for (const id of impactNodes) {
+        if (graph.hasNode(id)) sigma.setNodeState(id, { isAffected: false });
+      }
+      for (const id of impactEdges) {
+        if (graph.hasEdge(id)) sigma.setEdgeState(id, { isAffected: false });
+      }
+      impactNodes = impact === null ? [] : impact.nodeIds.filter((id) => graph.hasNode(id));
+      impactEdges = impact === null ? [] : impact.edgeIds.filter((id) => graph.hasEdge(id));
+      for (const id of impactNodes) sigma.setNodeState(id, { isAffected: true });
+      for (const id of impactEdges) sigma.setEdgeState(id, { isAffected: true });
+      sigma.setGraphState({ hasImpact: impact !== null });
     },
     fit() {
       void sigma.getCamera().reset({ duration: reduced ? 0 : 300 });

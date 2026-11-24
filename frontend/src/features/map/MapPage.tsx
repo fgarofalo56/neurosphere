@@ -34,6 +34,9 @@ import { MAP_TABLE_PATH } from "../map-table/paths";
 import { FilterBar } from "./filters/FilterBar";
 import { useMapFilters } from "./filters/useMapFilters";
 import { createBurstDebouncer, fetchViewport, useLiveUpdates, useViewport } from "./hooks";
+import { ImpactPanel } from "./impact/ImpactPanel";
+import { IMPACT_STRINGS } from "./impact/strings";
+import { useIncidentView } from "./impact/useIncidentView";
 import { Legend } from "./Legend";
 import { MapCanvas, type MapCanvasHandle } from "./MapCanvas";
 import { SearchBox } from "./search/SearchBox";
@@ -228,14 +231,18 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     setTopCursor(data.next_cursor);
   }, [initial.data, initial.isPlaceholderData, filterSignature, mapGraph, applyPage]);
 
+  // Incident view: dependents of one node, highlighted and listed, kept current by live changes.
+  const incident = useIncidentView({ domainId, mapGraph, selectedId, version });
+  const { handleDelta: incidentOnDelta, onTopology: incidentOnTopology } = incident;
+
   const onDelta = useCallback(
     (delta: DeltaMessage) => {
       if (revokedRef.current) return; // a delta racing the 4403 close must not re-add nodes
-      mapGraph.applyDelta(delta.nodes, delta.edges);
+      incidentOnDelta(delta.nodes, () => mapGraph.applyDelta(delta.nodes, delta.edges));
       setLiveCoverage(delta.coverage);
       bump();
     },
-    [mapGraph, bump],
+    [mapGraph, bump, incidentOnDelta],
   );
   // A topology notice means nodes or edges came or went. Refetch the top level and every cluster
   // the user has opened, once per burst. Pages are merged (upsert), so camera, selection and the
@@ -294,8 +301,9 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     (message: TopologyMessage) => {
       if (revokedRef.current || message.domain_id !== domainId) return;
       if (message.refetch || message.truncated) topologyBurst.trigger();
+      incidentOnTopology();
     },
-    [domainId, topologyBurst],
+    [domainId, topologyBurst, incidentOnTopology],
   );
 
   const live = useLiveUpdates(domainId, initial.isSuccess, onDelta, onTopology);
@@ -396,7 +404,8 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     [client, domainId, expansions, mapGraph, applyPage],
   );
 
-  // Search jump: select, open the panel and centre once the redraw (which indexes new nodes) ran.
+  // Search jump (also the impact list's "show on map"): select, open the panel and centre once the
+  // redraw (which indexes new nodes) ran.
   const jumper = useJumpToNode({
     domainId,
     mapGraph,
@@ -484,6 +493,23 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
 
         {initial.isError ? <ErrorState error={initial.error} /> : null}
 
+        {incident.banner !== null && !revoked ? (
+          <MessageBar intent="warning" data-testid="impact-banner">
+            <MessageBarBody>
+              {IMPACT_STRINGS.bannerText(incident.banner.label)}{" "}
+              <Button
+                size="small"
+                onClick={() => incident.banner !== null && incident.start(incident.banner.nodeId)}
+              >
+                {IMPACT_STRINGS.bannerShow}
+              </Button>{" "}
+              <Button size="small" appearance="subtle" onClick={incident.dismissBanner}>
+                {IMPACT_STRINGS.bannerDismiss}
+              </Button>
+            </MessageBarBody>
+          </MessageBar>
+        ) : null}
+
         <div role="status" data-testid="live-status" data-live-status={live.status}>
           <StatusPill
             label={`${LIVE_TEXT[live.status]}${live.lastErrorCode !== null ? ` (${live.lastErrorCode})` : ""}`}
@@ -552,6 +578,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           reducedMotion={motion.reduced}
           animateEdges={animateEdges}
           selectedId={selectedId}
+          impact={incident.highlight}
           theme={theme}
           fitRequest={fitRequest}
           onSelect={setSelectedId}
@@ -570,6 +597,20 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
             budgetExhausted={budgetExhausted}
             onExpand={(id) => void expandCluster(id)}
             onClose={() => setSelectedId(null)}
+            onShowImpact={() => incident.start(selectedId)}
+            impactShown={incident.target === selectedId}
+          />
+        ) : null}
+        {incident.target !== null ? (
+          <ImpactPanel
+            rootLabel={incident.targetLabel}
+            depth={incident.depth}
+            onDepth={incident.setDepth}
+            state={incident.state}
+            loading={incident.loading}
+            failed={incident.failed}
+            onClear={incident.clear}
+            onShowOnMap={(row) => jumper.jump(incident.matchFor(row))}
           />
         ) : null}
         <Legend
