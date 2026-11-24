@@ -11,7 +11,7 @@ import { useUiStyle } from "../../design-system";
 import { browserScheduler, createEdgeAnimator, type Scheduler } from "./animator";
 import type { MapGraph } from "./mapGraph";
 import { DEFAULT_MAP_THEME, type MapTheme } from "./mapTheme";
-import { createMapRenderer, type MapRenderer } from "./renderer";
+import { createMapRenderer, type ImpactHighlight, type MapRenderer } from "./renderer";
 import { STRINGS } from "./strings";
 
 const useStyles = makeStyles({
@@ -42,13 +42,9 @@ export interface MapCanvasHandle {
   centreOn(nodeId: string): void;
 }
 
-/**
- * Camera centring is provided by the renderer (`centreOn`, which honours reduced motion there).
- * It is declared optional here until renderer.ts (owned by another work item) gains the method.
- */
-type CentringRenderer = MapRenderer & { centreOn?: (id: string) => void };
-
 export interface MapCanvasProps {
+  /** Incident view: the nodes and edges to highlight (everything else dims); null for none. */
+  readonly impact?: ImpactHighlight | null;
   readonly ref?: Ref<MapCanvasHandle>;
   readonly mapGraph: MapGraph;
   /** Bumped whenever the graph changed; triggers a redraw. */
@@ -80,6 +76,7 @@ export function MapCanvas({
   reducedMotion,
   animateEdges,
   selectedId,
+  impact = null,
   theme = DEFAULT_MAP_THEME,
   fitRequest = 0,
   onSelect,
@@ -100,8 +97,8 @@ export function MapCanvas({
     ref,
     () => ({
       centreOn: (nodeId: string) => {
-        const renderer = rendererRef.current as CentringRenderer | null;
-        if (renderer === null || renderer.centreOn === undefined) return;
+        const renderer = rendererRef.current;
+        if (renderer === null) return;
         renderer.update(); // new nodes must be indexed before their display position exists
         renderer.centreOn(nodeId);
       },
@@ -158,6 +155,16 @@ export function MapCanvas({
   useEffect(() => {
     rendererRef.current?.select(selectedId);
   }, [selectedId, ready]);
+
+  // Incident highlight. Re-applied after every redraw (version) so a node that arrived with a
+  // refetch or delta is picked up, and after a renderer rebuild (ready). A renderer that never
+  // saw an impact is not touched when there is none.
+  const impactUsedRef = useRef(false);
+  useEffect(() => {
+    if (impact === null && !impactUsedRef.current) return;
+    impactUsedRef.current = impact !== null;
+    rendererRef.current?.setImpact(impact);
+  }, [impact, ready, version]);
 
   useEffect(() => {
     rendererRef.current?.setReducedMotion(reducedMotion);

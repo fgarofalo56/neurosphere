@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { HealthIndicator, NodeTypeIcon } from "../../design-system";
 import { useCardClasses } from "./card";
 import { isCoreKind as isCore, kindToNodeType } from "./appearance";
+import { IMPACT_STRINGS } from "./impact/strings";
 import { formatMetric } from "./Legend";
 import type { MapNodeAttributes } from "./mapGraph";
 import { HEALTH_LABEL, SIZE_METRIC_LABEL, STRINGS, kindLabel } from "./strings";
@@ -40,6 +41,10 @@ export interface NodePanelProps {
   readonly budgetExhausted: boolean;
   readonly onExpand: (clusterId: string) => void;
   readonly onClose: () => void;
+  /** Start the incident view for this node; omitted where the view is not offered. */
+  readonly onShowImpact?: () => void;
+  /** The incident view already shows this node's dependents. */
+  readonly impactShown?: boolean;
 }
 
 /** "Recent errors" as text: count, rate and last time; unknown is said, never shown as zero. */
@@ -104,6 +109,8 @@ export function NodePanel({
   budgetExhausted,
   onExpand,
   onClose,
+  onShowImpact,
+  impactShown = false,
 }: NodePanelProps): ReactElement {
   const styles = useStyles();
   const card = useCardClasses();
@@ -169,6 +176,22 @@ export function NodePanel({
           ) : null}
           {expansion?.failed === true ? <p role="alert">{STRINGS.loadMoreFailed}</p> : null}
           {budgetExhausted ? <p>{STRINGS.budgetReached}</p> : null}
+        </div>
+      ) : null}
+
+      {!isCluster && onShowImpact !== undefined ? (
+        <div>
+          <Button
+            appearance="primary"
+            disabled={impactShown}
+            onClick={onShowImpact}
+            data-testid="show-impact"
+          >
+            {IMPACT_STRINGS.showImpact}
+          </Button>
+          <p className={styles.muted}>
+            <small>{IMPACT_STRINGS.shortcut}</small>
+          </p>
         </div>
       ) : null}
 
