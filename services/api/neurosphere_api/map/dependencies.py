@@ -24,6 +24,8 @@ from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogRepository, GraphQuery
 from neurosphere_core.errors import DependencyTransientError
 
+from neurosphere_api.map.settings import MapSettings
+
 __all__ = [
     "DEFAULT_EDGE_BUDGET",
     "DEFAULT_NODE_BUDGET",
@@ -35,6 +37,7 @@ __all__ = [
     "get_clock",
     "get_graph",
     "get_limits",
+    "get_map_settings",
     "get_pseudonymizer",
     "get_repository",
 ]
@@ -103,6 +106,12 @@ def get_pseudonymizer(request: Request) -> PrincipalPseudonymizer:
 def get_limits(request: Request) -> ViewportLimits:
     limits = getattr(request.app.state, "map_viewport_limits", None)
     return limits if isinstance(limits, ViewportLimits) else ViewportLimits()
+
+
+def get_map_settings(request: Request) -> MapSettings:
+    """``app.state.map_settings`` when set (tests), else the ``NS_MAP_*`` environment."""
+    settings = getattr(request.app.state, "map_settings", None)
+    return settings if isinstance(settings, MapSettings) else MapSettings()
 
 
 def _utc_now() -> datetime:

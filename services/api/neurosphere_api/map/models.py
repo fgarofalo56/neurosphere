@@ -20,8 +20,12 @@ __all__ = [
     "NodeKind",
     "NodeMetrics",
     "Provenance",
+    "SearchCounts",
+    "SearchMatch",
+    "SearchResponse",
     "TruncationReason",
     "ViewportEdge",
+    "ViewportFilters",
     "ViewportNode",
     "ViewportResponse",
 ]
@@ -76,6 +80,16 @@ class Coverage(_Model):
     as_of: str | None = None
 
 
+class ViewportFilters(_Model):
+    """The filters a response was built with (PRP-74 item 2); each list is empty when unused."""
+
+    node_type: list[str] = Field(default_factory=list)
+    tag: list[str] = Field(default_factory=list)
+    environment: list[str] = Field(default_factory=list)
+    cloud: list[str] = Field(default_factory=list)
+    health: list[str] = Field(default_factory=list)
+
+
 class ViewportResponse(_Model):
     domain_id: str
     nodes: list[ViewportNode]
@@ -84,3 +98,30 @@ class ViewportResponse(_Model):
     truncation_reason: TruncationReason | None = None
     next_cursor: str | None = None
     coverage: Coverage
+    filters_applied: ViewportFilters | None = None
+    """Set only when at least one filter was given; ``null`` means the unfiltered view."""
+
+
+class SearchMatch(_Model):
+    node: ViewportNode
+    cluster_id: str
+    """The cluster (``kind:<entity_type>``) that holds this node when the viewport is clustered."""
+
+
+class SearchCounts(_Model):
+    """Counts over ALL matches scanned (not only the returned page); each sums to the total."""
+
+    by_kind: dict[str, int] = Field(default_factory=dict)
+    by_health: dict[str, int] = Field(default_factory=dict)
+    by_environment: dict[str, int] = Field(default_factory=dict)
+    by_cloud: dict[str, int] = Field(default_factory=dict)
+
+
+class SearchResponse(_Model):
+    domain_id: str
+    matches: list[SearchMatch]
+    counts: SearchCounts
+    truncated: bool
+    truncation_reason: TruncationReason | None = None
+    coverage: Coverage
+    filters_applied: ViewportFilters | None = None
