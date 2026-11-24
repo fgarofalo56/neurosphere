@@ -10,6 +10,7 @@ import time.
 
 from typing import Literal
 
+from neurosphere_contracts.map.v1.map_node_facets import MapNodeFacets
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
@@ -25,7 +26,9 @@ __all__ = [
     "ViewportResponse",
 ]
 
-NodeKind = Literal["person", "agent", "sub_agent", "model", "source", "cluster"]
+NodeKind = Literal[
+    "person", "agent", "sub_agent", "model", "source", "service", "tool", "mcp_server", "cluster"
+]
 Health = Literal["ok", "degraded", "failing", "unknown"]
 Provenance = Literal["observed", "declared", "inferred"]
 CoverageState = Literal["complete", "partial", "delayed", "unknown"]
@@ -53,6 +56,10 @@ class ViewportNode(_Model):
     cluster_id: str | None = None
     member_count: int | None = Field(default=None, ge=0)
     metrics: NodeMetrics = Field(default_factory=NodeMetrics)
+    facets: MapNodeFacets | None = None
+    health_inferred: bool = False
+    """True when ``metrics.health`` and ``facets.health`` come from the dependents fallback rule
+    (PRP-74 clarification 5), not from a measured subject point. Never ``ok`` when inferred."""
 
 
 class ViewportEdge(_Model):
