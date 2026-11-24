@@ -6997,6 +6997,26 @@
         "title": "EntityPage",
         "type": "object"
       },
+      "EntityType": {
+        "enum": [
+          "person",
+          "agent",
+          "agent_version",
+          "model_deployment",
+          "grounding_source",
+          "tool",
+          "service",
+          "domain",
+          "owner",
+          "policy",
+          "recommendation",
+          "run_reference",
+          "grant",
+          "mcp_server"
+        ],
+        "title": "EntityType",
+        "type": "string"
+      },
       "EntityVersion": {
         "minimum": 1.0,
         "title": "EntityVersion",
@@ -7014,6 +7034,17 @@
         ],
         "title": "Environment",
         "type": "string"
+      },
+      "ErrorCount": {
+        "minimum": 0.0,
+        "title": "ErrorCount",
+        "type": "integer"
+      },
+      "ErrorRate": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "ErrorRate",
+        "type": "number"
       },
       "EstimatedCost": {
         "additionalProperties": false,
@@ -10585,6 +10616,161 @@
           "locked"
         ],
         "title": "Lock",
+        "type": "object"
+      },
+      "MapNodeFacets": {
+        "additionalProperties": false,
+        "description": "Filterable facets and health of one live-map node (PRP-70 item 4). A fragment schema without schema_version, like actions/v1/target-ref, so the API and the frontend share one shape. Every member is nullable or defaulted, so none is required. Unknown numeric values (error_rate, error_count, request_count) are null, never 0: a zero means a measured zero.",
+        "properties": {
+          "cloud": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cloud"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "discovery": {
+            "anyOf": [
+              {
+                "enum": [
+                  "declared",
+                  "telemetry",
+                  "import",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Discovery"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntityType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "error_count": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorRate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "health": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ok",
+                  "degraded",
+                  "failing",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Health"
+          },
+          "last_error_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lifecycle_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LifecycleStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_count": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_geography": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResidencyGeography"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sensitivity_categories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SensitivityCategories"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "MapNodeFacets",
         "type": "object"
       },
       "MappedControlView": {
@@ -15673,6 +15859,11 @@
         "title": "RequestAccepted",
         "type": "object"
       },
+      "RequestCount": {
+        "minimum": 0.0,
+        "title": "RequestCount",
+        "type": "integer"
+      },
       "RequestCreate": {
         "description": "Ask for a lifecycle action. ``export`` is not a job (it runs synchronously).",
         "properties": {
@@ -20703,6 +20894,21 @@
             ],
             "title": "Cluster Id"
           },
+          "facets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MapNodeFacets"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "health_inferred": {
+            "default": false,
+            "title": "Health Inferred",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -20714,6 +20920,9 @@
               "sub_agent",
               "model",
               "source",
+              "service",
+              "tool",
+              "mcp_server",
               "cluster"
             ],
             "title": "Kind",

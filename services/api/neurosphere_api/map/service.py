@@ -26,14 +26,18 @@ import base64
 import binascii
 import logging
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Final
+from typing import Any, Final
 
 from neurosphere_contracts.catalog.v1.agent import Agent
 from neurosphere_contracts.catalog.v1.grounding_source import GroundingSource
+from neurosphere_contracts.catalog.v1.mcp_server import McpServer
 from neurosphere_contracts.catalog.v1.model_deployment import ModelDeployment
 from neurosphere_contracts.catalog.v1.person import Person
+from neurosphere_contracts.catalog.v1.service import Service
+from neurosphere_contracts.catalog.v1.tool import Tool
 from neurosphere_contracts.query.v1.budget import Budget
 from neurosphere_core.aggregates import (
     AggregateReader,
@@ -54,8 +58,16 @@ from neurosphere_core.paging import PageRequest
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.map.dependencies import Clock, ViewportLimits
+from neurosphere_api.map.facets import (
+    DERIVED_RELATIONS,
+    DERIVED_SUBJECT_TYPES,
+    cluster_facets,
+    derive_health,
+    facets_of,
+)
 from neurosphere_api.map.models import (
     Coverage,
+    Health,
     NodeKind,
     NodeMetrics,
     Provenance,
@@ -64,8 +76,15 @@ from neurosphere_api.map.models import (
     ViewportNode,
     ViewportResponse,
 )
+from neurosphere_api.map.settings import MapSettings
 
-__all__ = ["SCAN_PAGE_CAP", "VIEWPORT_ENTITY_TYPES", "build_viewport", "provenance_of"]
+__all__ = [
+    "SCAN_PAGE_CAP",
+    "VIEWPORT_ENTITY_TYPES",
+    "build_viewport",
+    "model_deployment_ids",
+    "provenance_of",
+]
 
 SCAN_PAGE_CAP: Final = 20
 """At most 20 x 500 entities are scanned for the cluster counts of one request."""
@@ -80,18 +99,32 @@ _SUBJECT_TIMEOUT_S: Final = 5.0
 
 logger = logging.getLogger(__name__)
 
-VIEWPORT_ENTITY_TYPES: Final = ("agent", "grounding_source", "model_deployment", "person")
+VIEWPORT_ENTITY_TYPES: Final = (
+    "agent",
+    "grounding_source",
+    "model_deployment",
+    "person",
+    "service",
+    "tool",
+    "mcp_server",
+)
 _KIND: Final[dict[str, NodeKind]] = {
     "person": "person",
     "agent": "agent",
     "model_deployment": "model",
     "grounding_source": "source",
+    "service": "service",
+    "tool": "tool",
+    "mcp_server": "mcp_server",
 }
 _CLUSTER_LABEL: Final[dict[str, str]] = {
     "person": "People",
     "agent": "Agents",
     "model_deployment": "Models",
     "grounding_source": "Sources",
+    "service": "Services",
+    "tool": "Tools",
+    "mcp_server": "MCP servers",
 }
 _LIVE: Final = ("draft", "active", "deprecated")
 
@@ -102,6 +135,24 @@ def provenance_of(edge: PresentedEdge) -> Provenance:
     if edge.status == "inferred":
         return "inferred"
     return "observed" if edge.evidence_ids else "declared"
+
+
+def _raw(value: Any) -> Any:
+    return getattr(value, "root", value)
+
+
+def model_deployment_ids(
+    entities: Sequence[CatalogEntity], provider: str, model_name: str
+) -> list[str]:
+    """Ids of every model deployment of ``(provider, model_name)`` (case-insensitive) among
+    ``entities``: maps a ``model:<provider>/<model>`` delta id to the viewport's model node ids."""
+    want = (provider.strip().lower(), model_name.strip().lower())
+    return sorted(
+        e.id
+        for e in entities
+        if isinstance(e, ModelDeployment)
+        and (str(_raw(e.provider)).strip().lower(), e.model_name.strip().lower()) == want
+    )
 
 
 def _encode_cursor(entity_type: str, repo_cursor: str) -> str:
@@ -152,7 +203,9 @@ class _Builder:
         pseudonymizer: PrincipalPseudonymizer,
         clock: Clock,
         limits: ViewportLimits,
+        settings: MapSettings | None = None,
     ) -> None:
+        self.settings = settings or MapSettings()
         self.scope = scope
         self.domain_id = domain_id
         self.repository = repository
@@ -224,9 +277,14 @@ class _Builder:
 
     @staticmethod
     def subject_key_of(entity: CatalogEntity) -> str | None:
-        """Series key of an agent or model deployment; ``None`` for everything else."""
+        """Series key of an agent, model deployment, tool or service; ``None`` for everything
+        else. An MCP server never has a subject key (telemetry carries no MCP-server id)."""
         if isinstance(entity, Agent):
             return subject_series_key("agent", entity.id)
+        if isinstance(entity, Tool):
+            return subject_series_key("tool", entity.id)
+        if isinstance(entity, Service):
+            return subject_series_key("service", entity.id)
         if isinstance(entity, ModelDeployment):
             provider = str(getattr(entity.provider, "root", entity.provider))
             return subject_series_key("model", provider, entity.model_name)
@@ -241,21 +299,21 @@ class _Builder:
         reader = self.reader
         if not isinstance(reader, SubjectMetricsReader):
             return
-        keys: dict[SubjectKind, list[str]] = {"agent": [], "model": []}
+        kinds: tuple[SubjectKind, ...] = ("agent", "model", "tool", "service")
+        keys: dict[SubjectKind, list[str]] = {k: [] for k in kinds}
         owners: dict[str, list[str]] = {}
         for entity in entities:
             key = self.subject_key_of(entity)
             if key is None:
                 continue
-            kind: SubjectKind = "agent" if key.startswith("agent:") else "model"
-            keys[kind].append(key)
+            keys[_kind_of_key(key)].append(key)
             owners.setdefault(key, []).append(entity.id)
         if not owners:
             return
         end = bucket_start(self.clock(), "hour") + timedelta(hours=1)
         window = AggregateWindow(start=end - timedelta(hours=2), end=end)
         try:
-            for kind in ("agent", "model"):
+            for kind in kinds:
                 if not keys[kind]:
                     continue
                 found = await asyncio.wait_for(
@@ -277,10 +335,10 @@ class _Builder:
             self.subjects.clear()
             self.subjects_failed = True
 
-    def _metrics_of(self, entity_id: str) -> NodeMetrics:
+    def _metrics_of(self, entity_id: str, derived: Health | None = None) -> NodeMetrics:
         point = self.subjects.get(entity_id)
         if point is None:
-            return NodeMetrics()
+            return NodeMetrics() if derived is None else NodeMetrics(health=derived)
         tokens = [t for t in (point.input_tokens, point.output_tokens) if t is not None]
         return NodeMetrics(
             frequency=float(point.event_count),
@@ -289,13 +347,56 @@ class _Builder:
             health=health_for_error_rate(point.error_rate),
         )
 
-    def node_for(self, entity: CatalogEntity, cluster_id: str | None) -> ViewportNode:
+    def derived_health_for(
+        self, entities: Sequence[CatalogEntity], edges: Sequence[PresentedEdge]
+    ) -> dict[str, Health]:
+        """Fallback health of each service, tool or MCP server WITHOUT a subject point, from the
+        measured health of its direct dependents in this response (clarification 5).
+
+        Only non-``unknown`` results are returned; a node with a point is never in the result.
+        """
+        dependents: dict[str, list[str]] = {}
+        for edge in edges:
+            if edge.relation_type in DERIVED_RELATIONS:
+                dependents.setdefault(edge.target_id, []).append(edge.source_id)
+        out: dict[str, Health] = {}
+        for entity in entities:
+            if entity.entity_type not in DERIVED_SUBJECT_TYPES or entity.id in self.subjects:
+                continue
+            sources = sorted(set(dependents.get(entity.id, [])))
+            health = derive_health(
+                [self._measured_health(s) for s in sources],
+                failing_ratio=self.settings.derived_failing_ratio,
+                degraded_ratio=self.settings.derived_degraded_ratio,
+            )
+            if health != "unknown":
+                out[entity.id] = health
+        return out
+
+    def _measured_health(self, entity_id: str) -> Health:
+        point = self.subjects.get(entity_id)
+        return "unknown" if point is None else health_for_error_rate(point.error_rate)
+
+    def node_for(
+        self,
+        entity: CatalogEntity,
+        cluster_id: str | None,
+        derived: Health | None = None,
+    ) -> ViewportNode:
         kind = _KIND[entity.entity_type]
-        metrics = self._metrics_of(entity.id)
+        point = self.subjects.get(entity.id)
+        inferred = point is None and derived is not None
+        metrics = self._metrics_of(entity.id, derived)
+        facets = facets_of(entity, point, derived_health=derived)
         if isinstance(entity, Person):
             label = self.pseudonymizer.pseudonym(self.scope.customer_id, entity.id)
             return ViewportNode(
-                id=label, kind=kind, label=label, cluster_id=cluster_id, metrics=metrics
+                id=label,
+                kind=kind,
+                label=label,
+                cluster_id=cluster_id,
+                metrics=metrics,
+                facets=facets,
             )
         if isinstance(entity, ModelDeployment):
             window = entity.context_window_tokens
@@ -303,12 +404,18 @@ class _Builder:
                 update={"context_size": None if window is None else window.root}
             )
             label = entity.deployment_name
-        elif isinstance(entity, Agent | GroundingSource):
+        elif isinstance(entity, Agent | GroundingSource | Service | Tool | McpServer):
             label = entity.display_name.root
         else:  # pragma: no cover - only VIEWPORT_ENTITY_TYPES are ever listed
             label = entity.id
         return ViewportNode(
-            id=entity.id, kind=kind, label=label, cluster_id=cluster_id, metrics=metrics
+            id=entity.id,
+            kind=kind,
+            label=label,
+            cluster_id=cluster_id,
+            metrics=metrics,
+            facets=facets,
+            health_inferred=inferred,
         )
 
     def public_id(self, entity: CatalogEntity) -> str:
@@ -432,10 +539,13 @@ async def build_viewport(
     pseudonymizer: PrincipalPseudonymizer,
     clock: Clock,
     limits: ViewportLimits,
+    settings: MapSettings | None = None,
 ) -> ViewportResponse:
     nodes_cap = _clamp(node_budget, limits.max_nodes)
     edges_cap = _clamp(edge_budget, limits.max_edges)
-    b = _Builder(scope, domain_id, repository, graph, reader, pseudonymizer, clock, limits)
+    b = _Builder(
+        scope, domain_id, repository, graph, reader, pseudonymizer, clock, limits, settings
+    )
     reason: TruncationReason | None = None
     next_cursor: str | None = None
     entities: list[CatalogEntity]
@@ -462,6 +572,7 @@ async def build_viewport(
                             label=_CLUSTER_LABEL[entity_type],
                             cluster_id=cid,
                             member_count=counts[entity_type],
+                            facets=cluster_facets(),
                         )
                     )
             reason = "node_budget"
@@ -485,7 +596,8 @@ async def build_viewport(
         reason = "traversal_incomplete"
 
     await b.load_subjects(entities)
-    nodes = [b.node_for(e, member_cluster) for e in entities]
+    derived = b.derived_health_for(entities, list(edges_state.items.values()))
+    nodes = [b.node_for(e, member_cluster, derived.get(e.id)) for e in entities]
     nodes = _sub_agents(nodes, edges_state, public)
     nodes.extend(clusters)
     nodes = nodes[: limits.max_nodes]  # belt and braces: never above the hard ceiling
@@ -502,6 +614,17 @@ async def build_viewport(
         next_cursor=next_cursor,
         coverage=coverage,
     )
+
+
+def _kind_of_key(key: str) -> SubjectKind:
+    prefix = key.partition(":")[0]
+    if prefix == "agent":
+        return "agent"
+    if prefix == "tool":
+        return "tool"
+    if prefix == "service":
+        return "service"
+    return "model"
 
 
 def _edge_key(edge: PresentedEdge) -> str:

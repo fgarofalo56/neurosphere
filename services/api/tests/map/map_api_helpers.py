@@ -26,8 +26,16 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 )
 from neurosphere_api.map import ViewportLimits, build_router, get_clock
 from neurosphere_contracts.catalog.v1.delegates_to import DelegatesToRelation
+from neurosphere_contracts.catalog.v1.depends_on import DependsOnRelation
 from neurosphere_contracts.catalog.v1.invokes import InvokesRelation
-from neurosphere_core.aggregates import AggregateStatus, InMemoryAggregateStore
+from neurosphere_core.aggregates import (
+    AggregateStatus,
+    InMemoryAggregateStore,
+    SubjectPoint,
+    aggregate_doc_id,
+    bucket_start,
+    format_bucket,
+)
 from neurosphere_core.auth.scope import Role
 from neurosphere_core.catalog.graph import RepositoryGraphQuery
 from neurosphere_core.catalog.repo import InMemoryCatalogRepository
@@ -47,8 +55,15 @@ __all__ = [
     "agent_id",
     "make_api",
     "make_edge",
+    "mcp_doc",
     "model_doc",
     "person_doc",
+    "put_points",
+    "service_doc",
+    "service_id",
+    "subject_point",
+    "tool_doc",
+    "tool_id",
 ]
 
 PREFIX = "/api/v1/map"
@@ -93,6 +108,78 @@ def model_doc(name: str, domain: str = FINANCE) -> dict[str, Any]:
     return raw
 
 
+def service_id(name: str) -> str:
+    return f"{NS}:foundry:service:{name}"
+
+
+def tool_id(name: str) -> str:
+    return f"{NS}:foundry:tool:{name}"
+
+
+def service_doc(name: str, domain: str = FINANCE, **patch: Any) -> dict[str, Any]:
+    raw = example("service.minimal-and-typical.json")
+    raw.update(id=service_id(name), domain_id=domain, display_name=f"Service {name}")
+    raw.update(patch)
+    return raw
+
+
+def tool_doc(name: str, domain: str = FINANCE, **patch: Any) -> dict[str, Any]:
+    raw = example("tool.minimal-and-typical.json")
+    raw.update(id=tool_id(name), domain_id=domain, display_name=f"Tool {name}", mcp_server_ref=None)
+    raw.update(patch)
+    return raw
+
+
+def mcp_doc(name: str, domain: str = FINANCE, **patch: Any) -> dict[str, Any]:
+    raw = example("mcp_server.entra-streamable-http.json")
+    raw.update(
+        id=f"{NS}:neurosphere:mcp_server:{name}", domain_id=domain, display_name=f"Mcp {name}"
+    )
+    raw.update(patch)
+    return raw
+
+
+def subject_point(
+    key: str,
+    *,
+    events: int = 10,
+    error_count: int | None = 0,
+    error_rate: float | None = 0.0,
+    domain: str = FINANCE,
+) -> SubjectPoint:
+    """Newest-hour subject point for a series key (agent, model, tool or service)."""
+    start = format_bucket(bucket_start(NOW, "hour"))
+    return SubjectPoint(
+        id=aggregate_doc_id(CUSTOMER, domain, "subject", "hour", start, key),
+        customer_id=CUSTOMER,
+        domain_id=domain,
+        grain="hour",
+        bucket_start=start,
+        series_key=key,
+        watermark=start,
+        complete=True,
+        subject_kind=key.partition(":")[0],  # pyright: ignore[reportArgumentType]
+        subject_key=key,
+        event_count=events,
+        missing_duration_count=0,
+        unknown_outcome_count=0,
+        error_count=error_count,
+        error_rate=error_rate,
+        p95_ms=100,
+    )
+
+
+def put_points(api: "Api", *points: SubjectPoint) -> None:
+    async def run() -> None:
+        buckets: dict[tuple[str, str, str], list[SubjectPoint]] = {}
+        for p in points:  # replace_bucket replaces the whole bucket: group first
+            buckets.setdefault((p.customer_id, p.domain_id, p.bucket_start), []).append(p)
+        for (cust, domain, start), docs in buckets.items():
+            await api.store.replace_bucket(cust, domain, "hour", start, docs)
+
+    asyncio.run(run())
+
+
 def make_edge(
     name: str,
     source: str,
@@ -102,7 +189,7 @@ def make_edge(
     relation: str = "invokes",
     status_file: str = "inferred",
     **patch: Any,
-) -> InvokesRelation | DelegatesToRelation:
+) -> InvokesRelation | DelegatesToRelation | DependsOnRelation:
     raw = example(f"{relation}.{status_file}.json")
     raw.update(
         id=f"{NS}:neurosphere:{relation}:{name}",
@@ -113,8 +200,12 @@ def make_edge(
         etag="caller-etag",
     )
     raw.update(patch)
-    model = InvokesRelation if relation == "invokes" else DelegatesToRelation
-    return model.model_validate(raw)
+    models: dict[str, Any] = {
+        "invokes": InvokesRelation,
+        "delegates_to": DelegatesToRelation,
+        "depends_on": DependsOnRelation,
+    }
+    return models[relation].model_validate(raw)
 
 
 @dataclass
@@ -157,7 +248,7 @@ class Api:
             self.repo, FixtureSearchIndex(documents_from_catalog(stored))
         )
 
-    def seed_edges(self, *edges: InvokesRelation | DelegatesToRelation) -> None:
+    def seed_edges(self, *edges: InvokesRelation | DelegatesToRelation | DependsOnRelation) -> None:
         async def run() -> None:
             scope = await self.scope_of(STEWARD_BOTH)
             for edge in edges:
