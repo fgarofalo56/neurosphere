@@ -239,15 +239,23 @@ A 50k-node browser rendering mode or a raised client cap; client-side search ove
 | 4 | merged | item d02250b3, merge 2a5a4fbf (sonnet; first agent lost to an auth expiry, resumed from its snapshot) | 2026-11-24: typecheck + lint green, vitest 145/145, map e2e incl. map-perf 13/13. Includes renderer `centreOn` and SDF shapes for service/tool/mcp_server; shortcut `i`; ring + dim, not colour only |
 | 5 | merged | item 46428e36, merge f93f39a0 (sonnet) | 2026-11-24: typecheck + lint green, vitest 162/162, map e2e 12/12 (keyboard spec unchanged). Deviation: a search hit not on a loaded table page is reported as text, not fetched (table is cluster-paged, no merge path) |
 | 6 | merged | item 3894854a (sonnet) | 2026-11-24: typecheck + lint green, vitest 216/216 (incl. tests/mock-api), Playwright map-live + a11y + map specs 744 passed / 2 failed under load beside the item 7 lane (incident canvas highlight, axe /map ops-console high-contrast); both 3/3 in isolation. registry.test.ts +1 line (pins the handler list) |
-| 7 | in-progress | implementer worktree (sonnet), dispatched 2026-11-24 beside item 5 (deps 1-4 met, disjoint files) | interaction-latency measurement and evidence; orchestrator replaces the headless file with a headed run |
-| 8 | todo | | Tier-2, runbook, Tier-3, close-out |
+| 7 | merged | item 7fbccd04, merge b2eed3bd (sonnet) | 2026-11-24: typecheck + lint green, map-latency + map-perf 2/2 headless. Orchestrator headed run (RTX 5090) committed: all five p95 <= 200 ms with emitted node events; pointer-mode picking got 0 click samples (harness issue, #406) |
+| review | APPROVE | reviewer (sonnet), 2026-11-24 | one pass over `features/map/**` items 1-4 (map-table diff not read; item 5 covered by its 32 unit tests + unchanged keyboard spec). 6 non-blocking findings -> #406 |
+| 8 | merged | orchestrator, 2026-11-24 | runbook sections (usage, latency evidence), changelog fragment, 8 map/map-table visual baselines regenerated in Docker (86 passed), board, completion note. mkdocs and real-stack route lists already carried the runbook and `/map`, `/map/table`: no Tier-2 edit needed |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
+- Date, PR, merge commit: 2026-11-24, PR #405 (merge commit recorded on main at merge).
 - Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (headed and hosted re-measure via PRP-66):
-- Env vars for the operator (`NS_MAP_LATENCY_ENFORCE`, `NS_MAP_PERF_HEADED`):
-- Recorded interaction latency (p95 per interaction) and hardware:
-- Follow-up issue numbers:
-- Product check (can an SRE find the failing service and see its dependents highlighted without leaving the map?):
+  - Items 3 and 4 were sequenced as planned; camera centring (item 3) and the service/tool/MCP server canvas shapes (item 1) needed `renderer.ts`, which item 4 owns, so both landed in item 4.
+  - One value per filter: the server accepts up to 10, but the shared API client comma-joins arrays (multi-select needs a `frontend/src/api` change, #406).
+  - Table search: a hit on a loaded row is focused, one in a closed cluster is expanded and focused, one not on a loaded page is reported as text; the cluster-paged table has no neighbourhood merge path.
+  - Topology refetch upserts pages, so `node_removed` clears only on reload (#406).
+  - Latency spec: node hover, click and "Show impact" selection use the real input followed by the sigma node event raised from the page (`node_targeting` in the file), because the harness's pointer picking never selected a node on the 2000-node perf fixture (headless or headed). The spec skips in CI unless `NS_MAP_LATENCY_RUN=1` (11 to 26 min headless).
+  - Item 4's first implementer was cut off by an auth expiry; its uncommitted work was snapshotted and finished by a fresh agent.
+  - The single review pass read `features/map/**` only; `features/map-table/**` is covered by tests.
+- Descoped items: none.
+- OPEN gates (headed and hosted re-measure via PRP-66): the PRP-66 re-measure with GPU pointer picking (after the harness fix in #406) and against a real hosted API; the local real-stack check (`make demo-up`, filter, search, impact on the failing service, new agent without reload) was not run in this session; the stories are covered by the mock-API `map-live` e2e specs.
+- Env vars for the operator (`NS_MAP_LATENCY_ENFORCE`, `NS_MAP_PERF_HEADED`): `NS_MAP_PERF_HEADED`, `NS_MAP_LATENCY_WRITE_EVIDENCE`, `NS_MAP_LATENCY_ENFORCE`, `NS_MAP_LATENCY_SAMPLES`, `NS_MAP_LATENCY_NODE_INPUT`, `NS_MAP_LATENCY_RUN`; see `docs/runbooks/live-map.md` "Interaction-latency evidence".
+- Recorded interaction latency (p95 per interaction) and hardware: headed Chromium 159, ANGLE D3D11 on NVIDIA GeForce RTX 5090, AMD Ryzen 9 5950X (32 logical cores), 128 GiB RAM, Windows 11 (10.0.26300), 2000 nodes and 4000 edges, 30 samples each: pan 55.4 ms, wheel zoom 58.9 ms, node hover 86.6 ms, node click 104.2 ms, show impact 168.5 ms (max 218 ms). The 200 ms p95 target held on this hardware for all five; not enforced in the committed run. Nothing is claimed for 50k nodes.
+- Follow-up issue numbers: #406.
+- Product check (can an SRE find the failing service and see its dependents highlighted without leaving the map?): yes against the mock API: `map-live/incident.spec.ts` selects the failing service, shows impact, lists dependents by depth with health text, rings them on the canvas and updates on a live health flip; not yet run on the compose stack (OPEN above).

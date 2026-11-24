@@ -160,6 +160,78 @@ interaction latency. The v1.2 scope restates it, and this PRP implements the res
 
 This PRP does not claim the map meets the 50k-node or 200 ms criterion.
 
+## Using the map: filters, search and incident view (PRP-77)
+
+The client is `frontend/src/features/map/` (canvas) and `frontend/src/features/map-table/` (the
+accessible table). Both read the same state from the URL, so a filtered or searched view can be
+shared and survives a reload; the back button restores the previous filter.
+
+- **Filter bar** (`map-filter-bar`): node type, environment, cloud, health and a tag. Option lists
+  and their counts come from the search route's `counts` for the domain (one unfiltered
+  `q=&limit=1` call). A tag must match the catalog tag pattern `^[a-z0-9][a-z0-9._-]{0,62}$`; an
+  invalid tag is refused in the field and never sent. The UI sends one value per filter (the
+  server accepts up to 10). "N filters applied, clear all" resets them. A filter change refetches
+  the viewport and every open cluster with the same parameters.
+- **Search** (`map-search`, results `map-search-result`): at least 2 characters, debounced, the
+  previous request aborted on each keystroke, result count announced politely. Each row shows kind,
+  environment and health as text; a person shows the pseudonym label only. Choosing a result on
+  screen selects and centres it; one off screen is fetched with the neighbourhood route and merged
+  under the 2000-node client cap (the farthest unselected leaf nodes of the previous view are
+  dropped first; dropped and skipped counts are shown as text). In the table, a loaded row is
+  focused; a row in a closed cluster is expanded and focused; a row not on a loaded page is reported
+  as text ("Use Load more" or "not in the table with the current filters").
+- **Incident view**: "Show impact" (`show-impact`) in the node panel, or `i` with a node selected
+  (ignored while typing). It calls the impact route with depth 2 (control 1 to 5), rings every
+  dependent node and thickens its edges while dimming the rest, and lists the dependents by depth
+  with their health as text (`impact-list`, heading "Depends on this node"). Dependents not on
+  screen have a "show on map" action. While it is on, a live delta that turns the node or a
+  dependent `failing`, or a topology push, recomputes after 2 s (once per burst) and the polite
+  status (`impact-status`) says how many dependents are affected. If the selected node itself turns
+  `failing`, the view starts by itself; any other node that turns failing raises a banner
+  (`impact-banner`) instead, so the map never moves under the user. The table has the same toggle
+  (`I` on a focused row) with a depth column.
+- **Topology push**: a `topology` message with `refetch: true` triggers one refetch per burst
+  (400 ms quiet, 2 s maximum wait) of the top level and every open cluster, with the active
+  filters. Camera, selection and node positions are kept. Removed nodes disappear on the next
+  reload (issue #406).
+- **Live metrics**: a delta that leaves a metric null keeps the last known value; model nodes now
+  update live because delta ids match viewport ids.
+- **Node kinds**: service (pentagon), tool (cross) and MCP server (octagon) have their own shape
+  and text label in the legend; an unknown kind from a newer server is drawn as a generic node
+  with its raw kind name.
+
+## Interaction-latency evidence
+
+`frontend/tests/e2e/map-latency.spec.ts` renders the 2000-node, 4000-edge fixture with the same
+fake realtime gateway as `map-perf.spec.ts` and measures, 30 samples each by default, the time from
+the real input event to the second `requestAnimationFrame` after it (taken in the page with
+`performance.now()`, so no Playwright round-trip is counted) for pan, wheel zoom, node hover, node
+click and the "Show impact" highlight (until the first impact row is painted).
+
+| Variable | Effect |
+|---|---|
+| `NS_MAP_PERF_HEADED=1` | Headed Chromium on the real GPU (the only product evidence) |
+| `NS_MAP_LATENCY_WRITE_EVIDENCE=1` | Writes `docs/evidence/G07/map/interaction-latency.json`; otherwise the result goes to `temp/map-latency/` |
+| `NS_MAP_LATENCY_ENFORCE=1` | Fails the test unless every p95 is at most 200 ms |
+| `NS_MAP_LATENCY_SAMPLES` | More samples (minimum 30) |
+| `NS_MAP_LATENCY_NODE_INPUT` | `pointer` (real GPU picking) or `emit` (real input, then the sigma node event raised from the page). Headless defaults to `emit`; the pointer mode does not yet hit nodes on the perf fixture (#406) |
+| `NS_MAP_LATENCY_RUN=1` | Runs the spec in CI (skipped there by default: 11 to 26 minutes headless) |
+
+Re-measure on operator hardware (PRP-66), on a quiet machine. Until the harness picking in #406 is
+fixed, also set `NS_MAP_LATENCY_NODE_INPUT=emit` (the committed 2026-11-24 run did); otherwise the
+headed default `pointer` collects no click samples and the run fails:
+
+```bash
+cd frontend && NS_MAP_PERF_HEADED=1 NS_MAP_LATENCY_WRITE_EVIDENCE=1 NS_MAP_LATENCY_ENFORCE=1 NS_E2E_APP_PORT=5299 NS_MOCK_API_PORT=5300 pnpm exec playwright test map-latency
+```
+
+The file records `mode` (headed or headless), `browser` (name, version, `webgl_renderer`), `host`
+(OS, CPU model, logical cores, RAM, Node), `scene` (node and edge counts), per interaction
+`samples`, `p50_ms`, `p95_ms`, `max_ms`, `meets_target` and, where nodes were not picked by the
+pointer, `node_targeting`, plus `target_p95_ms` (200), overall `meets_target`, `enforced` and a
+plain-language `note`. A number is valid only for the hardware in the file and only for the 2000
+node view; it is never a 50k-node result.
+
 ## Settings
 
 All are read once at startup and range-checked; an invalid value fails startup. Unknown `NS_MAP_*`
@@ -205,4 +277,4 @@ These did not run and are reported open:
 Other known limits: topology notices stop at the scan cap; the inferred health rule only sees
 dependents present in the same response; per-edge traffic volume is not built (request count is
 per node); a metric delta carries `context_size: null`, meaning "not carried", and the client
-merge fix belongs to PRP-77.
+keeps the last known value (PRP-77). Client follow-ups from PRP-77 are in issue #406.
