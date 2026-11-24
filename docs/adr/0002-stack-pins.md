@@ -133,12 +133,12 @@ only when the package is dev-only (hypothesis, for example).
 | azure-identity | 1.27.0 | MIT | https://pypi.org/project/azure-identity/ | runtime; no EOL published locally; Dependabot tracks releases |
 | azure-monitor-opentelemetry | 1.8.12 | MIT | https://pypi.org/project/azure-monitor-opentelemetry/ | runtime; no EOL published locally; Dependabot tracks releases |
 | azure-monitor-opentelemetry-exporter | 1.0.0b59 | MIT | https://pypi.org/project/azure-monitor-opentelemetry-exporter/ | runtime; pre-release version; no support window recorded |
-| azure-search-documents | 12.0.0 | MIT | https://pypi.org/project/azure-search-documents/ | runtime; no EOL published locally; Dependabot tracks releases |
+| azure-search-documents | 12.1.0 | MIT | https://pypi.org/project/azure-search-documents/ | runtime; no EOL published locally; Dependabot tracks releases |
 | azure-storage-blob | 12.31.1 | MIT | https://pypi.org/project/azure-storage-blob/ | runtime; no EOL published locally; Dependabot tracks releases |
 | black | 26.10.1 | MIT | https://pypi.org/project/black/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | https://pypi.org/project/boolean-py/ | dev-only; no EOL published locally; Dependabot tracks releases |
-| boto3 | 1.44.3 | Apache-2.0 | https://pypi.org/project/boto3/ | runtime; no EOL published locally; Dependabot tracks releases |
-| botocore | 1.44.3 | Apache-2.0 | https://pypi.org/project/botocore/ | runtime; no EOL published locally; Dependabot tracks releases |
+| boto3 | 1.44.8 | Apache-2.0 | https://pypi.org/project/boto3/ | runtime; no EOL published locally; Dependabot tracks releases |
+| botocore | 1.44.9 | Apache-2.0 | https://pypi.org/project/botocore/ | runtime; no EOL published locally; Dependabot tracks releases |
 | cachecontrol | 0.14.4 | Apache-2.0 | https://pypi.org/project/cachecontrol/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | certifi | 2026.10.19 | MPL-2.0 | https://pypi.org/project/certifi/ | runtime; no EOL published locally; Dependabot tracks releases |
 | cffi | 2.1.1 | MIT-0 | https://pypi.org/project/cffi/ | runtime; no EOL published locally; Dependabot tracks releases |
@@ -149,7 +149,7 @@ only when the package is dev-only (hypothesis, for example).
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | https://pypi.org/project/cyclonedx-python-lib/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | datamodel-code-generator | 0.86.0 | MIT | https://pypi.org/project/datamodel-code-generator/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | https://pypi.org/project/defusedxml/ | dev-only; 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.162.2 | MIT | https://pypi.org/project/fastapi/ | runtime; 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.163.1 | MIT | https://pypi.org/project/fastapi/ | runtime; 0.x: minor releases may break; no support window recorded |
 | filelock | 4.2.4 | MIT | https://pypi.org/project/filelock/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | https://pypi.org/project/frozenlist/ | runtime; no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | https://pypi.org/project/genson/ | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -159,7 +159,7 @@ only when the package is dev-only (hypothesis, for example).
 | httpx | 0.28.1 | BSD-3-Clause | https://pypi.org/project/httpx/ | runtime; 0.x: minor releases may break; no support window recorded |
 | httpx2 | 2.16.0 | BSD-3-Clause | https://pypi.org/project/httpx2/ | runtime; no EOL published locally; Dependabot tracks releases |
 | httpx2-jsfetch | 1.0 | BSD-3-Clause | https://pypi.org/project/httpx2-jsfetch/ | runtime; PyPI license_expression, https://pypi.org/project/httpx2-jsfetch/1.0/, retrieved 2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22) |
-| hypothesis | 6.170.15 | MPL-2.0 | https://pypi.org/project/hypothesis/ | dev-only; dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
+| hypothesis | 6.170.17 | MPL-2.0 | https://pypi.org/project/hypothesis/ | dev-only; dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | https://pypi.org/project/idna/ | runtime; no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | https://pypi.org/project/inflect/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | iniconfig | 2.3.1 | MIT | https://pypi.org/project/iniconfig/ | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -229,15 +229,15 @@ only when the package is dev-only (hypothesis, for example).
 | psutil | 7.2.2 | BSD-3-Clause | https://pypi.org/project/psutil/ | runtime; no EOL published locally; Dependabot tracks releases |
 | py-serializable | 2.1.0 | Apache-2.0 | https://pypi.org/project/py-serializable/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | pycparser | 3.11 | BSD-3-Clause | https://pypi.org/project/pycparser/ | runtime; no EOL published locally; Dependabot tracks releases |
-| pydantic | 2.14.3 | MIT | https://pypi.org/project/pydantic/ | runtime; no EOL published locally; Dependabot tracks releases |
-| pydantic-core | 2.50.4 | MIT | https://pypi.org/project/pydantic-core/ | runtime; no EOL published locally; Dependabot tracks releases |
+| pydantic | 2.14.4 | MIT | https://pypi.org/project/pydantic/ | runtime; no EOL published locally; Dependabot tracks releases |
+| pydantic-core | 2.50.5 | MIT | https://pypi.org/project/pydantic-core/ | runtime; no EOL published locally; Dependabot tracks releases |
 | pydantic-settings | 2.16.3 | MIT | https://pypi.org/project/pydantic-settings/ | runtime; no EOL published locally; Dependabot tracks releases |
 | pygments | 2.21.0 | BSD-2-Clause | https://pypi.org/project/pygments/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | pyjwt | 2.15.1 | MIT | https://pypi.org/project/pyjwt/ | runtime; no EOL published locally; Dependabot tracks releases |
 | pyparsing | 3.3.3 | MIT | https://pypi.org/project/pyparsing/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | pyright | 1.1.414 | MIT | https://pypi.org/project/pyright/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | pytest | 9.2.0 | MIT | https://pypi.org/project/pytest/ | dev-only; no EOL published locally; Dependabot tracks releases |
-| pytest-asyncio | 1.4.1.post1 | Apache-2.0 | https://pypi.org/project/pytest-asyncio/ | dev-only; no EOL published locally; Dependabot tracks releases |
+| pytest-asyncio | 1.5.0 | Apache-2.0 | https://pypi.org/project/pytest-asyncio/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | python-dateutil | 2.9.0.post0 | Apache-2.0 AND BSD-3-Clause | https://pypi.org/project/python-dateutil/ | runtime; no EOL published locally; Dependabot tracks releases |
 | python-dotenv | 1.2.4 | BSD-3-Clause | https://pypi.org/project/python-dotenv/ | runtime; no EOL published locally; Dependabot tracks releases |
 | python-multipart | 0.0.32 | Apache-2.0 | https://pypi.org/project/python-multipart/ | runtime; 0.x: minor releases may break; no support window recorded |
@@ -250,7 +250,7 @@ only when the package is dev-only (hypothesis, for example).
 | respx | 0.23.1 | BSD-3-Clause | https://pypi.org/project/respx/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | rich | 15.0.0 | MIT | https://pypi.org/project/rich/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | rpds-py | 2026.9.1 | MIT | https://pypi.org/project/rpds-py/ | runtime; no EOL published locally; Dependabot tracks releases |
-| ruff | 0.17.5 | MIT | https://pypi.org/project/ruff/ | dev-only; 0.x: minor releases may break; no support window recorded |
+| ruff | 0.17.6 | MIT | https://pypi.org/project/ruff/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | s3transfer | 0.19.3 | Apache-2.0 | https://pypi.org/project/s3transfer/ | runtime; 0.x: minor releases may break; no support window recorded |
 | six | 1.17.0 | MIT | https://pypi.org/project/six/ | runtime; no EOL published locally; Dependabot tracks releases |
 | sortedcontainers | 2.4.0 | Apache-2.0 | https://pypi.org/project/sortedcontainers/ | dev-only; no EOL published locally; Dependabot tracks releases |
