@@ -1,6 +1,9 @@
 ---
 name: PRP-77-live-map-filters-search-and-incident-view
-status: backlog
+status: active
+started: 2026-11-24
+execution: session
+max_lanes: 2
 priority: P0
 order: 68
 review: required

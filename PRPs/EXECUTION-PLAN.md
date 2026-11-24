@@ -109,7 +109,7 @@ Gate before the next wave: An investigator can explore and export with reads aud
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-76: Catalog registration completeness](backlog/PRP-76-catalog-registration-completeness.md) | sonnet | required | PRP-108, PRP-105 | - | - | `prp-76-catalog-registration-completeness` |
-| 2 | [PRP-77: Live map filters, search and incident view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | sonnet | required | none | - | - | `prp-77-live-map-filters-search-incident` |
+| 2 | [PRP-77: Live map filters, search and incident view](active/PRP-77-live-map-filters-search-and-incident-view.md) | sonnet | required | none | - | - | `prp-77-live-map-filters-search-incident` |
 | 3 | [PRP-109: North-star scenario acceptance (the governance definition of done)](backlog/PRP-109-north-star-scenario-acceptance.md) | opus | required | PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82 | - | - | `prp-109-north-star-acceptance` |
 
 Gate before the next wave: The north-star scenario passes on the local stack (PRP-109); the hosted run is evidenced or recorded OPEN. Find an agent, catalog history and the map incident view work.
@@ -689,7 +689,7 @@ Context for this run: wave W24 of PRPs/EXECUTION-PLAN.md, branch prp-76-catalog-
 ### PRP-77 (W24)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-77-live-map-filters-search-and-incident-view.md
+/prp:prp-execute PRPs/active/PRP-77-live-map-filters-search-and-incident-view.md
 
 Context for this run: wave W24 of PRPs/EXECUTION-PLAN.md, branch prp-77-live-map-filters-search-incident cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
