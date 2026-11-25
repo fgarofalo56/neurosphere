@@ -548,3 +548,21 @@ def test_agent_identity_routes_declare_their_permissions() -> None:
         for m in e.methods
     }
     assert found == {(path, "PUT"): ("catalog.curate",), (path, "GET"): ("data.read",)}
+
+
+def test_capture_admin_routes_are_read_only_config_manage() -> None:
+    """PRP-103 item 5: the three capture admin routes are GET-only and need config.manage."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/interactions"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    perm = ("config.manage",)
+    assert found == {
+        (f"{base}/capture-policies", "GET"): perm,
+        (f"{base}/capture-policies/{{policy_id}}", "GET"): perm,
+        (f"{base}/capture-status", "GET"): perm,
+    }

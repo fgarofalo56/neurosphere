@@ -1,6 +1,8 @@
 import type { RouteObject } from "react-router";
 import type { NavItem } from "../../app/routes";
 import { AdminAuditPage } from "./audit/AdminAuditPage";
+import { CapturePage } from "./capture/CapturePage";
+import { ADMIN_CAPTURE_ROUTE } from "./capture/paths";
 import { DomainsPage } from "./domains/DomainsPage";
 import { PrincipalDetailPage } from "./identity/PrincipalDetailPage";
 import { PrincipalsPage } from "./identity/PrincipalsPage";
@@ -21,6 +23,8 @@ export const adminCoreRoutes: RouteObject[] = [
   { path: ADMIN_DOMAINS_ROUTE, element: <DomainsPage /> },
   { path: ADMIN_SYSTEM_ROUTE, element: <SystemPage /> },
   { path: ADMIN_AUDIT_ROUTE, element: <AdminAuditPage /> },
+  // PRP-103 item 5: read-only interaction capture.
+  { path: ADMIN_CAPTURE_ROUTE, element: <CapturePage /> },
 ];
 
 /**

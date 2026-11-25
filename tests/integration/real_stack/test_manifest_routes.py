@@ -222,7 +222,8 @@ def stack(compose_stack: None) -> Iterator[Stack]:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    assert len(manifest) == 58
+    # 59: PRP-103 item 5 added /admin/capture.
+    assert len(manifest) == 59
     assert sorted(calls.MANIFEST_CALLS) == sorted(manifest)
 
 
@@ -292,3 +293,14 @@ def test_own_access_and_role_mapping_views_are_served(stack: Stack) -> None:
     )
     assert mapping.status_code == 200, mapping.text
     assert mapping.json()["active"] is False
+
+
+def test_capture_status_is_served_and_off_by_default(stack: Stack) -> None:
+    """PRP-103 item 5: capture is off on the seeded stack; the view says why, never a 500."""
+    response = stack.client.get(
+        "/api/v1/admin/interactions/capture-status", headers=stack.tokens["operator"]
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["state"] == "off"
+    assert isinstance(body["off_reason"], str) and body["off_reason"], body

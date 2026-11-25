@@ -5,6 +5,7 @@
     "/actions/detail",
     "/actions/propose",
     "/admin/audit",
+    "/admin/capture",
     "/admin/catalog-import",
     "/admin/domains",
     "/admin/execution-control",

@@ -373,6 +373,14 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     url: `/map/table?domain_id=${encodeURIComponent(DOMAIN_MAP_INCIDENT)}&environment=production&cloud=commercial`,
     ready: "[role='treegrid']",
   },
+  // PRP-103 item 5: read-only interaction capture (Admin persona; the mock gates on `admin`).
+  {
+    pattern: "/admin/capture",
+    name: "admin interaction capture",
+    url: "/admin/capture",
+    ready: "[data-testid='capture-policy-row']",
+    persona: "admin",
+  },
 ];
 
 /** Representative routes for the theme pack matrix (home, a dashboard, map table, reports view, sandbox). */

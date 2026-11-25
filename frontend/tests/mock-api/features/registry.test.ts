@@ -3,6 +3,7 @@ import { handle as adminCore } from "./admin-core.ts";
 import { handle as adminSources } from "./admin-sources.ts";
 import { handle as agentMatch } from "./agent-match.ts";
 import { handle as audit } from "./audit.ts";
+import { handle as capture } from "./capture.ts";
 import { handle as catalog } from "./catalog.ts";
 import { handle as catalogAccess } from "./catalog-access.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
@@ -38,6 +39,7 @@ describe("feature mock registry", () => {
       roleMapping,
       adminSources,
       sourceStatus,
+      capture,
       adminCore,
       mapTopology,
     ]);

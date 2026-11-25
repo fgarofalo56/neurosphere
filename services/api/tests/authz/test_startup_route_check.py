@@ -32,6 +32,8 @@ _NAMES = ("NS_CLOUD", "NS_INGEST_PRODUCERS_FILE", "NS_SCAN_ENABLED", "NS_MCP_RES
 REALTIME_WS = "/api/v1/realtime/ws"
 ME_ACCESS = "/api/v1/me/access"
 ROLE_MAPPING = "/api/v1/admin/identity/role-mapping"
+CAPTURE_POLICIES = "/api/v1/admin/interactions/capture-policies"
+CAPTURE_STATUS = "/api/v1/admin/interactions/capture-status"
 
 
 @pytest.fixture(autouse=True)
@@ -107,3 +109,13 @@ def test_configured_composition_boots_clean(monkeypatch: pytest.MonkeyPatch) -> 
     assert websockets == set(GATEWAY_AUTHENTICATED_WEBSOCKETS) == {REALTIME_WS}
     paths = {(e.path, e.methods) for e in route_inventory(composed.app) if e.compliant}
     assert {(ME_ACCESS, ("GET",)), (ROLE_MAPPING, ("GET",))} <= paths
+
+
+def test_capture_admin_routes_boot_under_the_check() -> None:
+    """PRP-103 item 5: the read-only capture admin routes are mounted and compliant."""
+    app = main.create()
+    entries = {(e.path, e.methods): e for e in route_inventory(app)}
+    for path in (CAPTURE_POLICIES, f"{CAPTURE_POLICIES}/{{policy_id}}", CAPTURE_STATUS):
+        entry = entries[(path, ("GET",))]
+        assert entry.compliant
+        assert entry.permissions == ("config.manage",)
