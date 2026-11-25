@@ -224,7 +224,7 @@ None. No external call is made; the model-based detector is not built (GD-6).
 | 4 | merged | worktree-agent-a24fbf0e798524465 @ efeef77e + rework worktree-agent-a2ee628f73be779bf @ 2e567d50 | review CHANGES REQUIRED (cost model ignored nesting/wrapper repeats: accepted patterns 8-30x over the documented bound); one rework round (`too_deep`, depth 2, MAX_COMPLEXITY 160, honest bound 250 ms per 64 KiB per pattern, dictionary 2 s), confirmed by the orchestrator re-running the reviewer's patterns (all refused); 470 passed after merge |
 | 5 | merged | worktree-agent-a26ea51110909ef2c @ 7ea2f11f | review CHANGES REQUIRED (invisible-char strip list was a subset: variation selectors/tags split keys past detection); orchestrator fixed (full Default_Ignorable set) and confirmed: new 56-case test fails on the old engine, passes now; 599 passed + 1 strict xfail (chained assignment leak in item 2's detector, fix-forward lane in flight) |
 | 6 | in-progress | | dispatched 2026-11-24 (s-8c3599) |
-| 7 | verifying | worktree-agent-ac7fd81ae7a69e615 @ 719aea66 (merged to integration, review pending with item 6) | found a fail-open (forged Match offsets bypassing __post_init__); orchestrator fixed `engine._validated`, the 8 strict xfails now pass; 741 passed |
+| 7 | merged | worktree-agent-ac7fd81ae7a69e615 @ 719aea66 | review APPROVE (shared pass with item 6; engine rebuild now reuses checked offsets, f465c697) | found a fail-open (forged Match offsets bypassing __post_init__); orchestrator fixed `engine._validated`, the 8 strict xfails now pass; 741 passed |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
