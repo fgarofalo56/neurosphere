@@ -201,6 +201,99 @@ def test_every_validator_pattern_has_a_detected_generator() -> None:
             assert check_secret_free_text(_redact(credential)) == [], f"{name} via {kind}"
 
 
+#: Glue that must not hide a credential from the detectors (``secret_free_text`` has no left
+#: boundaries, so neither may the redaction that feeds it).
+_ADVERSARIAL_GLUE = ("x", "_", "ri", "di", " " * 20, "token_", '"', "'", "=")
+#: ``sk_``/``pk_`` and Slack ``xox`` keep a deliberate left word boundary (``task_``/``desk_``
+#: identifiers); the validator has no rule for them, so after a glued letter only the
+#: validator half of the parity check applies.
+_WORD_BOUNDARY_KINDS = frozenset({"sk_pk_underscore", "slack_xoxb"})
+
+
+@pytest.mark.parametrize("kind", sorted(CREDENTIAL_GENERATORS))
+def test_glued_credentials_redact_to_validator_clean_text(kind: str) -> None:
+    for seed in range(8):
+        credential = CREDENTIAL_GENERATORS[kind](random.Random(f"glue:{kind}:{seed}"))
+        secret = secret_value(kind, credential)
+        fragments = {secret[i : i + 6] for i in range(len(secret) - 5)}
+        for before in _ADVERSARIAL_GLUE:
+            for after in _ADVERSARIAL_GLUE:
+                text = before + credential + after
+                redacted = _redact(text)
+                label = f"{kind} seed {seed} glue {before!r}/{after!r}"
+                assert check_secret_free_text(redacted) == [], label
+                if kind in _WORD_BOUNDARY_KINDS and before[-1].isalnum():
+                    continue
+                survivors = [f for f in fragments if f in redacted and f not in before + after]
+                assert not survivors, f"{label}: a fragment survived"
+
+
+def _validator_probes() -> dict[str, list[str]]:
+    """Minimal strings each ``secret_free_text`` pattern rejects, built at runtime."""
+    a20 = "a" * 20
+    return {
+        "private key block": ["x" + "-----BEGIN " + "PRIVATE" + " KEY-----"],
+        "JWT": [
+            "x" + "eyJ" + "aaaa." + "bbbb.",
+            "token_" + "eyJ" + "hbGciOi." + "eyJzdWIi." + "c2ln",
+            "name.part." + "eyJ" + "hbGc." + "eyJz.",
+        ],
+        "bearer token": [
+            "auth_" + "bearer " + a20,
+            "Bear" + "er" + " " * 20 + "abcdefgh",
+            "xBEARER" + "\t" + "abc.def~",
+        ],
+        "AWS access key id": ["x" + "AK" + "IA" + "A" * 16],
+        "GitHub token": ["x" + "gh" + "p_" + a20, "x" + "github" + "_pat_" + a20],
+        "sk- key": [
+            "dis" + "k-" + "encryption-set-configuration",
+            "ris" + "k-" + "assessment-for-quarterly-review",
+            "s" + "k-" + "abcdefghijklmnopqrstuvwxyzabcd",
+        ],
+        "Azure storage or Service Bus key assignment": [
+            "x" + "Account" + "Key=" + "abcdefgh",
+            "x" + "SharedAccess" + "Key=" + "abcdefgh",
+        ],
+        "SAS signature": ["xsi" + "g=" + "a" * 30, "si" + "g=" + "%2B" * 7],
+        "URL with userinfo": [
+            "a://" + "u:" + "p@",
+            "https://u:" + "p" * 300 + "@h/",
+        ],
+    }
+
+
+def test_every_validator_pattern_is_redacted_from_minimal_probes() -> None:
+    """Iterates the validator dict, so a new ``secret_free_text`` pattern breaks this test."""
+    probes = _validator_probes()
+    assert set(probes) == set(SECRET_TEXT_PATTERNS)
+    for name, pattern in SECRET_TEXT_PATTERNS.items():
+        for probe in probes[name]:
+            assert re.search(pattern, probe), f"{name}: probe does not exercise the rule"
+            redacted = _redact(probe)
+            assert check_secret_free_text(redacted) == [], f"{name}: {len(probe)} chars"
+            assert _all_matches(redacted) == [], f"{name}: not idempotent"
+
+
+def test_sk_dash_lookalike_is_low_confidence() -> None:
+    text = "dis" + "k-" + "encryption-set-configuration"
+    (m,) = BY_ID["vendor_api_key"].find(text)
+    assert (m.start, m.end, m.confidence) == (2, len(text), "low")
+
+
+def test_jwt_after_a_dotted_name_is_found_whole() -> None:
+    jwt = CREDENTIAL_GENERATORS["jwt"](random.Random(11))
+    text = "name.part." + jwt
+    (m,) = BY_ID["jwt"].find(text)
+    assert (m.start, m.end) == (len("name.part."), len(text))
+
+
+def test_password_in_url_with_at_in_username() -> None:
+    credential = CREDENTIAL_GENERATORS["url_with_at_in_username"](random.Random(12))
+    host = credential.rsplit("@", 1)[1]
+    redacted = _redact(f"dsn {credential} end")
+    assert redacted == f"dsn {placeholder('url_with_credentials')}{host} end"
+
+
 def test_private_key_without_end_spans_to_end_of_text() -> None:
     credential = CREDENTIAL_GENERATORS["private_key_block_truncated"](random.Random(3))
     text = f"intro {credential}\ntrailing words"
@@ -284,6 +377,19 @@ _ADVERSARIAL = {
     "sk-repeat": " sk-" * (_ONE_MB // 4),
     "api-key-repeat": _rep("api-key:"),
     "base64-ish": ("Ab1+" * (_ONE_MB // 4)),
+    "bearer-long-blank": "bearer" + " " * _ONE_MB + "[",
+    "bearer-blank-repeat": _rep("bearer" + " " * 40),
+    "sk-long-run": "sk-" + "a" * _ONE_MB,
+    "sk-dash-repeat": "sk-" * (_ONE_MB // 3),
+    "sk-short-repeat": _rep("sk-" + "a" * 19 + " "),
+    "jwt-dot-run": "a." * (_ONE_MB // 2),
+    "jwt-segment-repeat": _rep("aaaaaaa."),
+    "jwt-head-no-dot": "eyJ" + "a" * _ONE_MB,
+    "jwt-short-head-repeat": _rep("eyJaaa.aaaa."),
+    "url-colon-at-run": "x://" + "x:x:x@@@" * (_ONE_MB // 8),
+    "url-user-no-colon": "x://" + "u@" * (_ONE_MB // 2),
+    "url-scheme-colon-repeat": _rep("x://x:x"),
+    "xsig-repeat": _rep("xsig="),
 }
 
 

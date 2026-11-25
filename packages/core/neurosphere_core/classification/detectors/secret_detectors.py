@@ -103,27 +103,51 @@ class PrivateKeyDetector(_Base):
 
 # --- jwt ---------------------------------------------------------------------------------
 
+#: Whole base64url runs (lookbehind: a run is entered once at its start; possessive runs never
+#: give back). The ``eyJ`` header is checked in code, so ``x``/``token_`` glued in front of a
+#: token does not hide it (``secret_free_text`` has no left boundary either).
 _JWT: Final = re.compile(
-    r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}(?:\.[A-Za-z0-9_-]*)?"
+    r"(?<![A-Za-z0-9_-])(?P<head>[A-Za-z0-9_-]{7,}+)\.[A-Za-z0-9_-]{4,}+(?:\.[A-Za-z0-9_-]*+)?"
 )
+_JWT_HEADER: Final = "eyJ"
+_JWT_MIN_HEADER_TAIL: Final = 4
 
 
 class JwtDetector(_Base):
-    """``eyJ`` header, payload and optional signature (base64url segments)."""
+    """``eyJ`` header, payload and optional signature (base64url segments).
+
+    The span starts at the first ``eyJ`` of the first segment that holds ``eyJ`` plus at least
+    4 more characters. A rejected candidate is retried from its second segment, so a JWT glued
+    after ``name.part.`` is still found; each segment is scanned a bounded number of times.
+    """
 
     detector_id = "jwt"
     kinds = frozenset({"jwt"})
     _category = "jwt"
 
     def find(self, text: str) -> tuple[Match, ...]:
-        return tuple(self._match(m.start(), m.end()) for m in _JWT.finditer(text))
+        out: list[Match] = []
+        pos = 0
+        while True:
+            m = _JWT.search(text, pos)
+            if m is None:
+                break
+            head = m.group("head")
+            at = head.find(_JWT_HEADER)
+            if at >= 0 and len(head) - at - len(_JWT_HEADER) >= _JWT_MIN_HEADER_TAIL:
+                out.append(self._match(m.start() + at, m.end()))
+                pos = m.end()
+            else:
+                pos = m.end("head") + 1
+        return tuple(out)
 
 
 # --- bearer_token ------------------------------------------------------------------------
 
 #: The span is the token only; the word ``Bearer`` is kept. The token class excludes ``[``, so
-#: ``Bearer [[ns-redacted:...]]`` matches neither here nor in ``secret_free_text``.
-_BEARER: Final = re.compile(r"(?i)\bbearer\s{1,16}(?P<token>[A-Za-z0-9._~+/=-]{8,})")
+#: ``Bearer [[ns-redacted:...]]`` matches neither here nor in ``secret_free_text``. No left
+#: boundary and an unbounded possessive blank run, mirroring ``secret_free_text`` exactly.
+_BEARER: Final = re.compile(r"(?i)bearer[ \t]++(?P<token>[A-Za-z0-9._~+/=-]{8,}+)")
 
 
 class BearerTokenDetector(_Base):
@@ -161,6 +185,10 @@ _GITHUB: Final = re.compile(r"gh[pousr]_[A-Za-z0-9_.-]{16,}|github_pat_[A-Za-z0-
 #: ``sk``/``pk`` keys need a left boundary (``task-``, ``disk-`` are not keys) and, checked in
 #: code, a digit or uppercase letter in the body (``pk_customer_order_id`` is a column name).
 _SK_PK: Final = re.compile(r"(?<![A-Za-z0-9])(?:sk|pk)[-_](?P<body>[A-Za-z0-9_-]{16,})")
+#: The ``secret_free_text`` ``sk-`` rule, mirrored exactly (no left boundary, no case gate), so
+#: no output that rule rejects survives. It also hits ``disk-encryption-...`` style slugs, so
+#: matches only this rule finds are reported at low confidence (accepted over-redaction).
+_SK_DASH: Final = re.compile(r"sk-[A-Za-z0-9_-]{20,}+")
 _SLACK: Final = re.compile(r"(?<![A-Za-z0-9])xox[bap][-_][A-Za-z0-9_-]{16,}")
 #: Header and query-parameter context (source 6). The value is spanned, the label kept; a bare
 #: 32-hex string is never matched. The value class excludes ``[`` (placeholders).
@@ -193,17 +221,31 @@ class VendorApiKeyDetector(_Base):
         )
         spans.update((m.start(), m.end()) for m in _SLACK.finditer(text))
         spans.update((m.start("value"), m.end("value")) for m in _KEY_CONTEXT.finditer(text))
-        return tuple(self._match(s, e) for s, e in sorted(spans))
+        low = {(m.start(), m.end()) for m in _SK_DASH.finditer(text)} - spans
+        out = [self._match(s, e) for s, e in spans]
+        out.extend(self._low(s, e) for s, e in low)
+        return tuple(sorted(out, key=lambda m: (m.start, m.end)))
+
+    def _low(self, start: int, end: int) -> Match:
+        return Match(
+            start=start,
+            end=end,
+            category=self._category,
+            confidence="low",
+            detector_id=self.detector_id,
+            sensitivity_category=self._sensitivity,
+        )
 
 
 # --- connection_string -------------------------------------------------------------------
 
 #: Anchors that carry key material. ``SharedAccessSignature sr=`` is the Event Hubs SAS token;
-#: ``sig=`` is a storage or Event Hubs SAS signature (Clarification 10).
+#: ``sig=`` is a storage or Event Hubs SAS signature (Clarification 10); like
+#: ``secret_free_text`` it has no left boundary (``xsig=...`` is still a signature).
 _CONN_ANCHOR: Final = re.compile(
     r"(?i)(?:AccountKey|SharedAccessKey|SharedAccessSignature)[ \t]{0,2}=[ \t]{0,2}"
     r"|SharedAccessSignature[ \t]{1,4}(?=sr=)"
-    r"|(?<![A-Za-z0-9])sig="
+    r"|sig="
 )
 #: Characters that end a connection-string token (whitespace, quotes, brackets, comma).
 _TOKEN_STOP: Final = frozenset(" \t\r\n\f\v\"'`<>()[]{},")
@@ -256,8 +298,12 @@ _SCHEME_CHARS: Final = frozenset(
 )
 _ASCII_LETTERS: Final = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 _SCHEME_MAX: Final = 32
-#: Userinfo after ``://``: optional user, ``:``, password up to the last ``@`` before a ``/``.
-_USERINFO: Final = re.compile(r"(?P<user>[^\s/@:]{0,256}):[^\s/]{1,256}@")
+#: Userinfo after ``://``: optional user (may hold a raw ``@``, as in the Azure Database for
+#: PostgreSQL single-server ``user@server`` login), ``:``, then the password through the last
+#: ``@`` before a ``/`` or whitespace. Unbounded but linear: the user run is possessive and
+#: stops at ``:``; the password run stops at ``/`` and whitespace, which end the region, and
+#: backtracks at most once over it to the last ``@``.
+_USERINFO: Final = re.compile(r"(?P<user>[^\s/:]*+):[^\s/]+@")
 
 
 class UrlWithCredentialsDetector(_Base):

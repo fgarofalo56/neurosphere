@@ -265,6 +265,17 @@ def _url_with_userinfo(rng: random.Random) -> str:
     return f"{scheme}://{user}:{secret}@{host}{tail}"
 
 
+def _url_with_at_in_username(rng: random.Random) -> str:
+    """Azure Database for PostgreSQL single-server login: ``user@servername`` (raw ``@``)."""
+    scheme = rng.choice(["postgresql", "postgres"])
+    server = _run(rng, _LOWER, 1) + _run(rng, _LOWER + _DIGITS, rng.randint(3, 20))
+    user = _run(rng, _LOWER, 1) + _run(rng, _ALNUM, rng.randint(2, 12))
+    secret = _mixed(rng, _ALNUM + "-._~!$*", rng.randint(8, 24))
+    suffix = rng.choice(["postgres.database.azure.com", "postgres.database.usgovcloudapi.net"])
+    tail = rng.choice(["/db", ":5432/app", ""])
+    return f"{scheme}://{user}@{server}:{secret}@{server}.{suffix}{tail}"
+
+
 def _assignment(rng: random.Random, label: str, value: str) -> str:
     style = rng.randrange(4)
     if style == 0:
@@ -348,6 +359,7 @@ CREDENTIAL_GENERATORS: Mapping[str, Callable[[random.Random], str]] = MappingPro
         "event_hubs_sas_token": _event_hubs_sas_token,
         "storage_sas_url": _storage_sas_url,
         "url_with_userinfo": _url_with_userinfo,
+        "url_with_at_in_username": _url_with_at_in_username,
         "password_assignment": _password_assignment,
         "client_secret_assignment": _client_secret_assignment,
         "azure_openai_api_key_header": _azure_openai_api_key_header,
@@ -379,6 +391,7 @@ EXPECTED_CATEGORY: Mapping[str, str] = MappingProxyType(
         "event_hubs_sas_token": "connection_string",
         "storage_sas_url": "connection_string",
         "url_with_userinfo": "url_with_credentials",
+        "url_with_at_in_username": "url_with_credentials",
         "password_assignment": "password_assignment",
         "client_secret_assignment": "password_assignment",
         "azure_openai_api_key_header": "vendor_api_key",
@@ -411,6 +424,8 @@ def secret_value(kind: str, credential: str) -> str:
                 return credential[index + 1 :].strip().strip("\"'")
     if kind == "apim_subscription_key_query":
         return credential.split("subscription-key=", 1)[1].split("&", 1)[0]
+    if kind == "url_with_at_in_username":  # the server name also appears in the host
+        return credential.split("://", 1)[1].rsplit("@", 1)[0].rsplit(":", 1)[1]
     if kind == "url_with_userinfo":
         return credential.split("://", 1)[1].rsplit("@", 1)[0]
     return credential
@@ -452,8 +467,7 @@ def NEGATIVE_LOOKALIKES(rng: random.Random) -> list[str]:  # noqa: N802 - stable
         "https://example.com/path?query=1&page=2",
         "postgres://dbhost:5432/app",
         "pk_customer_order_id_index",
-        "disk-encryption" + "-set-configuration",
-        "task-runner" + "-queue-processor-name",
+        "disk-" + "encryption-set",  # under 20 body characters: the validator accepts it
         "AccountName=" + _account_name(rng) + ";EndpointSuffix=core.windows.net",
         "Endpoint=sb://ns.servicebus.windows.net/;Authentication=Managed Identity",
         "config=enabled sig=true",
