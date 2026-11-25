@@ -6,12 +6,14 @@ is the off reason (:data:`CaptureOffReason`), so status can say why capture is o
 1. ``setting_off``: the PRP-99 ``interaction_capture`` stored setting is absent or disabled;
 2. ``retention_not_enabled``: the customer retention policy does not opt in to bodies or has no
    ``interaction_content`` rule (PRP-102 :func:`content_writes_enabled`, reused, not re-derived);
-3. ``no_policy``: no capture policy is stored;
-4. ``not_approved``: no policy is ``active`` with an approving ``approved_audit_id``;
-5. ``source_mismatch``: no active, approved policy names the producer's registered source;
-6. ``domain_missing``: the event carries no ``domain_id`` (GD-46: never captured);
-7. ``domain_mismatch``: no matching policy is for the event's domain;
-8. ``not_sampled``: deterministic sampling (sha256 of the event id against ``sampling.rate``) left
+3. ``policy_limit_exceeded``: more than :data:`MAX_MATCHER_POLICIES` policies are stored, so
+   the snapshot would be truncated; capture fails closed instead of matching a partial set;
+4. ``no_policy``: no capture policy is stored;
+5. ``not_approved``: no policy is ``active`` with an approving ``approved_audit_id``;
+6. ``source_mismatch``: no active, approved policy names the producer's registered source;
+7. ``domain_missing``: the event carries no ``domain_id`` (GD-46: never captured);
+8. ``domain_mismatch``: no matching policy is for the event's domain;
+9. ``not_sampled``: deterministic sampling (sha256 of the event id against ``sampling.rate``) left
    this event out, so a retry of the same event gets the same answer.
 
 ``sampling.max_per_minute`` is enforced by :class:`CaptureRateLimiter` (one token bucket per
@@ -80,6 +82,7 @@ CapturePolicyState = Literal["proposed", "active", "suspended", "retired"]
 CaptureOffReason = Literal[
     "setting_off",
     "retention_not_enabled",
+    "policy_limit_exceeded",
     "no_policy",
     "not_approved",
     "source_mismatch",
@@ -247,10 +250,11 @@ class CaptureMatcher:
         retention: PolicyState | None,
     ) -> None:
         snapshot = sorted(policies, key=lambda p: (p.customer, p.policy_id))
-        if len(snapshot) > MAX_MATCHER_POLICIES:
-            raise InvalidSchemaError(
-                "too many capture policies for one matcher", reason="capture_policy_limit"
-            )
+        # Over the limit the snapshot cannot be complete: fail closed (hold nothing) with a
+        # distinct reason rather than matching against a silently truncated set.
+        self._over_limit = len(snapshot) > MAX_MATCHER_POLICIES
+        if self._over_limit:
+            snapshot = []
         self._policies: tuple[CapturePolicy, ...] = tuple(snapshot)
         self._approved: tuple[CapturePolicy, ...] = tuple(
             p for p in snapshot if p.is_approved_active
@@ -271,7 +275,8 @@ class CaptureMatcher:
         if not setting_enabled:
             # Nothing is read while the switch is off.
             return cls((), setting_enabled=False, retention=retention)
-        stored = await store.list(customer_id=customer_id, limit=MAX_MATCHER_POLICIES)
+        # One more than the limit, so a truncated read is detected (policy_limit_exceeded).
+        stored = await store.list(customer_id=customer_id, limit=MAX_MATCHER_POLICIES + 1)
         return cls((s.policy for s in stored), setting_enabled=setting_enabled, retention=retention)
 
     @property
@@ -279,11 +284,13 @@ class CaptureMatcher:
         return self._policies
 
     def status(self) -> CaptureOffReason | None:
-        """The deployment-wide off reason (gates 1-4), or ``None`` when some policy can match."""
+        """The deployment-wide off reason (gates 1-5), or ``None`` when some policy can match."""
         if not self._setting_enabled:
             return "setting_off"
         if not self._retention_ok:
             return "retention_not_enabled"
+        if self._over_limit:
+            return "policy_limit_exceeded"
         if not self._policies:
             return "no_policy"
         if not self._approved:
@@ -332,6 +339,9 @@ class CaptureRateLimiter:
     """
 
     clock: Callable[[], float] = time.monotonic
+    # Must stay >= MAX_MATCHER_POLICIES (500): an evicted bucket comes back FULL, so evicting a
+    # live policy's bucket would hand it a fresh minute of captures. 1024 leaves room for
+    # policy churn across matcher refreshes; buckets are keyed by policy id only.
     max_buckets: int = 1024
     _buckets: dict[str, _Bucket] = field(default_factory=dict[str, _Bucket], init=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False)

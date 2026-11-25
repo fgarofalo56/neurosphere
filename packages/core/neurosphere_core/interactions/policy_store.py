@@ -106,7 +106,7 @@ DOC_TYPE: Final = "capture_policy"
 OPERATION_APPLY: Final = "capture_policy.apply"
 OPERATION_SEED_LOCAL: Final = "capture_policy.seed_local"
 DEFAULT_LIST_LIMIT: Final = 100
-MAX_LIST_LIMIT: Final = 500
+MAX_LIST_LIMIT: Final = 1000
 
 CAPTURE_POLICY_EXISTS: Final = "capture_policy_exists"
 CAPTURE_POLICY_MODIFIED: Final = "capture_policy_modified"
@@ -380,7 +380,9 @@ class CosmosCapturePolicyStore:
         sql = (
             "SELECT TOP @limit * FROM c WHERE "  # noqa: S608
             + " AND ".join(clauses)
-            + " ORDER BY c.customer_id ASC, c.id ASC"
+            # One ORDER BY term only: a multi-property ORDER BY needs a composite index the
+            # container does not declare (400 on real Cosmos). Customer order is applied below.
+            + " ORDER BY c.id ASC"
         )
         try:
             rows = [row async for row in self._container.query_items(sql, parameters=params)]
@@ -536,6 +538,18 @@ def _next_policy(
     )
 
 
+def _check_scope(cloud: str, customer_id: str, domain_id: str, *, prefix: str) -> None:
+    """Cloud and domain must name this customer BEFORE any audit chain is derived from them."""
+    if cloud not in {"commercial", "government"}:
+        raise _invalid("capture_policy_invalid", f"{prefix}/cloud", "cloud is required")
+    if not domain_id.startswith(f"{cloud}:{customer_id}:"):
+        raise _invalid(
+            "capture_policy_invalid",
+            f"{prefix}/domain_id",
+            "domain_id must belong to the policy cloud and customer",
+        )
+
+
 def _op_context(
     ctx: AuditContext, operation: str, intent_id: str, *, replace_intent: bool = False
 ) -> AuditContext:
@@ -603,8 +617,7 @@ async def apply_capture_policy_change(
         domain = str(change.policy.get("domain_id", ""))
     else:
         raise NotFoundError("capture policy not found", reason=CAPTURE_POLICY_NOT_FOUND)
-    if cloud not in {"commercial", "government"}:
-        raise _invalid("capture_policy_invalid", "/policy/cloud", "cloud is required")
+    _check_scope(cloud, change.customer_id, domain, prefix="/policy")
     chain_id = domain_audit_chain_id(change.customer_id, domain)
     op = _op_context(ctx, OPERATION_APPLY, change.approved_intent_id)
     before_subject = _subject(
@@ -662,9 +675,9 @@ async def read_back_capture_policy(
 # --- local seed ----------------------------------------------------------------------------------
 
 
-def _local_env(environ: Mapping[str, str] | None) -> bool:
-    env = os.environ if environ is None else environ
-    return env.get("NS_ENV", "").strip() == "local"
+def _local_env() -> bool:
+    """Read the process environment every time; callers cannot supply their own."""
+    return os.environ.get("NS_ENV", "").strip() == "local"
 
 
 async def _own_before_audit_id(audit: AuditRepository, chain_id: str, op: AuditContext) -> str:
@@ -694,10 +707,9 @@ async def seed_local_capture_policy(
     *,
     audit: AuditRepository,
     ctx: AuditContext,
-    environ: Mapping[str, str] | None = None,
     clock: Callable[[], datetime] = _utc_now,
 ) -> CapturePolicy:
-    """Write ``policy`` directly, only when ``NS_ENV=local`` is set explicitly.
+    """Write ``policy`` directly, only when the process has ``NS_ENV=local`` set explicitly.
 
     An unset ``NS_ENV`` is refused too (the settings default of ``local`` is not enough): a
     deployment must opt in to this bypass by name. Nothing is read or written when refused
@@ -706,7 +718,7 @@ async def seed_local_capture_policy(
     audit id of the seed's own before-record as its approval, so the approval points at real
     audit evidence. Version, previous version and ``effective_from`` are set by the server.
     """
-    if not _local_env(environ):
+    if not _local_env():
         raise CapabilityUnavailableError(
             LOCAL_ONLY, "capture policies can be seeded only when NS_ENV=local"
         )
@@ -715,8 +727,8 @@ async def seed_local_capture_policy(
     customer_id = str(body.get("customer_id", ""))
     cloud = str(body.get("cloud", ""))
     state = str(body.get("state", "proposed"))
-    if cloud not in {"commercial", "government"}:
-        raise _invalid("capture_policy_invalid", "/cloud", "cloud is required")
+    domain_id = str(body.get("domain_id", ""))
+    _check_scope(cloud, customer_id, domain_id, prefix="")
     current = await store.get(policy_id, customer_id=customer_id)
     if current is not None:
         before = _comparable(current.policy)
@@ -725,7 +737,7 @@ async def seed_local_capture_policy(
                 raise _invalid(
                     "capture_policy_identity_changed", f"/{name}", f"{name} cannot change"
                 )
-    chain_id = domain_audit_chain_id(customer_id, str(body.get("domain_id", "")))
+    chain_id = domain_audit_chain_id(customer_id, domain_id)
     # A seed has no action intent: a fresh synthetic one ties the policy to its audit records.
     op = _op_context(ctx, OPERATION_SEED_LOCAL, str(uuid.uuid4()), replace_intent=True)
     version = 1 if current is None else current.policy.version + 1

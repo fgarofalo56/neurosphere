@@ -6,6 +6,7 @@ import pytest
 from neurosphere_contracts.admin.v1.system_setting import SystemSetting
 from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_core.interactions.policy import (
+    MAX_MATCHER_POLICIES,
     OFF_REASONS,
     CaptureMatch,
     CaptureMatcher,
@@ -44,6 +45,7 @@ def test_off_reasons_are_distinct_and_complete() -> None:
     assert OFF_REASONS == (
         "setting_off",
         "retention_not_enabled",
+        "policy_limit_exceeded",
         "no_policy",
         "not_approved",
         "source_mismatch",
@@ -177,6 +179,26 @@ async def test_from_store_snapshot_and_switch_off_reads_nothing() -> None:
         ExplodingStore(), setting_enabled=False, retention=retention()
     )
     assert off.status() == "setting_off"
+
+
+async def test_policy_limit_fails_closed_with_distinct_reason() -> None:
+    store = InMemoryCapturePolicyStore()
+    # The approved policy sorts last, so a silently truncated read would drop it.
+    for i in range(MAX_MATCHER_POLICIES):
+        await store.create(parse_capture_policy(policy_doc(capture_policy_id=f"aa-{i:04d}")))
+    await store.create(parse_capture_policy(active_doc(capture_policy_id="zz-live")))
+    matcher = await CaptureMatcher.from_store(store, setting_enabled=True, retention=retention())
+    assert matcher.status() == "policy_limit_exceeded"
+    assert matcher.evaluate(SOURCE, DOMAIN, "e").off_reason == "policy_limit_exceeded"
+    assert matcher.policies == ()
+
+    at_limit = InMemoryCapturePolicyStore()
+    for i in range(MAX_MATCHER_POLICIES - 1):
+        await at_limit.create(parse_capture_policy(policy_doc(capture_policy_id=f"aa-{i:04d}")))
+    await at_limit.create(parse_capture_policy(active_doc(capture_policy_id="zz-live")))
+    full = await CaptureMatcher.from_store(at_limit, setting_enabled=True, retention=retention())
+    assert full.status() is None
+    assert len(full.policies) == MAX_MATCHER_POLICIES
 
 
 def _setting(enabled: bool, *, body: bool = True) -> SystemSetting:

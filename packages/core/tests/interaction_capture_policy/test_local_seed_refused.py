@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 import pytest
 from neurosphere_core.audit import domain_audit_chain_id
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError
@@ -27,31 +29,35 @@ from .policy_helpers import (
 CHAIN = domain_audit_chain_id(CUSTOMER, DOMAIN)
 
 
-@pytest.mark.parametrize(
-    "environ",
-    [{}, {"NS_ENV": "dev"}, {"NS_ENV": "prod"}, {"NS_ENV": "test"}, {"NS_ENV": "LOCAL "}],
-)
-async def test_refused_outside_local(environ: dict[str, str]) -> None:
+@pytest.fixture
+def local_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NS_ENV", "local")
+
+
+@pytest.mark.parametrize("value", [None, "", "dev", "prod", "test", "staging", "LOCAL", "locally"])
+async def test_refused_outside_local(monkeypatch: pytest.MonkeyPatch, value: str | None) -> None:
+    if value is None:
+        monkeypatch.delenv("NS_ENV", raising=False)
+    else:
+        monkeypatch.setenv("NS_ENV", value)
     store = InMemoryCapturePolicyStore()
     audit = audit_repo()
     with pytest.raises(CapabilityUnavailableError) as info:
         await seed_local_capture_policy(
-            store, policy_doc(state="active"), audit=audit, ctx=make_ctx(), environ=environ
+            store, policy_doc(state="active"), audit=audit, ctx=make_ctx()
         )
     assert info.value.reason == "capture_seed_local_only"
     assert await store.list() == []
     assert await audit.tail(CHAIN) is None  # nothing written anywhere
 
 
-async def test_refused_when_process_env_is_not_local(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("NS_ENV", "staging")
-    with pytest.raises(CapabilityUnavailableError):
-        await seed_local_capture_policy(
-            InMemoryCapturePolicyStore(), policy_doc(), audit=audit_repo(), ctx=make_ctx()
-        )
+def test_caller_cannot_supply_the_environment() -> None:
+    params = inspect.signature(seed_local_capture_policy).parameters
+    assert "environ" not in params
+    assert not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
 
 
-async def test_local_seed_active_policy_points_at_its_audit_record() -> None:
+async def test_local_seed_active_policy_points_at_its_audit_record(local_env: None) -> None:
     store = InMemoryCapturePolicyStore()
     audit = audit_repo()
     seeded = await seed_local_capture_policy(
@@ -59,7 +65,6 @@ async def test_local_seed_active_policy_points_at_its_audit_record() -> None:
         policy_doc(state="active"),
         audit=audit,
         ctx=make_ctx(),
-        environ={"NS_ENV": "local"},
         clock=lambda: NOW,
     )
     assert seeded.state == "active"
@@ -83,27 +88,32 @@ async def test_local_seed_active_policy_points_at_its_audit_record() -> None:
     assert matcher.match(SOURCE, DOMAIN, "e") is not None
 
     again = await seed_local_capture_policy(
-        store,
-        policy_doc(state="suspended"),
-        audit=audit,
-        ctx=make_ctx(),
-        environ={"NS_ENV": "local"},
+        store, policy_doc(state="suspended"), audit=audit, ctx=make_ctx()
     )
     assert again.version == 2
     assert again.previous_version == 1
     assert again.state == "suspended"
 
 
-async def test_local_seed_validates_before_auditing() -> None:
+async def test_local_seed_validates_before_auditing(local_env: None) -> None:
     store = InMemoryCapturePolicyStore()
     audit = audit_repo()
     with pytest.raises(InvalidSchemaError):
         await seed_local_capture_policy(
-            store,
-            policy_doc(kept_categories=["bearer_token"]),
-            audit=audit,
-            ctx=make_ctx(),
-            environ={"NS_ENV": "local"},
+            store, policy_doc(kept_categories=["bearer_token"]), audit=audit, ctx=make_ctx()
         )
     assert await audit.tail(CHAIN) is None
+    assert await store.list() == []
+
+
+async def test_local_seed_checks_domain_before_auditing(local_env: None) -> None:
+    store = InMemoryCapturePolicyStore()
+    audit = audit_repo()
+    foreign = "commercial:fabrikam:neurosphere:domain:support"
+    with pytest.raises(InvalidSchemaError) as info:
+        await seed_local_capture_policy(
+            store, policy_doc(domain_id=foreign), audit=audit, ctx=make_ctx()
+        )
+    assert info.value.reason == "capture_policy_invalid"
+    assert await audit.tail(domain_audit_chain_id("fabrikam", foreign)) is None
     assert await store.list() == []

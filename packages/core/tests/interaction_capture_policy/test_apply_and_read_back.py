@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from azure.cosmos.exceptions import (
     CosmosAccessConditionFailedError,
+    CosmosHttpResponseError,
     CosmosResourceExistsError,
     CosmosResourceNotFoundError,
 )
@@ -174,6 +175,31 @@ async def test_stale_base_version_refused() -> None:
 
 
 @pytest.mark.parametrize(
+    "domain",
+    [
+        "commercial:fabrikam:neurosphere:domain:support",  # another customer's chain
+        "government:contoso:neurosphere:domain:support",  # another cloud
+        "not-a-domain",
+    ],
+)
+@pytest.mark.parametrize("approved", [APPROVAL_AUDIT_ID, None])
+async def test_new_policy_domain_checked_before_any_audit_write(
+    domain: str, approved: str | None
+) -> None:
+    store = InMemoryCapturePolicyStore()
+    audit = audit_repo()
+    with pytest.raises(InvalidSchemaError) as info:
+        await _apply(
+            store, _change("propose", policy=policy_doc(domain_id=domain)), audit, approved
+        )
+    assert info.value.reason == "capture_policy_invalid"
+    assert await audit.tail(CHAIN) is None
+    foreign = domain_audit_chain_id("fabrikam", "commercial:fabrikam:neurosphere:domain:support")
+    assert await audit.tail(foreign) is None  # no denied record on another customer's chain
+    assert await store.list() == []
+
+
+@pytest.mark.parametrize(
     ("stage", "base", "extra", "reason"),
     [
         ("suspend", 1, {}, "capture_policy_transition_refused"),
@@ -285,6 +311,7 @@ async def test_read_back_mismatch_fails_verify() -> None:
 class _FakeContainer:
     def __init__(self) -> None:
         self.rows: dict[tuple[str, str], dict[str, Any]] = {}
+        self.queries: list[str] = []
         self._n = 0
 
     def _stamp(self, body: Mapping[str, Any]) -> dict[str, Any]:
@@ -321,6 +348,10 @@ class _FakeContainer:
         self, sql: str, *, parameters: list[dict[str, Any]]
     ) -> AsyncIterator[dict[str, Any]]:
         values = {p["name"]: p["value"] for p in parameters}
+        self.queries.append(sql)
+        if _order_by_terms(sql) > 1:
+            # Real Cosmos answers 400 without a composite index; the container declares none.
+            raise CosmosHttpResponseError(status_code=400, message="composite index required")
 
         async def rows() -> AsyncIterator[dict[str, Any]]:
             for key in sorted(self.rows):
@@ -331,8 +362,39 @@ class _FakeContainer:
                     continue
                 yield dict(row)
 
-        del sql
         return rows()
+
+
+def _order_by_terms(sql: str) -> int:
+    upper = sql.upper()
+    if "ORDER BY" not in upper:
+        return 0
+    return len(upper.split("ORDER BY", 1)[1].split(","))
+
+
+async def test_cosmos_queries_use_at_most_one_order_by_term() -> None:
+    container = _FakeContainer()
+    store = CosmosCapturePolicyStore(container)  # type: ignore[arg-type]
+    await store.create(parse_capture_policy(policy_doc()))
+    await store.create(
+        parse_capture_policy(
+            policy_doc(
+                customer_id="acme",
+                domain_id="commercial:acme:neurosphere:domain:support",
+            )
+        )
+    )
+    everyone = await store.list()
+    assert [(s.policy.customer, s.policy.policy_id) for s in everyone] == [
+        ("acme", POLICY_ID),
+        (CUSTOMER, POLICY_ID),
+    ]
+    assert len(await store.list(customer_id=CUSTOMER)) == 1
+    matcher = await CaptureMatcher.from_store(store, setting_enabled=True, retention=retention())
+    assert matcher.status() == "not_approved"
+    assert container.queries  # the list queries really went through the fake
+    for sql in container.queries:
+        assert _order_by_terms(sql) <= 1, sql
 
 
 async def test_cosmos_store_apply_and_read_back() -> None:
