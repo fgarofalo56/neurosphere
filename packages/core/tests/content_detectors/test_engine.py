@@ -68,6 +68,7 @@ CONTEXTS = (
     "Please use {} for the nightly job and report back.",
     '{{"value": "{}", "n": 1}}',
     "settings:\n  note: {}\n  retries: 3\n",
+    "settings:\n  token: {}\n  retries: 3\n",
 )
 
 
@@ -742,14 +743,6 @@ def test_credential_categories_cover_secret_detectors() -> None:
         assert detector.kinds <= CREDENTIAL_CATEGORIES | {"other"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "PasswordAssignmentDetector bug (reported, item 2 owns the fix): in "
-        "'password: client_secret = <value>' the outer label takes the inner label as its "
-        "value and the real value after '=' is left in the output"
-    ),
-)
 def test_chained_assignment_labels_leave_no_value() -> None:
     leaked = 0
     for seed in range(20):

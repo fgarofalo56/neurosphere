@@ -337,17 +337,37 @@ class UrlWithCredentialsDetector(_Base):
 
 # --- password_assignment -----------------------------------------------------------------
 
+_KW_PATTERN: Final = (
+    r"password|passwd|passphrase|passcode|pwd|\bpin|secret|token"
+    r"|api[_-]?key|apikey|access[_-]?key|private[_-]?key"
+)
+#: A value: a quoted string (backslash escapes and doubled quotes stay inside it, so
+#: ``"two \"quoted\" words"`` and ``'it''s'`` are spanned whole; a plain quoted run is the
+#: fallback for a trailing backslash) or an unquoted run. Each repeated item is a single
+#: character or a fixed two-character pair, so the bounded repetition never nests.
+_VALUE_PATTERN: Final = (
+    r"\"(?:[^\"\\\r\n]|\\[^\r\n]|\"\"){1,512}\"|'(?:[^'\\\r\n]|\\[^\r\n]|''){1,512}'"
+    r"|\"[^\"\r\n]{1,512}\"|'[^'\r\n]{1,512}'|[^\s\"'{\[][^\s\"']{0,511}"
+)
 #: Credential phrasing. The label is kept, the value spanned. ``suffix`` is a ``_``/``.``/``-``
 #: segment or a camelCase word (``tokenValue``); ``max_tokens`` never matches because ``s``
 #: is neither. Quantifiers are bounded; the suffix is possessive (no separator character can
 #: occur in it, so giving back characters could never let the separator match).
 _ASSIGNMENT: Final = re.compile(
-    r"(?i)(?P<kw>password|passwd|passphrase|passcode|pwd|\bpin|secret|token"
-    r"|api[_-]?key|apikey|access[_-]?key|private[_-]?key)"
+    rf"(?i)(?P<kw>{_KW_PATTERN})"
     r"(?P<suffix>[_.-][A-Za-z0-9_.-]{0,40}+|(?-i:[A-Z])[A-Za-z0-9_.-]{0,40}+)?"
     r"(?P<sep>[\"']?(?:[ \t]{0,4}[=:][ \t]{0,4}|[ \t]{1,4}is[ \t]{1,4}))"
-    r"(?P<value>\"[^\"\r\n]{1,512}\"|'[^'\r\n]{1,512}'|[^\s\"'{\[][^\s\"']{0,511})"
+    rf"(?P<value>{_VALUE_PATTERN})"
 )
+_KW: Final = re.compile(rf"(?i){_KW_PATTERN}")
+#: A label word (bare or quoted) followed by an assignment operator, matched where a value
+#: starts: ``password: client_secret = 'v'`` names a second label, not the value.
+_CHAIN_LABEL: Final = re.compile(
+    r"(?:\"(?P<dq>[A-Za-z0-9_.-]{1,64}+)\"|'(?P<sq>[A-Za-z0-9_.-]{1,64}+)'"
+    r"|(?P<bare>[A-Za-z0-9_.-]{1,64}+))[ \t]{0,4}[=:]"
+)
+_CHAIN_VALUE: Final = re.compile(rf"[ \t]{{0,4}}(?P<value>{_VALUE_PATTERN})")
+_CHAIN_MAX_BLANKS: Final = 4
 _IS_ALLOWED: Final = frozenset({"password", "passwd", "passphrase", "passcode", "pwd", "pin"})
 #: Label words that name metadata about a credential, not the credential (``token_count``).
 _NON_SECRET_SUFFIX: Final = frozenset(
@@ -419,6 +439,10 @@ class PasswordAssignmentDetector(_Base):
     Not credentials: labels whose suffix names metadata (``token_count``, ``secret_name``,
     ``token_limit``), token-accounting labels (``max_token``, ``prompt_tokens``), a ``token``
     value of 6 digits or fewer, ``null``/``true``/``false``-style values and placeholders.
+
+    Chained labels (``password: client_secret = 'v'``, any depth) are spanned from the first
+    value through the innermost value, so the inner label is replaced too (over-redaction
+    accepted over leaking the value). Quoted values keep escaped and doubled quotes inside.
     """
 
     detector_id = "password_assignment"
@@ -428,20 +452,102 @@ class PasswordAssignmentDetector(_Base):
 
     def find(self, text: str) -> tuple[Match, ...]:
         out: list[Match] = []
-        for m in _ASSIGNMENT.finditer(text):
-            kw = m.group("kw").lower()
-            if "is" in m.group("sep").lower() and kw not in _IS_ALLOWED:
-                continue
-            if _is_metadata_label(text, m.start("kw"), kw, m.group("suffix")):
-                continue
-            value = m.group("value")
-            bare = value[1:-1] if value[0] in "\"'" else value
-            if bare.startswith(_PLACEHOLDER_START) or bare.lower() in _EMPTY_VALUES:
-                continue
-            if kw == "token" and _SHORT_NUMBER.fullmatch(bare):
-                continue
-            out.append(self._match(m.start("value"), m.end("value")))
+        pos = 0
+        while True:
+            m = _ASSIGNMENT.search(text, pos)
+            if m is None:
+                break
+            if self._accepted(text, m):
+                end = max(m.end("value"), _chain_end(text, m.start("value")))
+                out.append(self._match(m.start("value"), end))
+                pos = end
+            elif (label := _chain_label(text, m.start("value"))) is not None:
+                # The outer label is not a credential, but its "value" is a label: rescan from
+                # the first credential label in the chain so it is judged on its own.
+                pos = _first_credential_label(text, label)
+            else:
+                pos = m.end()
         return tuple(out)
+
+    @staticmethod
+    def _accepted(text: str, m: re.Match[str]) -> bool:
+        kw = m.group("kw").lower()
+        if "is" in m.group("sep").lower() and kw not in _IS_ALLOWED:
+            return False
+        if _is_metadata_label(text, m.start("kw"), kw, m.group("suffix")):
+            return False
+        value = m.group("value")
+        bare = value[1:-1] if value[0] in "\"'" else value
+        if bare.startswith(_PLACEHOLDER_START) or bare.lower() in _EMPTY_VALUES:
+            return False
+        return not (kw == "token" and _SHORT_NUMBER.fullmatch(bare))
+
+
+def _chain_label(text: str, start: int) -> re.Match[str] | None:
+    """A credential label plus ``=``/``:`` starting at ``start`` (a value that is a label)."""
+    label = _CHAIN_LABEL.match(text, start)
+    if label is None:
+        return None
+    word = label.group("dq") or label.group("sq") or label.group("bare") or ""
+    return label if _KW.search(word) else None
+
+
+def _next_chain_label(text: str, label: re.Match[str]) -> re.Match[str] | None:
+    pos = label.end()
+    blanks = pos + _CHAIN_MAX_BLANKS
+    while pos < blanks and pos < len(text) and text[pos] in " \t":
+        pos += 1
+    return _chain_label(text, pos)
+
+
+def _is_credential_word(word: str) -> bool:
+    """The label word names a credential (``client_secret``), not metadata (``token_count``).
+
+    A chain label is preceded by an operator, blank or quote, never a label character, so the
+    metadata check sees the word alone and the answer depends on the word only (cacheable per
+    call; nothing derived from the text outlives ``find``).
+    """
+    for kw in _KW.finditer(word):
+        suffix = word[kw.end() :]
+        if suffix and not (suffix[0] in "_.-" or suffix[0].isupper()):
+            continue  # ``max_tokens``: the assignment pattern never matches here
+        if not _is_metadata_label(word, kw.start(), kw.group().lower(), suffix or None):
+            return True
+    return False
+
+
+def _first_credential_label(text: str, label: re.Match[str]) -> int:
+    """Start of the first credential label in the chain that begins with ``label``, else the
+    end of the chain's last label (nothing in the chain is a credential label)."""
+    seen: dict[str, bool] = {}
+    current: re.Match[str] | None = label
+    last = label
+    while current is not None:
+        word = current.group("dq") or current.group("sq") or current.group("bare")
+        if word not in seen:
+            seen[word] = _is_credential_word(word)
+        if seen[word]:
+            return current.start()
+        last = current
+        current = _next_chain_label(text, current)
+    return last.end()
+
+
+def _chain_end(text: str, start: int) -> int:
+    """End of a chained assignment whose first value starts at ``start``, else ``start``.
+
+    ``password: client_secret = 'v'`` (any depth, ``a: b: c = v``): while the candidate value
+    is a credential label followed by ``=``/``:``, step to the value after that operator, so the
+    span covers the innermost value. Each step costs at most the label it moves over (the value
+    is matched once, at the end of the chain), so the walk is linear.
+    """
+    label = _chain_label(text, start)
+    if label is None:
+        return start
+    while (following := _next_chain_label(text, label)) is not None:
+        label = following
+    value = _CHAIN_VALUE.match(text, label.end())
+    return label.end() if value is None else value.end("value")
 
 
 # --- opaque_secret -----------------------------------------------------------------------

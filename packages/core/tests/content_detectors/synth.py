@@ -32,6 +32,7 @@ __all__ = [
     "CREDENTIAL_GENERATORS",
     "EXPECTED_CATEGORY",
     "NEGATIVE_LOOKALIKES",
+    "assignment_value",
     "secret_value",
 ]
 
@@ -311,6 +312,11 @@ def _password_assignment(rng: random.Random) -> str:
 def _client_secret_assignment(rng: random.Random) -> str:
     label = rng.choice(["client_secret", "ClientSecret", "AppSecret", "AZURE_CLIENT_SECRET"])
     return _assignment(rng, label, _mixed(rng, _ALNUM + "-_.~", rng.randint(34, 40)))
+
+
+def assignment_value(rng: random.Random, low: int = 12, high: int = 32) -> str:
+    """A bare credential value (no label, no quotes, no spaces) for assignment tests."""
+    return _mixed(rng, _ALNUM + "-_.~!#$%^*+", rng.randint(low, high))
 
 
 def _header(rng: random.Random, names: list[str]) -> str:
