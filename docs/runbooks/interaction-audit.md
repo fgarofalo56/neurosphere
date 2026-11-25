@@ -5,6 +5,140 @@ Status date: 2026-11-25. This runbook covers where opt-in captured interaction c
 Nothing in this runbook makes the product capture content: capture stays off by default, and the
 store refuses every write until the customer retention policy opts in.
 
+## What exists after PRP-102
+
+| Piece | Where | State |
+|---|---|---|
+| Envelope encryption | `neurosphere_core.crypto` | Built, tested with a fake Key Vault and the local key |
+| Interaction store (index plus encrypted content) | `neurosphere_core.interactions` | Built; nothing calls it until PRP-103 |
+| Lifecycle data class `interaction_content` | `neurosphere_core.interactions.lifecycle_delete`, `build_targets` | Built; registered only when the worker passes the backends (PRP-103 wires it) |
+| Cosmos containers | `interaction_index`, `interaction_capture_policies`, `policy_definitions`, `policy_violations`, `policy_exceptions`, `notification_outbox` | Declared in the registry and the IaC export; empty |
+| Hosted Key Vault key, role assignment, content blob container | PRP-109 | OPEN |
+| Live wrap and unwrap against a real vault | PRP-136 (`NS_LIVE_APPROVED=1`) | OPEN |
+
+## Why capture is impossible until a policy opts in
+
+Two independent gates must both be open before a single byte of content is stored:
+
+1. The customer retention policy (`NS_LIFECYCLE_POLICY_FILE`, see the lifecycle runbook) sets
+   `retain_prompt_response_bodies: true` AND has a rule for the data class `interaction_content`.
+   No policy, an invalid policy, the opt-in set to false, or no such rule refuses every write with
+   `content_retention_not_enabled`. The refusal is counted on `ns.interactions.store.refusals`
+   (attribute `ns.reason`); content is never logged.
+2. An approved capture policy exists for the domain and source (PRP-103). Until PRP-103 ships,
+   nothing calls the store at all.
+
+Sample retention policy rule (the 90-day default chosen by the owner, GD-5):
+
+```json
+{
+  "policy_version": "records-2026-2",
+  "retain_prompt_response_bodies": true,
+  "rules": [
+    {"data_class": "interaction_content", "min_retention_days": 0, "max_retention_days": 90}
+  ]
+}
+```
+
+A real policy also lists every other data class it governs; one `data_class` may appear once.
+
+## What the store accepts
+
+The write API takes only a PRP-99 `RedactedContent` document, never a string or bytes. Before
+any I/O the document is validated against the `RedactedContent` JSON Schema, including the
+`secret_free_text` patterns that Pydantic ignores (ADR-0004). A failure is refused with
+`content_not_secret_free` and nothing is written. The schema is vendored as package data
+(`interactions/redacted_content.schema.json`) because the contract schema files are not in the
+runtime images; a drift test rebuilds the bundle from the contract and compares it byte for byte.
+
+The index document is a PRP-99 `InteractionRecord`: metadata only. Its `content_ref` (blob
+pointer, key identifier, `aes_256_gcm`, SHA-256 of the stored envelope, byte length) is the only
+link to the content, and it holds no hash of plaintext.
+
+## Envelope format
+
+One blob per interaction, named `<customer>/<domain>/<yyyy>/<mm>/<dd>/<interaction_id>.env`
+(the domain id is percent-encoded where it contains a slash). The blob is a versioned binary
+envelope, big-endian:
+
+| Field | Size |
+|---|---|
+| Magic `NSEV` | 4 bytes |
+| Format version (1) | 1 byte |
+| Key identifier (versioned Key Vault key id, or `local:` plus a fingerprint) | 2-byte length, up to 512 bytes |
+| Wrap algorithm (`RSA-OAEP-256`, or `local-a256gcm`) | 1-byte length, up to 64 bytes |
+| Wrapped data key | 2-byte length, up to 2048 bytes |
+| Nonce | 1-byte length, exactly 12 bytes |
+| Ciphertext with the 16-byte GCM tag | 4-byte length |
+
+Each interaction gets a fresh 256-bit data key and a fresh random 96-bit nonce. The GCM
+associated data binds the customer, domain, interaction id and format version plus the envelope
+header (version, key id, wrap algorithm), so a blob copied to another interaction, or a header
+edited in place, fails with `content_integrity_failed`. Reads check the stored byte length and
+SHA-256 before decrypting.
+
+## Key configuration
+
+The configuration source is the stored setting `InteractionCaptureSetting` (PRP-99):
+`kek_provider` (`key_vault_key` or `local_development`), `kek_uri`, the content storage account
+and container, and the identity reference used to reach them.
+
+| `kek_provider` | Where it works | Key |
+|---|---|---|
+| `key_vault_key` | every environment | An RSA key (2048 or 3072 bits recommended) in a vault that uses the Azure RBAC permission model. The workload identity needs only `Key Vault Crypto Service Encryption User` on that key or vault. `kek_uri` is `https://<vault>.vault.azure.net/keys/<name>` (Commercial) or `.vault.usgovcloudapi.net` (Government), with or without a version. |
+| `local_development` | `NS_ENV=local` only; refused everywhere else | A 32-byte key file at `NS_INTERACTION_LOCAL_KEY_FILE`, created on first use with owner-only permissions. Never copy it anywhere else. |
+
+The vault host must match the deployment cloud: a Government deployment refuses a Commercial
+vault and the reverse (`key_host_refused`), before any token is requested. The vault URI, key
+name, key identifier and key material are never logged; `httpx` request logs for key operations
+are filtered.
+
+## Key rotation
+
+Create a new version of the same Key Vault key. When `kek_uri` has no version, new interactions
+wrap with the current version (resolved once per process; restart the workers to pick up a new
+version promptly). Every envelope records the exact versioned key id it was wrapped with, and
+unwrap always uses that recorded version, so old versions keep decrypting old content. Do not
+disable or delete an old key version while content wrapped by it is still retained; once all
+such content has expired (at most the retention rule's maximum after the rotation), the old
+version may be disabled. A recorded key id that names a different vault or key is refused.
+
+## Purge, holds and expiry
+
+- Expiry runs through the lifecycle engine for the data class `interaction_content`. A record is
+  due at the earlier of its own `expires_at` (the earlier of the capture policy's
+  `retention_days` and the rule's `max_retention_days`) and `captured_at` plus the rule's
+  `max_retention_days`, never before `min_retention_days`.
+- A legal hold that selects `data_class=interaction_content`, a record, or a subject keeps the
+  record; the outcome records `LEGAL_HOLD`.
+- A purge deletes the blob first, then the index document, and deletes only the blob name the
+  store computes for that interaction, never a pointer read from the document. A purge
+  interrupted between the two steps reads as `content_purged` and is completed by the next run.
+- Lifecycle export returns index metadata only and never decrypts. Pseudonymize deletes the
+  content blob and clears `principal_id` and `content_ref` (content cannot be pseudonymized in
+  place; PRP-83 confirms the data-subject semantics).
+- Turning `retain_prompt_response_bodies` off stops new writes immediately; stored content then
+  expires through its rule. Reverting the code leaves blobs nothing can read: purge them first
+  through the lifecycle API (`lifecycle.manage`).
+
+## Reason codes
+
+| Reason | Meaning |
+|---|---|
+| `content_retention_not_enabled` | The retention policy does not opt in (see above); nothing written |
+| `content_not_secret_free` | The content failed the `RedactedContent` schema; nothing written |
+| `content_integrity_failed` | Tampered or mismatched envelope, header, size, hash or key id |
+| `key_wrap_unavailable` | Key Vault unreachable, throttled (429), timed out or answered badly |
+| `key_host_refused` | The `kek_uri` is malformed or names another cloud's vault |
+| `content_purged` | The index exists but its content was purged |
+| `interaction_not_found`, `interaction_exists` | Read of an unknown id; second write of the same id |
+| `content_record_mismatch`, `interaction_index_invalid` | The index document disagrees with the content or the contract |
+| `interaction_store_unavailable`, `content_container_missing` | Cosmos or blob storage unavailable; the content container is missing outside `NS_ENV=local` |
+| `invalid_query` | An index query or continuation token that does not belong to that query |
+
+Orphan blobs left by a failed index write are counted on `ns.interactions.store.orphan_cleanup`
+(attribute `ns.outcome`: `removed`, `failed`, or `kept` when the outcome of the write is unknown).
+
 ## Verification
 
 Every external fact the encryption code relies on was read from the cited page on the status

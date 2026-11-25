@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-102-encrypted-interaction-store-and-retention](active/PRP-102-encrypted-interaction-store-and-retention.md) | P0 | 6/8 (75%) | todo 1, review 1, merged 6 | opus / opus | required |
+| [PRP-102-encrypted-interaction-store-and-retention](active/PRP-102-encrypted-interaction-store-and-retention.md) | P0 | 8/8 (100%) | merged 8 | opus / opus | required |
 
 ## Backlog
 

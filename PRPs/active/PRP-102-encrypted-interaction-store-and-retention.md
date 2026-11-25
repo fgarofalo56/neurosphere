@@ -251,14 +251,29 @@ None run here. A real Key Vault wrap and unwrap, the hosted blob container and t
 | 4 | merged | `prp-102-item-4-store` (f562dad6, merge 8578852e; review fixes 425ff1fa) | Verified on integration: 195 passed (interaction_store, envelope_crypto, import boundaries, stores_registry), ruff, pyright clean; Snyk 0 issues. Independent review APPROVE (no blockers). Orchestrator applied 2 suggestions: delete uses the computed blob name, never the stored pointer; a failed index create re-reads before removing the blob (committed create returns success; unreadable index or cancel keeps the blob). Deviations: extra reasons (`content_record_mismatch`, `interaction_index_invalid`, `interaction_store_unavailable`, `content_container_missing`, `invalid_query`); domain id percent-encoded in blob names; `local_development` records a fixed placeholder `kek_uri`; `captured_at` normalised to fixed 6-digit UTC; RedactedContent schema vendored as package data with a byte-for-byte drift test (`tests/interaction_store/schema_bundle.py --write`). Follow-ups: contract URL-with-userinfo `not` pattern backtracks (about 1.7 s per adversarial 32k part, PRP-99 contract); count ValueError/TypeError refusals; refuse trailing-dot ids; check `list_records` cross-partition query on the emulator |
 | 5 | merged | `prp-102-item-5-lifecycle` (8cc57faf, merge a7808a1d; review fix 3b247e54) | Verified on integration: 284 passed (lifecycle_interactions, lifecycle_worker, core lifecycle, interaction_store, import boundaries, workers runtime), ruff, pyright clean; Snyk 0 issues. Independent review APPROVE (no blockers). Orchestrator applied suggestion 1: a subject listing fails closed (`CapabilityUnavailableError`, `interaction_record_id_too_long`) on a record whose id exceeds 512 characters. Record id is `{interaction_id}/{domain_id}`; subject is `principal_id`; pseudonymize clears `principal_id` and `content_ref`; export drops `content_ref` and adds `content_stored`. Deviation found: `TargetRecord` had no `expires_at` (fixed by item 8). Follow-ups: paging cursor is `interaction_id` only (ids assumed unique per customer); `record.legal_hold_ids` is informational, the hold registry is the authority; engine `sweep_expiry` always reads the first page, so more than 100 held records starve later expiries (engine issue) |
 | 6 | merged | `prp-102-item-6-security` (1306c62f, merge 31a24677) | 36 tests (6 at rest, 4 logging, 26 refusals), no xfail, no product defect found. Verified on integration: 159 passed with the store and lifecycle suites; ruff, pyright clean; full `tests/security` 1831 passed in the implementer's lane (no package clash) |
-| 8 | review | orchestrator, 745259fa | Owner chose 2026-11-25 to fix the expiry gap here. Verified: 292 passed (core lifecycle, lifecycle_interactions, lifecycle_worker, security, interaction_store) plus 130 passed (lifecycle_cosmos, lifecycle_api, runtime_data, integration/lifecycle); ruff, pyright clean; `TargetRecord` is not in openapi.json. Independent review running |
-| 7 | todo | | |
+| 8 | merged | orchestrator, 745259fa | Owner chose 2026-11-25 to fix the expiry gap here. Verified: 292 passed (core lifecycle, lifecycle_interactions, lifecycle_worker, security, interaction_store) plus 130 passed (lifecycle_cosmos, lifecycle_api, runtime_data, integration/lifecycle); ruff, pyright clean; `TargetRecord` is not in openapi.json. Independent review APPROVE: no other backend's mapping carries `expires_at`, so no other data class can expire earlier; precedence unchanged |
+| 7 | merged | orchestrator | Runbook sections (what exists, the two gates, sample rule, accepted content, envelope format, key configuration and rotation, purge/holds/expiry, reason codes); changelog fragment; follow-up issue #411. PRP gates on the integration branch: ruff and format (2504 files) clean, repo-wide pyright 0 errors, stores --check, licences PASS, prp_status and validate_planning PASS, gate pytest list 460 passed, docs 132 passed |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-25, PR to be recorded at merge.
 - Deviations:
-- Descoped items:
+  - Item 8 was added with the owner's approval: an optional per-record `expires_at` in the lifecycle engine (`lifecycle/{models,engine,adapters}.py`), so a capture policy shorter than the retention rule is honoured.
+  - `jsonschema` was also made a direct core dependency, and the `RedactedContent` schema is vendored as package data (the contract schemas are not in the runtime images).
+  - `docs/licenses.md` is generated and unchanged; "direct" is recorded in ADR-0002.
+  - Item-level API deviations are listed in the Execution state rows.
+- Descoped items: none.
 - OPEN gates:
+  - live Key Vault wrap and unwrap in Commercial and Government (PRP-136, `NS_LIVE_APPROVED=1`)
+  - hosted Key Vault key, `Key Vault Crypto Service Encryption User` role assignment and content blob container (PRP-109)
+  - the Cosmos index and blob content against the emulators (unit-tested with in-memory twins only)
+  - `verify-gates -Mode full` as recorded at close
 - Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+  - `NS_LIFECYCLE_POLICY_FILE` (existing): it must set `retain_prompt_response_bodies: true` and include an `interaction_content` rule before any content can be written.
+  - `NS_INTERACTION_LOCAL_KEY_FILE`: only for `kek_provider: local_development` under `NS_ENV=local`.
+  - Everything else comes from the `InteractionCaptureSetting` stored setting.
+- Hand-offs:
+  - PRP-103 wires the store and the lifecycle target into the worker composition (`runtime/factories.py`) and calls `put`.
+  - PRP-109 provisions the key, role and container.
+  - PRP-136 evidences the live wrap.
+- Follow-up issues: #411. Its contract regex backtracking and expiry paging items should land before PRP-103 turns capture on.
+- Product check (can an operator use it without editing files): not yet. There is no operator-facing surface until PRP-103 (capture) and PRP-104 (explorer); this PRP ships the safe-by-construction store those use.

@@ -15,8 +15,9 @@ How a record maps onto :class:`~neurosphere_core.lifecycle.models.TargetRecord`:
 - ``data_class`` is always ``interaction_content`` (``DATA_CLASS_INTERACTION``), so a legal hold
   selecting that class covers every captured interaction;
 - ``created_at`` is the record's ``captured_at``, which the engine's min/max retention rule runs
-  from (the record's own ``expires_at`` is never later than ``captured_at`` plus the rule's
-  ``max_retention_days``; the engine has no per-record expiry field);
+  from, and ``expires_at`` is the record's own expiry (the earlier of the capture policy's
+  retention and the rule); the engine expires at the earlier of the two and never before
+  minimum retention (item 8);
 - ``subject_id`` is the record's ``principal_id`` (the PRP-99 principal pseudonym), the only
   person identifier an index record carries;
 - ``pseudonymized`` is true once the record carries neither a principal nor a content reference.
