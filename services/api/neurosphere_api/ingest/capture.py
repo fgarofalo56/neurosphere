@@ -355,6 +355,18 @@ class EdgeCapture:
         return decision
 
     async def _capture_one(self, job: CaptureJob, correlation_id: str) -> TelemetryEvent | None:
+        """Never raises (except cancellation): an exception escaping here would fail the whole
+        request through ``gather`` while sibling captures kept running detached, storing
+        content for telemetry that is never published."""
+        try:
+            return await self._try_capture(job, correlation_id)
+        except Exception:
+            # Never expected (the pipeline turns failures into redaction_failed). The exception
+            # is dropped unlogged: it may carry captured text. Telemetry is still accepted.
+            self.count_failure(EDGE_ERROR)
+            return None
+
+    async def _try_capture(self, job: CaptureJob, correlation_id: str) -> TelemetryEvent | None:
         decision = self._decide(job.scope, job.event)
         if decision is None:
             return None
@@ -372,13 +384,7 @@ class EdgeCapture:
             trace_id=event.trace_id.root if event.trace_id is not None else None,
             span_id=event.span_id.root if event.span_id is not None else None,
         )
-        try:
-            ref = await self._pipeline.capture(job.body, target, capture_event, audit=self._audit)
-        except Exception:
-            # Never expected (the pipeline turns failures into redaction_failed). The exception
-            # is dropped unlogged: it may carry captured text. Telemetry is still accepted.
-            self.count_failure(EDGE_ERROR)
-            return None
+        ref = await self._pipeline.capture(job.body, target, capture_event, audit=self._audit)
         if ref is None:
             return None
         return event.model_copy(update={"payload_ref": ref})

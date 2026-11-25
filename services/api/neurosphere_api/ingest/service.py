@@ -8,8 +8,10 @@ item (invalid items rejected individually) -> publish the valid ones -> result.
 Opt-in capture (PRP-103): when an :class:`~neurosphere_api.ingest.capture.EdgeCapture` is
 attached and active, the OTLP traces and CloudEvents telemetry paths extract body parts from the
 parsed document BEFORE the drop, and after mapping put the pipeline's ``payload_ref`` on the
-mapped ``TelemetryEvent`` before its hub message is built. The extracted values are released
-before publish. With no capture attached (or capture off) the path is unchanged.
+mapped ``TelemetryEvent`` before its hub message is built. The service drops its own references
+to the parsed document and the extracted parts before publish; this is reference hygiene, not
+erasure: the raw request bytes (and any copies Python has not yet collected) stay in memory
+until the request completes. With no capture attached (or capture off) the path is unchanged.
 """
 
 from __future__ import annotations
@@ -300,7 +302,7 @@ class IngestService:
             await self._apply_capture(
                 capture, producer, jobs, messages, received_at, correlation_id
             )
-            # Release the extracted values before publish.
+            # Drop our references to the extracted parts before publish (raw bytes stay alive).
             jobs.clear()
             bodies.clear()
         return await self._finish(messages, rejected, [], dropped)
@@ -427,7 +429,7 @@ class IngestService:
             await self._apply_capture(
                 capture, producer, jobs, messages, received_at, correlation_id
             )
-            # Release the extracted values before publish.
+            # Drop our references to the extracted parts before publish (raw bytes stay alive).
             jobs.clear()
             bodies.clear()
         return await self._finish(messages, rejected, [], dropped)
