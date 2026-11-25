@@ -231,9 +231,9 @@ None run here. A real Key Vault wrap and unwrap, the hosted blob container and t
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | orchestrator, `prp-102-encrypted-interaction-store` | 2026-11-25 s-30eda2: plan approved by the owner (Opus implementers; items 2 and 3 parallel; independent review on items 3, 4, 5; rows 5-7 kept as ASSUMPTIONS). U-1 and U-2 confirmed, see runbook "Verification". Finding: `key-version` is a required wrap/unwrap path segment and `kek_uri` may omit it, so item 3 resolves the current version through Get Key. Runbook nav line pulled forward from item 7 (the nav test requires it) |
-| 2 | in-progress | | |
-| 3 | in-progress | | |
-| 4 | todo | | |
+| 2 | merged | `prp-102-item-2-stores` (43e3f882, merge 7f0409b9) | Six containers; `cryptography>=50.0.2,<51` and `jsonschema>=4.26,<5` (orchestrator scope addition for item 4's runtime schema check) now direct in core; uv.lock +4 lines, no version change. `docs/licenses.md` is generated and unchanged (rows already right); "direct" recorded in ADR-0002's hand-kept table. Orchestrator fixed `tests/unit/hosted_demo/test_cosmos_container_drift.py` count 32 to 38 (b2ab7de4). Verified: stores --check, 111 passed (stores_registry, hosted_demo, registry parity, Dockerfiles), licences PASS |
+| 3 | merged | `prp-102-item-3-crypto` (e044e051, merge d5eea651; review fixes cfc2af61) | Verified on integration: 77 passed, ruff, pyright clean; Snyk code scan 0 issues. Independent review APPROVE (no blockers). Orchestrator applied 2 suggestions: unwrap 400 maps to `content_integrity_failed`; public entry points re-raise through `without_context` (no `__context__` chain). Deviations: URI checks run in the constructor; local wrapper refusal is `InvalidSchemaError(reason="config")`; `seal` over 2^31-1 raises `ValueError("content_too_large")`; no 429 retry (callers own backoff). Follow-up issue at close-out: cap Key Vault response size, unlink a partly written local key file, refuse a group/other-readable local key file |
+| 4 | in-progress | | |
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |
