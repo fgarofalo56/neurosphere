@@ -149,6 +149,47 @@ async def test_max_expiry_deletes_when_due_and_verified() -> None:
     assert "r1" not in rig.target.records
 
 
+async def test_record_expiry_earlier_than_the_rule_is_honoured() -> None:
+    # PRP-102: telemetry rule max is 365 days; the record's own expiry passed yesterday.
+    rig = make_rig()
+    early = record("r1", age_days=40).model_copy(update={"expires_at": NOW - timedelta(days=1)})
+    rig.target.put(early)
+    out = await rig.engine.submit(_req(ActionKind.EXPIRE), make_ctx())
+    assert out.status is JobStatus.COMPLETED
+    assert out.governing_rule is Rule.MAX_RETENTION_EXPIRY
+    assert "r1" not in rig.target.records
+
+
+async def test_record_expiry_not_yet_reached_is_not_due() -> None:
+    rig = make_rig()
+    rig.target.put(
+        record("r1", age_days=40).model_copy(update={"expires_at": NOW + timedelta(days=1)})
+    )
+    out = await rig.engine.submit(_req(ActionKind.EXPIRE), make_ctx())
+    assert out.status is JobStatus.NOT_DUE
+    assert "r1" in rig.target.records
+
+
+async def test_record_expiry_never_shortens_min_retention() -> None:
+    rig = make_rig()
+    rig.target.put(
+        record("r1", age_days=10).model_copy(update={"expires_at": NOW - timedelta(days=1)})
+    )
+    out = await rig.engine.submit(_req(ActionKind.EXPIRE), make_ctx())
+    assert out.blocked_by is Rule.MIN_RETENTION
+    assert "r1" in rig.target.records
+
+
+async def test_a_later_record_expiry_never_extends_the_rule() -> None:
+    rig = make_rig()
+    rig.target.put(
+        record("r1", age_days=400).model_copy(update={"expires_at": NOW + timedelta(days=900)})
+    )
+    out = await rig.engine.submit(_req(ActionKind.EXPIRE), make_ctx())
+    assert out.status is JobStatus.COMPLETED
+    assert "r1" not in rig.target.records
+
+
 async def test_pseudonymization_reports_reidentifiable_via_retained_mapping() -> None:
     rig = make_rig()
     rig.target.put(record("r1", age_days=100, subject_id="subj-1"))

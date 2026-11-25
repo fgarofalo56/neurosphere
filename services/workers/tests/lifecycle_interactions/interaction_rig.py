@@ -177,14 +177,19 @@ class Rig:
     seeded: dict[str, InteractionRecord] = field(default_factory=dict)
 
     async def seed(
-        self, *, domain_id: str = DOMAIN, principal_id: str | None = None, text: str | None = None
+        self,
+        *,
+        domain_id: str = DOMAIN,
+        principal_id: str | None = None,
+        text: str | None = None,
+        capture_retention_days: int = 90,
     ) -> str:
         """Store one interaction through the real store; returns its lifecycle record id."""
         interaction_id = str(uuid.uuid4())
         stored = await self.store.put(
             make_record(interaction_id, domain_id=domain_id, principal_id=principal_id),
             make_content(interaction_id, text or "hello [[ns-redacted:email_address]]"),
-            capture_retention_days=90,
+            capture_retention_days=capture_retention_days,
         )
         record_id = interaction_record_id(interaction_id, domain_id)
         self.seeded[record_id] = stored

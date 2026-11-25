@@ -90,6 +90,10 @@ class TargetRecord(_Frozen):
     customer_id: str | None = None
     domain_id: str | None = None
     pseudonymized: bool = False
+    #: A per-record expiry the record carries itself (PRP-102: an interaction's capture policy
+    #: may keep content for less than the class rule). Expiry is due at the earlier of this and
+    #: ``created_at + max_retention_days``; it never shortens ``min_retention_days``.
+    expires_at: AwareDatetime | None = None
 
 
 class LifecycleRequest(_Frozen):

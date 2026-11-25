@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -19,6 +19,7 @@ from neurosphere_core.lifecycle import (
 from neurosphere_core.lifecycle.models import LifecycleOutcome
 
 from .interaction_rig import (
+    CAPTURED,
     CONTAINER,
     CUSTOMER,
     DOMAIN,
@@ -135,6 +136,29 @@ async def test_records_inside_retention_are_not_due(tmp_path: Path) -> None:
     assert [(o.status, o.reason) for o in outcomes] == [(JobStatus.NOT_DUE, "not_expired")]
     assert rig.has_blob(record_id)
     assert rig.has_index(record_id)
+
+
+async def test_a_shorter_capture_retention_expires_before_the_rule(tmp_path: Path) -> None:
+    # Rule max 90 days; 40 days after capture only the 30-day record is due (Clarification 2).
+    rig = make_rig(tmp_path, now=CAPTURED + timedelta(days=40))
+    short = await rig.seed(capture_retention_days=30)
+    long = await rig.seed(capture_retention_days=90)
+    outcomes = _by_id(await _sweep(rig), rig)
+    _assert_purged(rig, short, outcomes[short])
+    assert (outcomes[long].status, outcomes[long].reason) == (JobStatus.NOT_DUE, "not_expired")
+    assert rig.has_blob(long)
+    assert rig.has_index(long)
+
+
+async def test_a_hold_beats_a_short_capture_retention(tmp_path: Path) -> None:
+    rig = make_rig(tmp_path, now=CAPTURED + timedelta(days=40))
+    record_id = await rig.seed(capture_retention_days=30)
+    await rig.holds.place(
+        LegalHold(reason_code="litigation", data_class=DATA_CLASS_INTERACTION, placed_at=PLACED)
+    )
+    (outcome,) = await _sweep(rig)
+    _assert_held(outcome)
+    assert rig.has_blob(record_id)
 
 
 async def test_an_interrupted_purge_reads_as_purged_and_the_next_run_completes_it(

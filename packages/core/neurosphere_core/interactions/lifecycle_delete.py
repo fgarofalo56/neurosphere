@@ -149,7 +149,16 @@ class InteractionLifecycleBackend:
             "customer_id": record.customer_id.root,
             "domain_id": domain_id,
             "pseudonymized": principal is None and record.content_ref is None,
+            # The capture policy's expiry; the engine expires at the earlier of this and the rule.
+            "expires_at": self._expires_at(record),
         }
+
+    @staticmethod
+    def _expires_at(record: InteractionRecord) -> datetime | None:
+        try:
+            return parse_timestamp(record.expires_at.root)
+        except ValueError:
+            return None  # unparsable: fall back to the class rule, never expire early
 
     async def _record(self, record_id: str) -> InteractionRecord | None:
         parsed = parse_interaction_record_id(record_id)
