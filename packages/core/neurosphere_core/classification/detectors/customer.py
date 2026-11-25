@@ -28,14 +28,38 @@ Static safety check (``check_pattern_safety``), applied in this order, first fai
                            lower bound does. An unbounded repeat followed by anything is
                            quadratic in the text length (``\\w+x`` over 64 KiB of ``a`` takes
                            seconds), so customers write ``[0-9]{1,12}`` instead of ``[0-9]+``.
+``too_deep``               groups nested more than ``MAX_GROUP_DEPTH`` (2) levels. A level is
+                           a group (capturing or ``(?i:...)``) or a repeat of anything but one
+                           character, so ``(?:(?:(?:\\w?){1}){1}){1}`` and ``(((\\w?)))`` are
+                           refused. Each level adds interpreter work to every path through
+                           it (15 nested groups made a pattern 10x slower than its flat form).
 ``empty_match``            the pattern can match the empty string (``x?``, ``\\b``).
-``too_complex``            the backtracking estimate ``paths * max_width`` exceeds
-                           ``MAX_COMPLEXITY`` (1024); ``paths`` multiplies the choices of every
-                           variable repeat (x4 when the repeated body is a group rather than
-                           one character) and alternation, so adjacent overlapping repeats
-                           (``\\w{1,64}\\w{1,64}x``) are caught here. Calibrated so every
-                           accepted pattern scans 64 KiB of adversarial text well under
-                           50 ms (the tests measure it).
+``too_complex``            the cost estimate ``paths * (max_width + steps)`` exceeds
+                           ``MAX_COMPLEXITY`` (160).
+                           ``paths`` multiplies the choices of every variable repeat (x4 when
+                           the repeated body is a group rather than one character) and
+                           alternation, so adjacent overlapping repeats
+                           (``\\w{1,64}\\w{1,64}x``) and ``?`` chains (``\\w?`` x5 is 32
+                           paths) are caught here. Every path may re-check up to
+                           ``max_width`` characters and re-run ``steps`` interpreter
+                           operations: 1 per character, character repeat, group or
+                           alternation, plus ``GROUP_REPEAT_WEIGHT`` (4) for every repeat of
+                           a group, fixed counts such as ``{1}`` included, whose body is
+                           charged once per repetition. The old ``paths * max_width`` alone
+                           ignored that per-path overhead and accepted patterns 30x over
+                           their claimed cost.
+
+Cost contract (what the engine, item 5, sizes chunks and the time budget on): one accepted
+pattern costs at most about 1 ms per estimate unit per 64 KiB of text on the reference
+machine (Python 3.12, Windows 11 dev workstation), so at the cap **at most 250 ms per
+64 KiB chunk per pattern**, budget 4x that (1 s) on a shared CI runner. The worst accepted
+pattern measured is a long case-insensitive class run with a failing tail,
+``(?i)[a-z]{100}[a-z]{50}1`` (cost 154), at 96 ms idle and 157 ms with a core busy, over
+64 KiB of ``a``; ``(?i)``
+classes are the slowest per character. Typical identifiers cost far less: ``EMP-[0-9]{6}``
+(cost 13) and ``(?i)case-[0-9]{4,10}`` (cost 154, the largest legitimate shape the tests
+pin) scan 64 KiB in about 1 ms. ``finditer`` itself adds about 12 ms per 64 KiB when the
+pattern matches at every position.
 
 The check reads the stdlib parse tree (``re._parser``, private but present and stable in the
 supported range ``>=3.12,<3.14``; a test pins that range). Any exception while parsing or
@@ -66,9 +90,11 @@ from neurosphere_core.classification.protocol import Detector
 
 MAX_PATTERN_CHARS: Final = 256
 MAX_REPEAT_BOUND: Final = 100
-MAX_COMPLEXITY: Final = 1024
-#: Weight for a variable repeat of a group rather than one character: measured about 3x
-#: slower per step than a single-character repeat, which ``re`` runs in a tight C loop.
+MAX_COMPLEXITY: Final = 160
+MAX_GROUP_DEPTH: Final = 2
+#: Weight for a repeat of a group rather than one character: measured about 3x slower per
+#: step than a single-character repeat, which ``re`` runs in a tight C loop. Multiplies the
+#: paths of a variable group repeat and is added to the steps of every group repeat.
 GROUP_REPEAT_WEIGHT: Final = 4
 MAX_TERMS: Final = 10_000
 MAX_TERM_CHARS: Final = 256
@@ -91,6 +117,7 @@ REFUSAL_DETAILS: Final[tuple[str, ...]] = (
     "nested_quantifier",
     "quantified_alternation",
     "unbounded_repeat_cap",
+    "too_deep",
     "empty_match",
     "too_complex",
 )
@@ -229,6 +256,44 @@ def _paths(seq: Any) -> int:
     return total
 
 
+def _steps(seq: Any) -> int:
+    """Interpreter operations one path may run: see ``too_complex`` in the module docstring."""
+    total = 0
+    for op, av in _items(seq):
+        if op in _REPEAT_OPS:
+            if _single_char(av[2]):
+                total += 1
+            else:
+                total += GROUP_REPEAT_WEIGHT + _steps(av[2]) * max(1, int(av[1]))
+        elif op == "BRANCH":
+            total += 1 + sum(_steps(b) for b in av[1])
+        elif op == "SUBPATTERN":
+            total += 1 + _steps(av[3])
+        elif op == "ATOMIC_GROUP":
+            total += 1 + _steps(av)
+        else:
+            total += 1
+    return total
+
+
+def _depth(seq: Any) -> int:
+    """Group nesting depth: groups and repeats of anything but one character."""
+    deepest = 0
+    for op, av in _items(seq):
+        if op in _REPEAT_OPS:
+            level = _depth(av[2]) + (0 if _single_char(av[2]) else 1)
+        elif op == "BRANCH":
+            level = max(_depth(b) for b in av[1])
+        elif op == "SUBPATTERN":
+            level = 1 + _depth(av[3])
+        elif op == "ATOMIC_GROUP":
+            level = 1 + _depth(av)
+        else:
+            level = 0
+        deepest = max(deepest, level)
+    return deepest
+
+
 def check_pattern_safety(pattern: str) -> None:
     """Refuse ``pattern`` unless its backtracking cost is statically bounded.
 
@@ -243,8 +308,11 @@ def check_pattern_safety(pattern: str) -> None:
         flags = int(tree.state.flags)
         walk = _Walk()
         _visit(tree, walk)
+        if _depth(tree) > MAX_GROUP_DEPTH:
+            walk.found.add("too_deep")
         low_width, high_width = (int(w) for w in tree.getwidth())
         paths = _paths(tree)
+        steps = _steps(tree)
     except PatternRefused:
         raise
     except Exception:
@@ -256,7 +324,7 @@ def check_pattern_safety(pattern: str) -> None:
             raise PatternRefused(detail)
     if low_width == 0:
         raise PatternRefused("empty_match")
-    if paths * high_width > MAX_COMPLEXITY:
+    if paths * (high_width + steps) > MAX_COMPLEXITY:
         raise PatternRefused("too_complex")
 
 
@@ -351,9 +419,13 @@ class CustomerDictionaryDetector:
 
     Cost: one dict step per walked character, and a walk never exceeds the longest folded
     term (at most 768 characters), so the scan is linear in the text length with that
-    constant as the worst-case factor; ordinary text leaves the trie after one or two steps.
-    This avoids both a 10,000-way regex alternation (tried branch by branch at every
-    position) and a new dependency.
+    constant as the worst-case factor; ordinary text leaves the trie after one or two steps
+    (about 35 ms per 64 KiB on the reference machine). The worst case is a long term built
+    from a repeated token over text of that token, so every start position walks the whole
+    term: a 255-character run of ``!`` plus ``x`` over 64 KiB of ``!`` takes about 1.3 s,
+    ``"a a ... b"`` over ``"a a ..."`` about 0.7 s. Contract for the engine: **at most 2 s
+    per 64 KiB per dictionary** on the reference machine. This avoids both a 10,000-way
+    regex alternation (tried branch by branch at every position) and a new dependency.
 
     A term never matches inside a longer word. Matches that cut into a
     ``[[ns-redacted:...]]`` placeholder are dropped; only a term that covers the whole
