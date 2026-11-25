@@ -146,8 +146,13 @@ class JwtDetector(_Base):
 
 #: The span is the token only; the word ``Bearer`` is kept. The token class excludes ``[``, so
 #: ``Bearer [[ns-redacted:...]]`` matches neither here nor in ``secret_free_text``. No left
-#: boundary and an unbounded possessive blank run, mirroring ``secret_free_text`` exactly.
-_BEARER: Final = re.compile(r"(?i)bearer[ \t]++(?P<token>[A-Za-z0-9._~+/=-]{8,}+)")
+#: boundary and an unbounded possessive blank run, mirroring ``secret_free_text``. The run also
+#: accepts JSON-escaped whitespace (``\t``, ``\n``, ``\r``, ``\ ``, ``\u0009``, `` ``, with
+#: up to 8 backslashes for text encoded more than once): every item starts with a blank or a
+#: backslash run and the run is possessive, so it is still scanned once.
+_BEARER: Final = re.compile(
+    r"(?i)bearer(?:[ \t]|\\{1,8}+(?:[tnr ]|u0009|u0020))++(?P<token>[A-Za-z0-9._~+/=-]{8,}+)"
+)
 
 
 class BearerTokenDetector(_Base):
@@ -349,24 +354,59 @@ _VALUE_PATTERN: Final = (
     r"\"(?:[^\"\\\r\n]|\\[^\r\n]|\"\"){1,512}\"|'(?:[^'\\\r\n]|\\[^\r\n]|''){1,512}'"
     r"|\"[^\"\r\n]{1,512}\"|'[^'\r\n]{1,512}'|[^\s\"'{\[][^\s\"']{0,511}"
 )
+#: A value in JSON-escaped quotes (``\"v\"``, ``\\\"v\\\"``: JSON inside a JSON string, as in
+#: LLM tool-call arguments), spanned through the closing escaped quote. The body stops at the
+#: first backslash run followed by the quote; each body item is a character or a possessive
+#: backslash run plus one character, so the bounded repetition never nests.
+_ESCAPED_QUOTED: Final = (
+    r"\\{1,8}+\"(?:[^\\\"\r\n]|\\++[^\\\"\r\n]){1,512}+\\{1,8}+\""
+    r"|\\{1,8}+'(?:[^\\'\r\n]|\\++[^\\'\r\n]){1,512}+\\{1,8}+'"
+)
+#: An optional (possibly escaped) quote closing a quoted label: ``"password"``, ``\"password\"``.
+_LABEL_QUOTE: Final = r"(?:\\{0,8}+[\"'])?"
+#: Assignment and comparison operators, longest first so ``==`` is never read as ``=`` plus a
+#: value ``=``: ``=``, ``:``, ``:=`` (Go, Pascal), ``=>`` (PHP, Ruby, Perl), ``->``/``<-``
+#: (R and others), ``==``/``===``/``!=`` (comparisons in code).
+#: Atomic: once ``=>`` matched, ``=`` plus the value ``>`` is never tried instead (that would
+#: re-detect ``password => [[ns-redacted:...]]``).
+_OPERATOR: Final = r"(?>===|==|!=|:=|=>|->|<-|[=:])"
+_OPERATOR_CHARS: Final = "=:!<>-"
+#: One label character; a ``-`` that starts ``->`` ends the label (``db_password->v``), so the
+#: possessive label runs below never swallow the operator.
+_LABEL_CHAR: Final = r"(?:[A-Za-z0-9_.]|-(?!>))"
 #: Credential phrasing. The label is kept, the value spanned. ``suffix`` is a ``_``/``.``/``-``
 #: segment or a camelCase word (``tokenValue``); ``max_tokens`` never matches because ``s``
 #: is neither. Quantifiers are bounded; the suffix is possessive (no separator character can
 #: occur in it, so giving back characters could never let the separator match).
 _ASSIGNMENT: Final = re.compile(
     rf"(?i)(?P<kw>{_KW_PATTERN})"
-    r"(?P<suffix>[_.-][A-Za-z0-9_.-]{0,40}+|(?-i:[A-Z])[A-Za-z0-9_.-]{0,40}+)?"
-    r"(?P<sep>[\"']?(?:[ \t]{0,4}[=:][ \t]{0,4}|[ \t]{1,4}is[ \t]{1,4}))"
-    rf"(?P<value>{_VALUE_PATTERN})"
+    rf"(?P<suffix>(?:[_.]|-(?!>)){_LABEL_CHAR}{{0,40}}+|(?-i:[A-Z]){_LABEL_CHAR}{{0,40}}+)?"
+    rf"(?P<sep>{_LABEL_QUOTE}"
+    rf"(?:[ \t]{{0,4}}+{_OPERATOR}[ \t]{{0,4}}+|[ \t]{{1,4}}is[ \t]{{1,4}}))"
+    rf"(?P<value>{_ESCAPED_QUOTED}|{_VALUE_PATTERN})"
 )
 _KW: Final = re.compile(rf"(?i){_KW_PATTERN}")
-#: A label word (bare or quoted) followed by an assignment operator, matched where a value
-#: starts: ``password: client_secret = 'v'`` names a second label, not the value.
+#: A label word (bare, quoted or escaped-quoted) followed by an assignment operator, matched
+#: where a value starts: ``password: client_secret = 'v'`` names a second label, not the value.
 _CHAIN_LABEL: Final = re.compile(
-    r"(?:\"(?P<dq>[A-Za-z0-9_.-]{1,64}+)\"|'(?P<sq>[A-Za-z0-9_.-]{1,64}+)'"
-    r"|(?P<bare>[A-Za-z0-9_.-]{1,64}+))[ \t]{0,4}[=:]"
+    r"(?:\\{0,8}+\"(?P<dq>[A-Za-z0-9_.-]{1,64}+)\\{0,8}+\""
+    r"|\\{0,8}+'(?P<sq>[A-Za-z0-9_.-]{1,64}+)\\{0,8}+'"
+    rf"|(?P<bare>{_LABEL_CHAR}{{1,64}}+))[ \t]{{0,4}}{_OPERATOR}"
 )
-_CHAIN_VALUE: Final = re.compile(rf"[ \t]{{0,4}}(?P<value>{_VALUE_PATTERN})")
+#: A command-line flag and its blank-separated value: ``--password v``, ``--client-secret v``,
+#: ``--api-key v``, PowerShell ``-Password v`` / ``-ClientSecret v``. The flag word is checked
+#: in code (``_is_credential_word``), so ``--max-tokens``/``--token-count`` are not credentials.
+#: The value never starts with ``--`` (the next long flag), ``=`` or ``:`` (an assignment the
+#: assignment pattern spans); a single ``-`` may start it (``-Password -x7Q...``; a following
+#: PowerShell switch is over-redacted). The literal leading ``-`` lets the engine skip to
+#: dashes; the lookbehind enters a dash run once; every run is possessive.
+_FLAG: Final = re.compile(
+    r"-(?<![A-Za-z0-9_.-]-)-?+(?P<flag>[A-Za-z][A-Za-z0-9_-]{0,63}+)[ \t]{1,4}+"
+    rf"(?P<value>{_ESCAPED_QUOTED}"
+    r"|\"(?:[^\"\\\r\n]|\\[^\r\n]|\"\"){1,512}\"|'(?:[^'\\\r\n]|\\[^\r\n]|''){1,512}'"
+    r"|\"[^\"\r\n]{1,512}\"|'[^'\r\n]{1,512}'|(?:[^\s\"'{\[=:-]|-(?![-\s]))[^\s\"']{0,511})"
+)
+_CHAIN_VALUE: Final = re.compile(rf"[ \t]{{0,4}}(?P<value>{_ESCAPED_QUOTED}|{_VALUE_PATTERN})")
 _CHAIN_MAX_BLANKS: Final = 4
 _IS_ALLOWED: Final = frozenset({"password", "passwd", "passphrase", "passcode", "pwd", "pin"})
 #: Label words that name metadata about a credential, not the credential (``token_count``).
@@ -434,7 +474,12 @@ def _is_metadata_label(text: str, kw_start: int, kw: str, suffix: str | None) ->
 
 class PasswordAssignmentDetector(_Base):
     """``password=``, ``pwd:``, ``client_secret:``, ``AppSecret=``, ``api_key=``, ``token=``
-    and similar phrasing; ``password is X`` for the password words. Spans the value only.
+    and similar phrasing with any of ``=``, ``:``, ``:=``, ``=>``, ``->``, ``<-``, ``==``,
+    ``===``, ``!=``; ``password is X`` for the password words; command-line flags
+    (``--password v``, ``--client-secret v``, ``-ClientSecret v``). Spans the value only.
+    A credential label followed by an arrow in prose (``password -> reset``) spans the next
+    word: over-redaction accepted. JSON-escaped quotes (``\\"client_secret\\": \\"v\\"``, JSON
+    inside a JSON string) count as quotes around both the label and the value.
 
     Not credentials: labels whose suffix names metadata (``token_count``, ``secret_name``,
     ``token_limit``), token-accounting labels (``max_token``, ``prompt_tokens``), a ``token``
@@ -451,7 +496,20 @@ class PasswordAssignmentDetector(_Base):
     _confidence = "medium"
 
     def find(self, text: str) -> tuple[Match, ...]:
-        out: list[Match] = []
+        spans = self._assignment_spans(text)
+        flags = self._flag_spans(text)
+        if not flags:  # assignment spans are already ordered and disjoint
+            return tuple(self._match(s, e) for s, e in spans)
+        merged: list[tuple[int, int]] = []
+        for start, end in sorted(spans + flags):
+            if merged and start < merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        return tuple(self._match(s, e) for s, e in merged)
+
+    def _assignment_spans(self, text: str) -> list[tuple[int, int]]:
+        out: list[tuple[int, int]] = []
         pos = 0
         while True:
             m = _ASSIGNMENT.search(text, pos)
@@ -459,7 +517,7 @@ class PasswordAssignmentDetector(_Base):
                 break
             if self._accepted(text, m):
                 end = max(m.end("value"), _chain_end(text, m.start("value")))
-                out.append(self._match(m.start("value"), end))
+                out.append((m.start("value"), end))
                 pos = end
             elif (label := _chain_label(text, m.start("value"))) is not None:
                 # The outer label is not a credential, but its "value" is a label: rescan from
@@ -467,7 +525,28 @@ class PasswordAssignmentDetector(_Base):
                 pos = _first_credential_label(text, label)
             else:
                 pos = m.end()
-        return tuple(out)
+        return out
+
+    @staticmethod
+    def _flag_spans(text: str) -> list[tuple[int, int]]:
+        """``--password v`` and ``-ClientSecret v``: the flag is kept, the value spanned."""
+        out: list[tuple[int, int]] = []
+        seen: dict[str, bool] = {}
+        pos = 0
+        while True:
+            m = _FLAG.search(text, pos)
+            if m is None:
+                break
+            flag = m.group("flag")
+            if flag not in seen:
+                seen[flag] = _is_credential_word(flag)
+            token = "token" in flag.lower()
+            if seen[flag] and _value_accepted(m.group("value"), is_token=token):
+                out.append((m.start("value"), m.end("value")))
+                pos = m.end("value")
+            else:
+                pos = m.start("value")  # the rejected value may hold the next flag
+        return out
 
     @staticmethod
     def _accepted(text: str, m: re.Match[str]) -> bool:
@@ -476,11 +555,20 @@ class PasswordAssignmentDetector(_Base):
             return False
         if _is_metadata_label(text, m.start("kw"), kw, m.group("suffix")):
             return False
-        value = m.group("value")
-        bare = value[1:-1] if value[0] in "\"'" else value
-        if bare.startswith(_PLACEHOLDER_START) or bare.lower() in _EMPTY_VALUES:
-            return False
-        return not (kw == "token" and _SHORT_NUMBER.fullmatch(bare))
+        return _value_accepted(m.group("value"), is_token=kw == "token")
+
+
+def _value_accepted(value: str, *, is_token: bool) -> bool:
+    """Not a placeholder, not ``null``/``true``-style, not a short ``token`` count."""
+    bare = value.strip("\\") if value[0] == "\\" else value
+    bare = bare[1:-1] if bare[:1] in ('"', "'") and len(bare) > 1 else bare
+    bare = bare.strip("\\")
+    # ``password:=[[ns-redacted:...]]`` can also be read as ``:`` plus the value ``=[[...``.
+    if bare.lstrip(_OPERATOR_CHARS).startswith(_PLACEHOLDER_START):
+        return False
+    if bare.rstrip(",;)]}").lower() in _EMPTY_VALUES:  # ``"password": null,`` in JSON
+        return False
+    return not (is_token and _SHORT_NUMBER.fullmatch(bare))
 
 
 def _chain_label(text: str, start: int) -> re.Match[str] | None:
