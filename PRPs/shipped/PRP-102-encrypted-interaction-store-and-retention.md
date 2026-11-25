@@ -1,10 +1,12 @@
 ---
 name: PRP-102-encrypted-interaction-store-and-retention
-status: active
+status: shipped
 priority: P0
 order: 102
 review: required
 created: 2026-11-16
+shipped: 2026-11-25
+pr: 412
 model: opus
 orchestrator_model: opus
 implementer_model: opus
@@ -255,7 +257,7 @@ None run here. A real Key Vault wrap and unwrap, the hosted blob container and t
 | 7 | merged | orchestrator | Runbook sections (what exists, the two gates, sample rule, accepted content, envelope format, key configuration and rotation, purge/holds/expiry, reason codes); changelog fragment; follow-up issue #411. PRP gates on the integration branch: ruff and format (2504 files) clean, repo-wide pyright 0 errors, stores --check, licences PASS, prp_status and validate_planning PASS, gate pytest list 460 passed, docs 132 passed |
 
 ## Completion note (filled at ship)
-- Date and PR: 2026-11-25, PR to be recorded at merge.
+- Date and PR: 2026-11-25, PR #412 (integration branch `prp-102-encrypted-interaction-store`; item merges 7f0409b9, d5eea651, 8578852e, a7808a1d, 31a24677; item 8 745259fa).
 - Deviations:
   - Item 8 was added with the owner's approval: an optional per-record `expires_at` in the lifecycle engine (`lifecycle/{models,engine,adapters}.py`), so a capture policy shorter than the retention rule is honoured.
   - `jsonschema` was also made a direct core dependency, and the `RedactedContent` schema is vendored as package data (the contract schemas are not in the runtime images).
