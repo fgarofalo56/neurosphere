@@ -295,6 +295,12 @@ def _register_sources_status(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_admin_capture(registry: RouterRegistry) -> None:
+    from neurosphere_api.admin.capture import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -336,6 +342,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_catalog_access,
     _register_sources_status,
     _register_agent_identity,
+    _register_admin_capture,
 )
 
 
