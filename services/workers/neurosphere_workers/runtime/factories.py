@@ -111,6 +111,7 @@ from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
 from neurosphere_core.hitl import HitlService
 from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
+from neurosphere_core.interactions import BlobInteractionContent, CosmosInteractionIndex
 from neurosphere_core.ledger import PriceTable
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
 from neurosphere_core.lifecycle import TargetRegistry
@@ -892,13 +893,61 @@ def _lifecycle_storage_configured(cfg: RuntimeConfig | None) -> bool:
     return cfg.settings.env == "local" or bool(cfg.store.cosmos_account)
 
 
+_ENV_INTERACTION_CONTAINER: Final = "NS_INTERACTION_CONTENT_CONTAINER"
+_ENV_INTERACTION_ACCOUNT: Final = "NS_INTERACTION_CONTENT_STORAGE_ACCOUNT"
+
+
+def _interaction_backends(
+    cfg: RuntimeConfig, cosmos: CosmosClient, lifetime: ClientLifetime
+) -> tuple[CosmosInteractionIndex | None, BlobInteractionContent | None]:
+    """The interaction index and content backends, both or neither (PRP-103 item 7).
+
+    Configured by ``NS_INTERACTION_CONTENT_CONTAINER`` (unset: no interaction target, silently,
+    as today). Set but unusable (no Azurite connection string locally, no
+    ``NS_INTERACTION_CONTENT_STORAGE_ACCOUNT`` elsewhere) is a partial configuration: logged,
+    and neither backend is returned, so the ``interaction_content`` target is left out and a
+    request for it fails closed as ``unknown_target``. Blob access is the archive's: the local
+    connection string, else managed or workload identity, never a key.
+    """
+    container = os.environ.get(_ENV_INTERACTION_CONTAINER, "").strip()
+    if not container:
+        return None, None
+    try:
+        if cfg.settings.env == "local":
+            conn = os.environ.get(ENV_BLOB_CONNECTION_STRING)
+            if not conn:
+                raise RoleConfigError("blob_connection_string_missing")
+            blobs = ContainerClient.from_connection_string(conn, container)
+        else:
+            account = os.environ.get(_ENV_INTERACTION_ACCOUNT, "").strip()
+            if not account:
+                raise RoleConfigError("interaction_storage_account_missing")
+            credential = lifetime.register(
+                DefaultAzureCredential(authority=cfg.settings.cloud_profile.login_host)
+            )
+            url = blob_account_url(cfg.settings.cloud_profile, account)
+            blobs = ContainerClient(url, container, credential=credential)
+    except RoleConfigError as exc:
+        logger.warning(
+            "lifecycle interaction target not registered",
+            extra={"event": "worker.lifecycle_interaction_off", "reason": exc.reason},
+        )
+        return None, None
+    content = BlobInteractionContent(
+        lifetime.register(blobs),  # type: ignore[arg-type]
+        settings=cfg.settings,
+    )
+    return CosmosInteractionIndex.from_client(cosmos, database=cfg.store.database), content
+
+
 def _lifecycle_targets(
     cfg: RuntimeConfig, cosmos: CosmosClient, lifetime: ClientLifetime
 ) -> TargetRegistry:
-    """Catalog, ledger and archive targets over the real stores.
+    """Catalog, ledger, archive and interaction targets over the real stores.
 
     The archive target is registered only when blob storage is configured (a missing archive
-    setting leaves it out, so a request for it fails closed as ``unknown_target``). The
+    setting leaves it out, so a request for it fails closed as ``unknown_target``); the
+    ``interaction_content`` target likewise needs its index and content backends together. The
     conversation target is not built here (follow-up: it needs the API-hosted store).
     """
     db = _database(cfg, cosmos)
@@ -911,6 +960,7 @@ def _lifecycle_targets(
             extra={"event": "worker.lifecycle_archive_off", "reason": exc.reason},
         )
         archive = None
+    interaction_index, interaction_blobs = _interaction_backends(cfg, cosmos, lifetime)
     return build_targets(
         cloud=cfg.cloud,
         customer_id=cfg.customer_id,
@@ -918,6 +968,8 @@ def _lifecycle_targets(
         ledger_container=db.get_container_client(_LEDGER_CONTAINER),
         archive_container=archive,
         archive_name=ArchiveSettings().container,
+        interaction_index=interaction_index,
+        interaction_blobs=interaction_blobs,
     )
 
 
