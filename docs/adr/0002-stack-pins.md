@@ -45,10 +45,11 @@ unless stated. Versions are major.minor; exact pins live in `uv.lock` and
 | openai | 3.26 | Apache-2.0 | https://pypi.org/project/openai/ | |
 | mcp | 2.3 | MIT | https://pypi.org/project/mcp/ | spec 2026-07-28; OAuth 2.1 resource-server auth in SDK; set `validate_token_resource` explicitly; DCR deprecated |
 | cloudevents | 2.2 | Apache-2.0 | https://pypi.org/project/cloudevents/ | |
-| jsonschema | 4.26 | MIT | https://pypi.org/project/jsonschema/ | draft 2020-12 |
+| jsonschema | 4.26 | MIT | https://pypi.org/project/jsonschema/ | draft 2020-12; direct runtime dependency of `packages/contracts` and, since PRP-102 (RedactedContent validation), of `packages/core` |
 | pytest / pytest-asyncio / hypothesis | 9.1 / 1.4 / 6.168 | MIT / Apache-2.0 / MPL-2.0 | pypi | hypothesis is dev-only (file-level copyleft) |
 | ruff / pyright / pip-audit | 0.16 / 1.1.4xx / 2.10 | MIT / MIT / Apache-2.0 | pypi | |
 | httpx / respx | 0.28 / 0.23 | BSD-3 | pypi | |
+| cryptography | 50.0.2 | Apache-2.0 OR BSD-3-Clause | https://pypi.org/project/cryptography/ | direct runtime dependency of `packages/core` (PRP-102 envelope encryption, AES-GCM); was transitive via `pyjwt[crypto]`; version and licence verified 2026-11-25 from installed package metadata |
 
 ### Frontend
 
