@@ -29,16 +29,6 @@
 # 2026-11-21 (PR 366). Their exploitability in these images has not been assessed either. Delete
 # these ten rules with the first eight.
 # expires: 2026-12-02 openssl-alpine
-#
-# nginx 1.30.6-r1 in the frontend image: CVE-2026-113425, CVE-2026-121810, CVE-2026-123007,
-# CVE-2026-123633 and CVE-2026-123634 (fixed in nginx 1.30.7), accepted 2026-11-18 by the owner
-# until 2026-11-26. Reason, scope and re-check trigger are in .trivyignore, which enforces the
-# same date for Trivy (exp:); the marker below enforces it here. Whether Grype reports these at
-# all was not observed (the image job stopped at the Trivy step); the rules are scoped to the
-# nginx package and are harmless if it does not.
-# CVE-2026-118899 (same package and fix version) was added 2026-11-19 under the same marker; its
-# reason is in .trivyignore.
-# expires: 2026-11-26 nginx-base
 ignore:
   - vulnerability: GHSA-fc5q-39xc-vjpf
     package:
@@ -100,21 +90,3 @@ ignore:
   - vulnerability: CVE-2026-84786
     package:
       name: libssl3
-  - vulnerability: CVE-2026-113425
-    package:
-      name: nginx
-  - vulnerability: CVE-2026-121810
-    package:
-      name: nginx
-  - vulnerability: CVE-2026-123007
-    package:
-      name: nginx
-  - vulnerability: CVE-2026-123633
-    package:
-      name: nginx
-  - vulnerability: CVE-2026-123634
-    package:
-      name: nginx
-  - vulnerability: CVE-2026-118899
-    package:
-      name: nginx
