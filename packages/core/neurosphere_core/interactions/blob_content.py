@@ -216,7 +216,7 @@ class BlobInteractionContent:
         try:
             await self._container.create_container()
         except ResourceExistsError:
-            pass
+            pass  # already created (another worker or an earlier run): nothing to do
         except Exception:
             raise InteractionStoreError(INTERACTION_STORE_UNAVAILABLE) from None
         self._ready = True

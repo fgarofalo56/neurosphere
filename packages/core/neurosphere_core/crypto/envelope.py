@@ -252,39 +252,36 @@ async def _seal(plaintext: bytes, aad: bytes, wrapper: KeyWrapper) -> Envelope:
         raise TypeError("seal takes bytes plaintext and bytes aad")
     if len(plaintext) > _MAX_PLAINTEXT or len(aad) > _MAX_CIPHERTEXT // 2:
         raise ValueError("content_too_large")
+    # The data key lives only in this frame: it is never stored on the envelope or logged.
     data_key = AESGCM.generate_key(bit_length=256)
     try:
-        try:
-            wrapped = await wrapper.wrap(data_key)
-        except EnvelopeError:
-            raise
-        except Exception:
-            raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
-        if not isinstance(wrapped, WrappedKey):
-            raise EnvelopeError(KEY_WRAP_UNAVAILABLE)
-        nonce = os.urandom(NONCE_BYTES)
-        try:
-            associated = _aead_associated_data(
-                ENVELOPE_FORMAT_VERSION, wrapped.key_id, wrapped.algorithm, aad
-            )
-        except (AttributeError, UnicodeEncodeError):
-            raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
-        ciphertext = AESGCM(data_key).encrypt(nonce, plaintext, associated)
-        try:
-            return Envelope(
-                format_version=ENVELOPE_FORMAT_VERSION,
-                key_id=wrapped.key_id,
-                wrap_algorithm=wrapped.algorithm,
-                wrapped_key=wrapped.value,
-                nonce=nonce,
-                ciphertext=ciphertext,
-            )
-        except EnvelopeError:
-            # A wrapper returned an unusable key id, algorithm or wrapped value.
-            raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
-    finally:
-        # bytes are immutable, so this only drops the reference; the key is never stored.
-        del data_key
+        wrapped = await wrapper.wrap(data_key)
+    except EnvelopeError:
+        raise
+    except Exception:
+        raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
+    if not isinstance(wrapped, WrappedKey):
+        raise EnvelopeError(KEY_WRAP_UNAVAILABLE)
+    nonce = os.urandom(NONCE_BYTES)
+    try:
+        associated = _aead_associated_data(
+            ENVELOPE_FORMAT_VERSION, wrapped.key_id, wrapped.algorithm, aad
+        )
+    except (AttributeError, UnicodeEncodeError):
+        raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
+    ciphertext = AESGCM(data_key).encrypt(nonce, plaintext, associated)
+    try:
+        return Envelope(
+            format_version=ENVELOPE_FORMAT_VERSION,
+            key_id=wrapped.key_id,
+            wrap_algorithm=wrapped.algorithm,
+            wrapped_key=wrapped.value,
+            nonce=nonce,
+            ciphertext=ciphertext,
+        )
+    except EnvelopeError:
+        # A wrapper returned an unusable key id, algorithm or wrapped value.
+        raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
 
 
 async def open_envelope(envelope: Envelope, aad: bytes, wrapper: KeyWrapper) -> bytes:
@@ -306,15 +303,12 @@ async def _open_envelope(envelope: Envelope, aad: bytes, wrapper: KeyWrapper) ->
         raise
     except Exception:
         raise EnvelopeError(KEY_WRAP_UNAVAILABLE) from None
+    if not isinstance(data_key, bytes) or len(data_key) != DATA_KEY_BYTES:
+        raise _integrity()
+    associated = _aead_associated_data(
+        envelope.format_version, envelope.key_id, envelope.wrap_algorithm, aad
+    )
     try:
-        if not isinstance(data_key, bytes) or len(data_key) != DATA_KEY_BYTES:
-            raise _integrity()
-        associated = _aead_associated_data(
-            envelope.format_version, envelope.key_id, envelope.wrap_algorithm, aad
-        )
-        try:
-            return AESGCM(data_key).decrypt(envelope.nonce, envelope.ciphertext, associated)
-        except InvalidTag:
-            raise _integrity() from None
-    finally:
-        del data_key
+        return AESGCM(data_key).decrypt(envelope.nonce, envelope.ciphertext, associated)
+    except InvalidTag:
+        raise _integrity() from None

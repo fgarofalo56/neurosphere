@@ -82,7 +82,6 @@ class LocalFileKeyWrapper:
         fingerprint = hashlib.sha256(_FINGERPRINT_LABEL + material).hexdigest()[:16]
         self._key_id = f"local:{fingerprint}"
         self._aead = AESGCM(material)
-        del material
 
     @property
     def key_id(self) -> str:

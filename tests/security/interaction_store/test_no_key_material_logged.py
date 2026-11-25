@@ -225,8 +225,10 @@ async def test_whole_flow_logs_and_raises_nothing_sensitive(
         await flow.expect(KEY_HOST_REFUSED, construct)
 
     # --- delete and lifecycle purge --------------------------------------------------------------
-    assert await store.delete(CUSTOMER, DOMAIN, first) is True
-    assert await store.delete(CUSTOMER, DOMAIN, first) is False
+    outcome = await store.delete(CUSTOMER, DOMAIN, first)
+    assert outcome is True
+    outcome = await store.delete(CUSTOMER, DOMAIN, first)
+    assert outcome is False
     await flow.expect("interaction_not_found", lambda: store.read_content(CUSTOMER, DOMAIN, first))
     engine, target = lifecycle_for(store)
     outcomes = await engine.sweep_expiry(

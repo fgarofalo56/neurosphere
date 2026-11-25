@@ -321,7 +321,8 @@ async def test_delete_ignores_a_corrupted_pointer(store: InMemoryInteractionStor
     )
     target_doc = next(d for d in docs.values() if d["interaction_id"] == target)
     target_doc["content_ref"]["pointer"] = victim_pointer
-    assert await store.delete(CUSTOMER, DOMAIN, target) is True
+    outcome = await store.delete(CUSTOMER, DOMAIN, target)
+    assert outcome is True
     assert (await store.read_content(CUSTOMER, DOMAIN, victim)).interaction_id.root == victim
     assert len(store.content_backend.blobs) == 1
 
@@ -332,19 +333,23 @@ async def test_read_after_interrupted_delete_is_content_purged_and_rerun_complet
     iid = new_id()
     await store.put(make_record(iid), make_content(iid), capture_retention_days=30)
     ref = _only_doc(store)["content_ref"]
-    assert await store.content_backend.delete(ref["pointer"])  # purge stopped after the blob
+    outcome = await store.content_backend.delete(ref["pointer"])  # purge stopped after the blob
+    assert outcome
     with pytest.raises(InteractionStoreError) as caught:
         await store.read_content(CUSTOMER, DOMAIN, iid)
     assert caught.value.reason == "content_purged"
-    assert await store.delete(CUSTOMER, DOMAIN, iid) is True
+    outcome = await store.delete(CUSTOMER, DOMAIN, iid)
+    assert outcome is True
     _assert_nothing_written(store)
-    assert await store.delete(CUSTOMER, DOMAIN, iid) is False
+    outcome = await store.delete(CUSTOMER, DOMAIN, iid)
+    assert outcome is False
 
 
 async def test_delete_removes_blob_and_index(store: InMemoryInteractionStore) -> None:
     iid = new_id()
     await store.put(make_record(iid), make_content(iid), capture_retention_days=30)
-    assert await store.delete(CUSTOMER, DOMAIN, iid) is True
+    outcome = await store.delete(CUSTOMER, DOMAIN, iid)
+    assert outcome is True
     _assert_nothing_written(store)
     with pytest.raises(InteractionStoreError) as caught:
         await store.read_content(CUSTOMER, DOMAIN, iid)
@@ -483,8 +488,10 @@ async def test_blob_backend_creates_container_only_under_local() -> None:
     with pytest.raises(InteractionStoreError) as caught:
         await backend.put(name, b"other")
     assert caught.value.reason == "interaction_exists"
-    assert await backend.delete(name) is True
-    assert await backend.delete(name) is False
+    outcome = await backend.delete(name)
+    assert outcome is True
+    outcome = await backend.delete(name)
+    assert outcome is False
     assert await backend.get(name) is None
 
 
@@ -522,5 +529,6 @@ async def test_store_over_blob_backend_round_trips(local_wrapper: Any) -> None:
     content = make_content(iid, canary())
     await store.put(make_record(iid), content, capture_retention_days=30)
     assert await store.read_content(CUSTOMER, DOMAIN, iid) == content
-    assert await store.delete(CUSTOMER, DOMAIN, iid) is True
+    outcome = await store.delete(CUSTOMER, DOMAIN, iid)
+    assert outcome is True
     assert container.blobs == {}
