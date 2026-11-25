@@ -136,10 +136,12 @@ def _validated(match: object, detector: Detector, length: int, offset: int) -> M
         raise _Fail("detector_error")
     if match.detector_id != detector.detector_id or match.category not in detector.kinds:
         raise _Fail("detector_error")
-    if match.end > length:
+    # Re-check offsets here: a Match built without __init__ (object.__new__) skips
+    # __post_init__, and start >= end would otherwise duplicate or keep the matched text.
+    start, end = match.start, match.end
+    if type(start) is not int or type(end) is not int or not 0 <= start < end <= length:
         raise _Fail("detector_error")
-    if offset == 0:
-        return match
+    # Rebuilding always re-runs Match validation (category, confidence) on detector output.
     return Match(
         start=match.start + offset,
         end=match.end + offset,

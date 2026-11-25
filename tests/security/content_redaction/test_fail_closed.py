@@ -220,36 +220,16 @@ MALFORMED: Final[dict[str, Callable[[str], object]]] = {
     "forged_none_offsets": lambda _t: (_forged(start=None, end=None),),
 }
 
-#: Forged-``Match`` shapes the engine does not reject today (reported to the orchestrator; the
-#: library fix belongs to the engine owner: ``engine._validated`` checks only ``isinstance``,
-#: ``detector_id``, ``category in kinds`` and ``end <= len``, trusting ``Match.__post_init__``
-#: for the rest, which ``object.__new__`` bypasses). Keyed by (shape, defaults): with the
-#: default detectors present, the self-check sometimes catches the result anyway. Strict: each
-#: xfail flips red once the engine re-validates offsets.
-_ENGINE_GAP: Final = (
-    "engine._validated does not re-check 0 <= start < end or int offsets on a forged Match; "
-    "the engine returns Redacted (mangled text; start > end duplicates the secret)"
-)
-KNOWN_FAIL_OPEN: Final[dict[tuple[str, bool], str]] = {
-    ("forged_float_offsets", True): _ENGINE_GAP,
-    ("forged_negative_both", False): _ENGINE_GAP,
-    ("forged_negative_both", True): _ENGINE_GAP,
-    ("forged_negative_start", False): _ENGINE_GAP,
-    ("forged_negative_start", True): _ENGINE_GAP,
-    ("forged_start_after_end", False): _ENGINE_GAP,
-    ("forged_start_equals_end", False): _ENGINE_GAP,
-    ("forged_start_equals_end", True): _ENGINE_GAP,
-}
+#: Forged-``Match`` shapes (built with ``object.__new__``, bypassing ``Match.__post_init__``)
+#: are included: ``engine._validated`` re-checks int offsets and ``0 <= start < end <= len``
+#: itself, so every shape fails closed with or without the default detectors.
 
 
 @pytest.mark.parametrize("defaults", [False, True])
 @pytest.mark.parametrize("shape", sorted(MALFORMED))
 def test_malformed_detector_output_fails_closed(
-    all_logs: pytest.LogCaptureFixture, shape: str, defaults: bool, request: pytest.FixtureRequest
+    all_logs: pytest.LogCaptureFixture, shape: str, defaults: bool
 ) -> None:
-    if (shape, defaults) in KNOWN_FAIL_OPEN:
-        reason = KNOWN_FAIL_OPEN[shape, defaults]
-        request.applymarker(pytest.mark.xfail(strict=True, reason=reason))
     fake = Fake(output=MALFORMED[shape])
     result = redact(TEXT, part="prompt", config=CONFIG, detector_set=_set(fake, defaults=defaults))
     assert isinstance(result, RedactionFailed), f"{shape}: not failed closed"
