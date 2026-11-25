@@ -84,7 +84,7 @@ def _leak_forms(value: str) -> list[str]:
         value[-12:],
         digest.hex(),
         base64.b64encode(digest).decode(),
-        hashlib.sha1(value.encode()).hexdigest(),  # noqa: S324 - leak probe, not security
+        base64.b64encode(value.encode()).decode(),
     ]
 
 

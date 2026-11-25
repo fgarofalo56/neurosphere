@@ -148,9 +148,11 @@ _SYSTEM_NAMES: Final = frozenset({"gen_ai.system_instructions"})
 
 #: Characters the ContentEnvelope pattern forbids (controls except tab, LF, CR) and lone
 #: surrogates (not encodable as UTF-8); both become a space / U+FFFD so offsets stay stable.
-_CONTROL: Final = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-_SURROGATE: Final = re.compile("[\ud800-\udfff]")
+_CONTROL: Final = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_SURROGATE: Final = re.compile(r"[\ud800-\udfff]")
 _REPLACEMENT_CHAR: Final = chr(0xFFFD)
+#: Deepest body value serialised (the edge's JSON nesting cap is 32; this bounds other callers).
+_MAX_SERIALIZE_DEPTH: Final = 64
 
 FailureReason = Literal[
     "detection_failed",
@@ -320,12 +322,32 @@ def _decode_any_value(value: Any) -> Any:
     return holder[0]
 
 
+def _too_deep(value: Any) -> bool:
+    """Iterative depth check, so the outcome never depends on the interpreter's stack."""
+    stack: list[tuple[Any, int]] = [(value, 1)]
+    while stack:
+        node, depth = stack.pop()
+        if depth > _MAX_SERIALIZE_DEPTH:
+            return True
+        if isinstance(node, Mapping):
+            stack.extend((child, depth + 1) for child in node.values())
+        elif isinstance(node, list | tuple):
+            stack.extend((child, depth + 1) for child in node)
+    return False
+
+
 def _serialize(value: Any) -> str | None:
-    """Deterministic text for a body value; ``None`` when there is nothing to keep."""
+    """Deterministic text for a body value; ``None`` when there is nothing to keep.
+
+    Raises ``ValueError`` (reason only) for a value nested deeper than
+    ``_MAX_SERIALIZE_DEPTH``; the caller skips and counts the field.
+    """
     if value is None:
         return None
     if isinstance(value, str):
         return value
+    if _too_deep(value):
+        raise ValueError("body_value_too_deep")
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 

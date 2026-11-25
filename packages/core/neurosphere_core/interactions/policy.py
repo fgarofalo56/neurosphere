@@ -32,9 +32,9 @@ from __future__ import annotations
 import hashlib
 import threading
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final, Literal, get_args
+from typing import Final, Literal, Protocol, get_args
 
 from neurosphere_contracts.admin.v1.system_setting import SystemSetting
 from neurosphere_contracts.interactions.v1.capture_policy import (
@@ -47,8 +47,23 @@ from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
 from neurosphere_core.interactions.store import content_writes_enabled
 from neurosphere_core.lifecycle.policy import PolicyState
 
-if TYPE_CHECKING:
-    from neurosphere_core.interactions.policy_store import CapturePolicyStore
+
+class _StoredPolicy(Protocol):
+    @property
+    def policy(self) -> CapturePolicy: ...
+
+
+class _PolicyLister(Protocol):
+    """What :meth:`CaptureMatcher.from_store` reads (any ``CapturePolicyStore`` satisfies it).
+
+    Structural on purpose: ``policy_store`` imports this module, so importing it back here,
+    even for typing only, would be a cyclic import.
+    """
+
+    async def list(
+        self, *, customer_id: str | None = ..., limit: int = ...
+    ) -> Sequence[_StoredPolicy]: ...
+
 
 __all__ = [
     "CAPTURE_POLICY_ENTITY_TYPE",
@@ -265,7 +280,7 @@ class CaptureMatcher:
     @classmethod
     async def from_store(
         cls,
-        store: CapturePolicyStore,
+        store: _PolicyLister,
         *,
         setting_enabled: bool,
         retention: PolicyState | None,
