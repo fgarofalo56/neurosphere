@@ -19,8 +19,11 @@ COPY connectors/sdk-ts ./connectors/sdk-ts
 RUN pnpm install --frozen-lockfile --filter "@neurosphere/frontend..."
 RUN pnpm --filter @neurosphere/frontend build
 
-# nginxinc/nginx-unprivileged:stable-alpine, digest observed 2026-10-18
-FROM nginxinc/nginx-unprivileged:stable-alpine@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01
+# nginxinc/nginx-unprivileged:mainline-alpine (nginx 1.31.7), digest observed 2026-11-25. Mainline,
+# not stable: stable-alpine still ships nginx 1.30.6 with six High advisories fixed in 1.30.7, and
+# no patched stable tag of the unprivileged image is published. Return to stable-alpine once it
+# carries nginx >= 1.30.7 if a stable branch is preferred.
+FROM nginxinc/nginx-unprivileged:mainline-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 
 # Pull in fixed Alpine package versions that postdate the pinned base image, then drop curl:
 # nginx never uses it and it carried an unfixed High CVE (CVE-2026-92392, 2026-10-21).
