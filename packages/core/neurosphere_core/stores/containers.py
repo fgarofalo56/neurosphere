@@ -209,6 +209,47 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
         "neurosphere_core.admin.cosmos_store",
         notes="one row per (kind, id); Cosmos id is '<kind>:<id>' (ids are unique per partition)",
     ),
+    # --- governance core (PRP-102, W21 stores owner) -------------------------------------------
+    ContainerSpec(
+        "interaction_index",
+        _CUSTOMER_DOMAIN,
+        "neurosphere_core.interactions.cosmos_index",
+        notes=(
+            "index document is the PRP-99 InteractionRecord, metadata only; the content lives "
+            "encrypted in blob storage"
+        ),
+    ),
+    ContainerSpec(
+        "interaction_capture_policies",
+        _CUSTOMER,
+        "neurosphere_core.interactions.policy",
+        notes="PRP-103 builds the store; CapturePolicy carries its own version, not an admin_kind",
+    ),
+    ContainerSpec(
+        "policy_definitions",
+        _CUSTOMER_DOMAIN,
+        "neurosphere_core.governance.policy.cosmos_store",
+        notes="PRP-105 builds the store",
+    ),
+    ContainerSpec(
+        "policy_violations",
+        _CUSTOMER_DOMAIN,
+        "neurosphere_core.governance.policy.cosmos_store",
+        notes="PRP-105 builds the store",
+    ),
+    ContainerSpec(
+        "policy_exceptions",
+        _CUSTOMER_DOMAIN,
+        "neurosphere_core.governance.policy.cosmos_store",
+        notes="PRP-105 builds the store",
+    ),
+    ContainerSpec(
+        "notification_outbox",
+        _CUSTOMER,
+        "neurosphere_core.notifications.cosmos_store",
+        default_ttl=TTL_PER_ITEM,
+        notes="PRP-107 builds the store and sets the expiry per row",
+    ),
 )
 
 

@@ -29,7 +29,8 @@ class DocumentBackend(Protocol):
     """Generic document-shaped store surface.
 
     A document is a mapping with ``id``, ``data_class``, ``created_at`` (aware datetime) and
-    optional ``subject_id``, ``doc_type``, ``customer_id``, ``domain_id``, ``pseudonymized``.
+    optional ``subject_id``, ``doc_type``, ``customer_id``, ``domain_id``, ``pseudonymized``
+    and ``expires_at`` (aware datetime: a per-record expiry earlier than the class rule).
     """
 
     async def read(self, record_id: str) -> Mapping[str, Any] | None: ...
@@ -61,6 +62,7 @@ def _record(doc: Mapping[str, Any]) -> TargetRecord:
         customer_id=doc.get("customer_id"),
         domain_id=doc.get("domain_id"),
         pseudonymized=bool(doc.get("pseudonymized", False)),
+        expires_at=doc.get("expires_at"),
     )
 
 

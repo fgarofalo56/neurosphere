@@ -16,6 +16,12 @@ from typing import Any, Literal
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.catalog.lifecycle_delete import CatalogLifecycleBackend, catalog_target
 from neurosphere_core.catalog.partitioning import PartitionKeyShape
+from neurosphere_core.interactions.blob_content import ContentBackend
+from neurosphere_core.interactions.cosmos_index import IndexBackend
+from neurosphere_core.interactions.lifecycle_delete import (
+    InteractionLifecycleBackend,
+    interaction_target,
+)
 from neurosphere_core.ledger.lifecycle_delete import LedgerLifecycleBackend, ledger_target
 from neurosphere_core.lifecycle import LifecycleEngine, TargetRegistry
 from neurosphere_core.lifecycle.archive_backend import (
@@ -64,11 +70,16 @@ def build_targets(
     ledger_name: str = "cost-ledger",
     archive_container: ArchiveContainer | None = None,
     archive_name: str = "archive",
+    interaction_index: IndexBackend | None = None,
+    interaction_blobs: ContentBackend | None = None,
+    interaction_name: str = "interaction_index",
 ) -> TargetRegistry:
-    """Register the catalog, ledger and archive targets that have a store behind them.
+    """Register the catalog, ledger, archive and interaction targets that have a store behind them.
 
     A target whose store is absent is simply not registered, so a request for it fails closed as
-    ``unknown_target``. The audit container can never be registered.
+    ``unknown_target``. The audit container can never be registered. The interaction target
+    (PRP-102, data class ``interaction_content``) needs both its index and its content backend:
+    one without the other is a wiring error, because a purge must remove both together.
     """
     registry = TargetRegistry()
     if catalog_container is not None:
@@ -89,6 +100,17 @@ def build_targets(
         registry.register(
             archive_target(
                 archive_name, ArchiveLifecycleBackend(archive_container, customer_id=customer_id)
+            )
+        )
+    if (interaction_index is None) != (interaction_blobs is None):
+        raise ValueError("interaction_index and interaction_blobs are configured together")
+    if interaction_index is not None and interaction_blobs is not None:
+        registry.register(
+            interaction_target(
+                interaction_name,
+                InteractionLifecycleBackend(
+                    interaction_index, interaction_blobs, customer_id=customer_id
+                ),
             )
         )
     return registry

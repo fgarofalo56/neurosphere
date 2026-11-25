@@ -45,7 +45,7 @@ def test_compiled_containers_equal_the_export() -> None:
 
     # The registry-shape facts the PRP pins: hierarchical keys and the two TTL containers.
     by_name = {c["name"]: c for c in inlined["containers"]}
-    assert len(by_name) == len(inlined["containers"]) == 32  # PRP-72 adds recommendation_feedback
+    assert len(by_name) == len(inlined["containers"]) == 38  # PRP-72 +1, PRP-102 +6
     assert by_name["copilot_conversations"]["default_ttl"] == -1
     assert by_name["revocations"]["default_ttl"] == -1
     # The catalog resolves to a flat /domain key while hierarchical keys are unverified.

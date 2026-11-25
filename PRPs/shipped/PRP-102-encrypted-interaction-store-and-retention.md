@@ -1,10 +1,12 @@
 ---
 name: PRP-102-encrypted-interaction-store-and-retention
-status: backlog
+status: shipped
 priority: P0
 order: 102
 review: required
 created: 2026-11-16
+shipped: 2026-11-25
+pr: 412
 model: opus
 orchestrator_model: opus
 implementer_model: opus
@@ -33,14 +35,14 @@ Out of scope: detection and redaction (PRP-101); deciding what to capture and ca
 - `cryptography` is only transitive today (via `pyjwt[crypto]` in `packages/core/pyproject.toml`), locked at `uv.lock:499-500`, with rows already in `docs/licenses.md:50` and `docs/adr/0002-stack-pins.md:146`; a direct dependency still needs the licence gate re-run and the ADR row updated to "direct".
 
 ## Acceptance criteria
-- [ ] Given redacted content and a key wrapper, When stored, Then the blob holds only a versioned envelope (format version, key id with version, wrapped data key, nonce, ciphertext and tag); a byte scan of every written blob finds none of the synthetic canary strings in the content; associated data binds customer, domain, interaction id and format version, so a blob copied to another interaction id fails to decrypt with `content_integrity_failed`.
-- [ ] The store write API takes only PRP-99's `RedactedContent` (whose `redaction_state` admits only `redacted` and `not_required`) and validates it against the `RedactedContent` JSON Schema, including the `secret_free_text` `not` patterns, before any I/O (Pydantic ignores `not`, ADR-0004); a failure is refused with `content_not_secret_free` and nothing is written; there is no write method that takes `str` or `bytes`. The index document validates as `InteractionRecord`, whose `content_ref` (`pointer`, `kek_uri`, `algorithm: aes_256_gcm`, `ciphertext_sha256`, `byte_length`) is the only link to the blob and holds no plaintext hash.
-- [ ] Given `PolicyState.bodies_retained` false (no policy, invalid policy, or opt-in false) or no `interaction_content` rule in the policy, Then every write is refused with `content_retention_not_enabled` and nothing is written; the refusal is counted, not logged with content.
-- [ ] `KeyVaultKeyWrapper` checks the vault host against the deployment cloud before requesting a token (a Government deployment refuses a Commercial vault host and the reverse) and never logs the vault URI, key name or any key material; `LocalFileKeyWrapper` refuses to construct unless `NS_ENV=local`.
-- [ ] Given a legal hold selecting `data_class=interaction_content` (or a record or subject), When expiry runs in `execute` mode, Then held records are kept and the outcome records `LEGAL_HOLD`; unheld expired records are purged with blob and index removed together; a purge interrupted after the blob delete is completed on the next run and a read of such a record answers `content_purged`.
-- [ ] The lifecycle target's `export` returns index metadata only, never content; `pseudonymize` deletes the content blob and pseudonymizes the index record (content cannot be pseudonymized in place) - ASSUMPTION row 6.
-- [ ] Containers `interaction_index`, `interaction_capture_policies`, `policy_definitions`, `policy_violations`, `policy_exceptions` and `notification_outbox` are in `stores/containers.py`, the exported `infra/compose/cosmos-containers.json` matches (`python -m neurosphere_core.stores --check`) and the hosted-demo container drift test passes.
-- [ ] `cryptography` is a direct dependency of `packages/core`, the licence report passes, and ADR-0002 states the verified version and that it is direct.
+- [x] Given redacted content and a key wrapper, When stored, Then the blob holds only a versioned envelope (format version, key id with version, wrapped data key, nonce, ciphertext and tag); a byte scan of every written blob finds none of the synthetic canary strings in the content; associated data binds customer, domain, interaction id and format version, so a blob copied to another interaction id fails to decrypt with `content_integrity_failed`. Evidence: `tests/security/interaction_store/test_no_plaintext_at_rest.py:113` (no canary in any encoding, local and Key Vault wrappers), `:163` (moved envelope fails), `packages/core/tests/envelope_crypto/test_envelope.py:82,144,159`.
+- [x] The store write API takes only PRP-99's `RedactedContent` (whose `redaction_state` admits only `redacted` and `not_required`) and validates it against the `RedactedContent` JSON Schema, including the `secret_free_text` `not` patterns, before any I/O (Pydantic ignores `not`, ADR-0004); a failure is refused with `content_not_secret_free` and nothing is written; there is no write method that takes `str` or `bytes`. The index document validates as `InteractionRecord`, whose `content_ref` (`pointer`, `kek_uri`, `algorithm: aes_256_gcm`, `ciphertext_sha256`, `byte_length`) is the only link to the blob and holds no plaintext hash. Evidence: `tests/security/interaction_store/test_refusals.py:118,162,186`, `:136` of `test_no_plaintext_at_rest.py` (index has no content field), vendored-schema drift test in `packages/core/tests/interaction_store`.
+- [x] Given `PolicyState.bodies_retained` false (no policy, invalid policy, or opt-in false) or no `interaction_content` rule in the policy, Then every write is refused with `content_retention_not_enabled` and nothing is written; the refusal is counted, not logged with content. Evidence: `tests/security/interaction_store/test_refusals.py:97` (nothing written, wrap never called, refusal counted).
+- [x] `KeyVaultKeyWrapper` checks the vault host against the deployment cloud before requesting a token (a Government deployment refuses a Commercial vault host and the reverse) and never logs the vault URI, key name or any key material; `LocalFileKeyWrapper` refuses to construct unless `NS_ENV=local`. Evidence: `packages/core/tests/envelope_crypto/test_keyvault_wrapper.py:185,222`, `tests/security/interaction_store/test_no_key_material_logged.py:102,284`, `packages/core/tests/envelope_crypto/test_local_wrapper.py:27,40,48`.
+- [x] Given a legal hold selecting `data_class=interaction_content` (or a record or subject), When expiry runs in `execute` mode, Then held records are kept and the outcome records `LEGAL_HOLD`; unheld expired records are purged with blob and index removed together; a purge interrupted after the blob delete is completed on the next run and a read of such a record answers `content_purged`. Evidence: `services/workers/tests/lifecycle_interactions/test_holds_beat_expiry.py:65,79,90,164` through the real engine; per-record expiry added by item 8.
+- [x] The lifecycle target's `export` returns index metadata only, never content; `pseudonymize` deletes the content blob and pseudonymizes the index record (content cannot be pseudonymized in place) - ASSUMPTION row 6. Evidence: `services/workers/tests/lifecycle_interactions/test_interaction_target.py:169,203,230`.
+- [x] Containers `interaction_index`, `interaction_capture_policies`, `policy_definitions`, `policy_violations`, `policy_exceptions` and `notification_outbox` are in `stores/containers.py`, the exported `infra/compose/cosmos-containers.json` matches (`python -m neurosphere_core.stores --check`) and the hosted-demo container drift test passes. Evidence: `uv run python -m neurosphere_core.stores --check` up to date; `tests/unit/hosted_demo/test_cosmos_container_drift.py` passes (38 containers).
+- [x] `cryptography` is a direct dependency of `packages/core`, the licence report passes, and ADR-0002 states the verified version and that it is direct. Evidence: `packages/core/pyproject.toml` (`cryptography>=50.0.2,<51`), `python scripts/licenses_report.py --check` PASS, ADR-0002 backend table row.
 - PRP exit: touched suites, `tests/security/interaction_store`, ruff, pyright, `validate_planning.py` pass; PR open with CI green.
 
 ## Clarifications (decided)
@@ -110,6 +112,13 @@ owns:
   - services/workers/tests/lifecycle_interactions/**
   - tests/security/interaction_store/**
   - docs/runbooks/interaction-audit.md
+  - packages/core/neurosphere_core/interactions/redacted_content.schema.json
+  - packages/core/neurosphere_core/lifecycle/models.py
+  - packages/core/neurosphere_core/lifecycle/engine.py
+  - packages/core/neurosphere_core/lifecycle/adapters.py
+  - packages/core/tests/lifecycle/test_conflict_rules.py
+  - packages/core/tests/stores_registry/test_registry.py
+  - tests/unit/hosted_demo/test_cosmos_container_drift.py
 tier1:
   - packages/core/neurosphere_core/stores/containers.py
   - infra/compose/cosmos-containers.json
@@ -125,7 +134,7 @@ must_not_touch:
   - services/workers/neurosphere_workers/runtime/factories.py
   - services/api/**
   - packages/core/neurosphere_core/payload/**
-  - packages/core/neurosphere_core/lifecycle/**
+  - packages/core/neurosphere_core/lifecycle/** (except models.py, engine.py, adapters.py: item 8, owner-approved 2026-11-25)
   - packages/core/neurosphere_core/classification/**
   - packages/contracts/**
   - infra/demo/main.bicep
@@ -190,6 +199,14 @@ Parallelization: item 1 first; items 2 and 3 [P]; item 4 after 3; item 5 after 4
 - Tests: `tests/security/interaction_store/test_no_plaintext_at_rest.py`, `test_no_key_material_logged.py`, `test_refusals.py`.
 - Pattern references: `tests/security/authz/test_admin_producers_secrecy.py`.
 
+### Item 8 - Per-record expiry in the lifecycle engine (added 2026-11-25)
+- Why: item 5 found that `TargetRecord` has no `expires_at`, so the engine purged interaction content at `captured_at` plus the rule's `max_retention_days`, not at the record's `expires_at` (Clarification 2: the earlier of `CapturePolicy.retention_days` and the rule). The owner chose to fix it in this PRP (2026-11-25) over deferring it to PRP-103.
+- Deliverable: optional `TargetRecord.expires_at`; `adapters._record` passes it through; EXPIRE is due at the earlier of it and `created_at + max_retention_days`, never earlier than minimum retention and never later than the rule; the interaction lifecycle target supplies the record's `expires_at`.
+- Owned files: `packages/core/neurosphere_core/lifecycle/{models,engine,adapters}.py` (owner-approved ownership extension), `interactions/lifecycle_delete.py`, `packages/core/tests/lifecycle/test_conflict_rules.py`, `services/workers/tests/lifecycle_interactions/**`.
+- Depends on: item 5.
+- Acceptance criteria: a 30-day capture record under a 90-day rule is purged at day 40 while a 90-day record is not due; holds still win; minimum retention still wins; records without `expires_at` behave as before.
+- Tests: `packages/core/tests/lifecycle`, `services/workers/tests/lifecycle_interactions`, plus every suite importing `neurosphere_core.lifecycle`.
+
 ### Item 7 - Integration and close-out
 - Deliverable: runbook sections (envelope format, key rotation by new key version with old versions still unwrapping, the sample retention policy rule, how capture stays impossible until a policy opts in, purge and hold behaviour); `mkdocs.yml` nav line; changelog fragment; Tier-3 regeneration; completion note with the env vars and the hosted needs handed to PRP-109 (key, role assignment, blob container) and the live wrap handed to PRP-136.
 - Owned files: runbook, `mkdocs.yml` (one line), this PRP file, changelog fragment, Tier-3 files.
@@ -230,19 +247,35 @@ None run here. A real Key Vault wrap and unwrap, the hosted blob container and t
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | orchestrator, `prp-102-encrypted-interaction-store` | 2026-11-25 s-30eda2: plan approved by the owner (Opus implementers; items 2 and 3 parallel; independent review on items 3, 4, 5; rows 5-7 kept as ASSUMPTIONS). U-1 and U-2 confirmed, see runbook "Verification". Finding: `key-version` is a required wrap/unwrap path segment and `kek_uri` may omit it, so item 3 resolves the current version through Get Key. Runbook nav line pulled forward from item 7 (the nav test requires it) |
+| 2 | merged | `prp-102-item-2-stores` (43e3f882, merge 7f0409b9) | Six containers; `cryptography>=50.0.2,<51` and `jsonschema>=4.26,<5` (orchestrator scope addition for item 4's runtime schema check) now direct in core; uv.lock +4 lines, no version change. `docs/licenses.md` is generated and unchanged (rows already right); "direct" recorded in ADR-0002's hand-kept table. Orchestrator fixed `tests/unit/hosted_demo/test_cosmos_container_drift.py` count 32 to 38 (b2ab7de4). Verified: stores --check, 111 passed (stores_registry, hosted_demo, registry parity, Dockerfiles), licences PASS |
+| 3 | merged | `prp-102-item-3-crypto` (e044e051, merge d5eea651; review fixes cfc2af61) | Verified on integration: 77 passed, ruff, pyright clean; Snyk code scan 0 issues. Independent review APPROVE (no blockers). Orchestrator applied 2 suggestions: unwrap 400 maps to `content_integrity_failed`; public entry points re-raise through `without_context` (no `__context__` chain). Deviations: URI checks run in the constructor; local wrapper refusal is `InvalidSchemaError(reason="config")`; `seal` over 2^31-1 raises `ValueError("content_too_large")`; no 429 retry (callers own backoff). Follow-up issue at close-out: cap Key Vault response size, unlink a partly written local key file, refuse a group/other-readable local key file |
+| 4 | merged | `prp-102-item-4-store` (f562dad6, merge 8578852e; review fixes 425ff1fa) | Verified on integration: 195 passed (interaction_store, envelope_crypto, import boundaries, stores_registry), ruff, pyright clean; Snyk 0 issues. Independent review APPROVE (no blockers). Orchestrator applied 2 suggestions: delete uses the computed blob name, never the stored pointer; a failed index create re-reads before removing the blob (committed create returns success; unreadable index or cancel keeps the blob). Deviations: extra reasons (`content_record_mismatch`, `interaction_index_invalid`, `interaction_store_unavailable`, `content_container_missing`, `invalid_query`); domain id percent-encoded in blob names; `local_development` records a fixed placeholder `kek_uri`; `captured_at` normalised to fixed 6-digit UTC; RedactedContent schema vendored as package data with a byte-for-byte drift test (`tests/interaction_store/schema_bundle.py --write`). Follow-ups: contract URL-with-userinfo `not` pattern backtracks (about 1.7 s per adversarial 32k part, PRP-99 contract); count ValueError/TypeError refusals; refuse trailing-dot ids; check `list_records` cross-partition query on the emulator |
+| 5 | merged | `prp-102-item-5-lifecycle` (8cc57faf, merge a7808a1d; review fix 3b247e54) | Verified on integration: 284 passed (lifecycle_interactions, lifecycle_worker, core lifecycle, interaction_store, import boundaries, workers runtime), ruff, pyright clean; Snyk 0 issues. Independent review APPROVE (no blockers). Orchestrator applied suggestion 1: a subject listing fails closed (`CapabilityUnavailableError`, `interaction_record_id_too_long`) on a record whose id exceeds 512 characters. Record id is `{interaction_id}/{domain_id}`; subject is `principal_id`; pseudonymize clears `principal_id` and `content_ref`; export drops `content_ref` and adds `content_stored`. Deviation found: `TargetRecord` had no `expires_at` (fixed by item 8). Follow-ups: paging cursor is `interaction_id` only (ids assumed unique per customer); `record.legal_hold_ids` is informational, the hold registry is the authority; engine `sweep_expiry` always reads the first page, so more than 100 held records starve later expiries (engine issue) |
+| 6 | merged | `prp-102-item-6-security` (1306c62f, merge 31a24677) | 36 tests (6 at rest, 4 logging, 26 refusals), no xfail, no product defect found. Verified on integration: 159 passed with the store and lifecycle suites; ruff, pyright clean; full `tests/security` 1831 passed in the implementer's lane (no package clash) |
+| 8 | merged | orchestrator, 745259fa | Owner chose 2026-11-25 to fix the expiry gap here. Verified: 292 passed (core lifecycle, lifecycle_interactions, lifecycle_worker, security, interaction_store) plus 130 passed (lifecycle_cosmos, lifecycle_api, runtime_data, integration/lifecycle); ruff, pyright clean; `TargetRecord` is not in openapi.json. Independent review APPROVE: no other backend's mapping carries `expires_at`, so no other data class can expire earlier; precedence unchanged |
+| 7 | merged | orchestrator | Runbook sections (what exists, the two gates, sample rule, accepted content, envelope format, key configuration and rotation, purge/holds/expiry, reason codes); changelog fragment; follow-up issue #411. PRP gates on the integration branch: ruff and format (2504 files) clean, repo-wide pyright 0 errors, stores --check, licences PASS, prp_status and validate_planning PASS, gate pytest list 460 passed, docs 132 passed |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-25, PR #412 (integration branch `prp-102-encrypted-interaction-store`; item merges 7f0409b9, d5eea651, 8578852e, a7808a1d, 31a24677; item 8 745259fa).
 - Deviations:
-- Descoped items:
+  - Item 8 was added with the owner's approval: an optional per-record `expires_at` in the lifecycle engine (`lifecycle/{models,engine,adapters}.py`), so a capture policy shorter than the retention rule is honoured.
+  - `jsonschema` was also made a direct core dependency, and the `RedactedContent` schema is vendored as package data (the contract schemas are not in the runtime images).
+  - `docs/licenses.md` is generated and unchanged; "direct" is recorded in ADR-0002.
+  - Item-level API deviations are listed in the Execution state rows.
+- Descoped items: none.
 - OPEN gates:
+  - live Key Vault wrap and unwrap in Commercial and Government (PRP-136, `NS_LIVE_APPROVED=1`)
+  - hosted Key Vault key, `Key Vault Crypto Service Encryption User` role assignment and content blob container (PRP-109)
+  - the Cosmos index and blob content against the emulators (unit-tested with in-memory twins only)
+  - `verify-gates -Mode full` as recorded at close
 - Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+  - `NS_LIFECYCLE_POLICY_FILE` (existing): it must set `retain_prompt_response_bodies: true` and include an `interaction_content` rule before any content can be written.
+  - `NS_INTERACTION_LOCAL_KEY_FILE`: only for `kek_provider: local_development` under `NS_ENV=local`.
+  - Everything else comes from the `InteractionCaptureSetting` stored setting.
+- Hand-offs:
+  - PRP-103 wires the store and the lifecycle target into the worker composition (`runtime/factories.py`) and calls `put`.
+  - PRP-109 provisions the key, role and container.
+  - PRP-136 evidences the live wrap.
+- Follow-up issues: #411. Its contract regex backtracking and expiry paging items should land before PRP-103 turns capture on.
+- Product check (can an operator use it without editing files): not yet. There is no operator-facing surface until PRP-103 (capture) and PRP-104 (explorer); this PRP ships the safe-by-construction store those use.

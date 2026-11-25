@@ -379,8 +379,11 @@ class LifecycleEngine:
                 dry_run=dry_run,
             )
         if request.action is ActionKind.EXPIRE:
-            # Rule 5: maximum retention expiry.
-            if now < record.created_at + timedelta(days=rule.max_retention_days):
+            # Rule 5: maximum retention expiry, or the record's own earlier expiry.
+            due = record.created_at + timedelta(days=rule.max_retention_days)
+            if record.expires_at is not None:
+                due = min(due, record.expires_at)
+            if now < due:
                 return self._outcome(request, JobStatus.NOT_DUE, "not_expired")
             return await self._execute_delete(
                 request, ctx, target, ref, record, Rule.MAX_RETENTION_EXPIRY, dry_run=dry_run
