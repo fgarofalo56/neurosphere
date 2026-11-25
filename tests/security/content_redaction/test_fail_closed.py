@@ -84,11 +84,16 @@ def _forged(**fields: Any) -> Match:
     return match
 
 
+def _no_output(_text: str) -> tuple[()]:
+    return ()
+
+
 @dataclass
 class Fake:
     """A Detector-protocol test double: fixed output on the first call, or a failure mode."""
 
-    output: Callable[[str], object] = lambda _text: ()
+    # default_factory, not a class-level lambda: CodeQL reads a class attribute lambda as a method.
+    output: Callable[[str], object] = field(default_factory=lambda: _no_output)
     detector_id: str = "fake"
     version: str = "1.0.0"
     kinds: frozenset[str] = field(default_factory=lambda: frozenset({"vendor_api_key"}))

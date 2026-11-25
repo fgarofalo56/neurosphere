@@ -956,11 +956,11 @@ def render_markdown(report: QualityReport, *, today: dt.date) -> str:
     lines += [
         "",
         "End to end through `redact` with the default configuration (a span counts as redacted "
-        "when no 6-character fragment of its secret survives; the gate covers every context, "
-        f"and the `{CHAINED_CONTEXT}` context is also shown on its own):",
+        + "when no 6-character fragment of its secret survives; the gate covers every context, "
+        + f"and the `{CHAINED_CONTEXT}` context is also shown on its own):",
         "",
         "| category | support | redacted | recall | gated | chained-label support | "
-        "chained-label recall |",
+        + "chained-label recall |",
         "| --- | ---: | ---: | ---: | --- | ---: | ---: |",
     ]
     excluded = frozenset({CHAINED_CONTEXT})

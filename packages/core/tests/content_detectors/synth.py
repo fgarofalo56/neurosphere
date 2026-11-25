@@ -460,7 +460,7 @@ def NEGATIVE_LOOKALIKES(rng: random.Random) -> list[str]:  # noqa: N802 - stable
         "ok",
         "fine",
         "The quick brown fox jumps over the lazy dog while the operators review the weekly "
-        "governance report and reset the password policy through the admin portal.",
+        + "governance report and reset the password policy through the admin portal.",
         "Please reset your password via the portal.",
         "/usr/local/lib/python3.12/site-packages/neurosphere_core/classification/detectors/x.py",
         r"C:\Program Files\NeuroSphere\bin\neurosphere-api.exe",
