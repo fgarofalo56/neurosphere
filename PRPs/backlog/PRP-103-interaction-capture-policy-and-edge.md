@@ -269,14 +269,14 @@ None here. Capture end to end on the hosted app (synthetic domain only, enabled 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | in-progress | agent worktree (item-1) | plan approved by owner 2026-11-25 (s-80ece6, adopted from orphaned s-42e704): waves 1+2, 3, 4, 5+6 (+7), 8 |
+| 2 | in-progress | agent worktree (item-2) | |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
-| 7 | todo | | serial-after PRP-107 |
-| 8 | todo | | |
+| 7 | todo | | owner 2026-11-25: do now after item 4, before PRP-107 ships; accept merge-conflict risk with PRP-107's factories.py |
+| 8 | todo | | owner 2026-11-25: #411 items 1-2 not done here; must land before PRP-108/109 enable capture (record in completion note) |
 
 ## Completion note (filled at ship)
 - Date and PR:
