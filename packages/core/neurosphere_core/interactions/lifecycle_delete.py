@@ -44,6 +44,7 @@ from typing import Any, Final
 
 from neurosphere_contracts.interactions.v1.interaction_record import InteractionRecord
 
+from neurosphere_core.errors import CapabilityUnavailableError
 from neurosphere_core.interactions.blob_content import ContentBackend, content_blob_name
 from neurosphere_core.interactions.cosmos_index import IndexBackend
 from neurosphere_core.interactions.models import (
@@ -194,6 +195,10 @@ class InteractionLifecycleBackend:
                 mapped = self._mapping(row)
                 if mapped is not None:
                     out.append(mapped)
+                elif principal_id is not None:
+                    # A subject request must not silently miss one of the subject's records:
+                    # fail closed rather than report the erase or export as complete.
+                    raise CapabilityUnavailableError("interaction_record_id_too_long")
             if len(rows) < step:
                 break
             cursor = rows[-1].interaction_id.root

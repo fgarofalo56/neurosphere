@@ -6,6 +6,7 @@ import json
 from typing import Any, cast
 
 import pytest
+from neurosphere_core.errors import CapabilityUnavailableError
 from neurosphere_core.interactions import (
     DATA_CLASS_INTERACTION,
     InMemoryInteractionContent,
@@ -135,6 +136,19 @@ async def test_list_by_subject_returns_only_that_principals_records(rig: Rig) ->
     first = sorted(mine)[0]
     after = await rig.target.list_by_subject(alice, limit=200, after=first)
     assert [r.record_id for r in after] == sorted(mine)[1:]
+
+
+async def test_subject_listing_fails_closed_on_an_unaddressable_record(rig: Rig) -> None:
+    alice = principal("alice")
+    long_domain = DOMAIN + "/" + "x" * (500 - len(DOMAIN))
+    await rig.seed(principal_id=alice)
+    await rig.seed(principal_id=alice, domain_id=long_domain)
+    # Expiry paging may skip it (counted), but a subject request must not miss it silently.
+    with pytest.raises(CapabilityUnavailableError) as caught:
+        await rig.target.list_by_subject(alice, limit=200, after=None)
+    assert caught.value.reason == "interaction_record_id_too_long"
+    listed = await rig.target.list_records(data_class=DATA_CLASS_INTERACTION, limit=10, after=None)
+    assert len(listed) == 1
 
 
 # -- delete ---------------------------------------------------------------------------------------
