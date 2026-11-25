@@ -69,6 +69,13 @@ WIRE_CONTRACT: dict[str, tuple[str, ...]] = {
     "lifecycle_mappings": ("/customer_id",),
     "gateways": ("/customer_id", "/domain_id"),
     "admin_config": ("/customer_id",),
+    # governance core (PRP-102); PRP-103/105/107 build the stores behind the last five
+    "interaction_index": ("/customer_id", "/domain_id"),
+    "interaction_capture_policies": ("/customer_id",),
+    "policy_definitions": ("/customer_id", "/domain_id"),
+    "policy_violations": ("/customer_id", "/domain_id"),
+    "policy_exceptions": ("/customer_id", "/domain_id"),
+    "notification_outbox": ("/customer_id",),
 }
 
 
@@ -85,8 +92,14 @@ def test_kinds_and_ttls() -> None:
     for spec in CONTAINERS:
         assert spec.kind == ("MultiHash" if len(spec.partition_key_paths) > 1 else "Hash")
     ttl = {s.name for s in CONTAINERS if s.default_ttl is not None}
-    assert ttl == {"revocations", "copilot_conversations", "recommendation_feedback"}
+    assert ttl == {
+        "revocations",
+        "copilot_conversations",
+        "recommendation_feedback",
+        "notification_outbox",
+    }
     assert container_spec("revocations").default_ttl == TTL_PER_ITEM
+    assert container_spec("notification_outbox").default_ttl == TTL_PER_ITEM
 
 
 def test_actions_store_constants() -> None:

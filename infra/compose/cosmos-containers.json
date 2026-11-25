@@ -229,6 +229,29 @@
     },
     {
       "default_ttl": null,
+      "name": "interaction_capture_policies",
+      "owner": "neurosphere_core.interactions.policy",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "interaction_index",
+      "owner": "neurosphere_core.interactions.cosmos_index",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
       "name": "lifecycle_holds",
       "owner": "neurosphere_core.lifecycle.cosmos",
       "partition_key": {
@@ -272,6 +295,17 @@
       }
     },
     {
+      "default_ttl": -1,
+      "name": "notification_outbox",
+      "owner": "neurosphere_core.notifications.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
       "default_ttl": null,
       "name": "outbox",
       "owner": "neurosphere_workers.ingestion.wiring",
@@ -301,6 +335,42 @@
         "kind": "Hash",
         "paths": [
           "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "policy_definitions",
+      "owner": "neurosphere_core.governance.policy.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "policy_exceptions",
+      "owner": "neurosphere_core.governance.policy.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "policy_violations",
+      "owner": "neurosphere_core.governance.policy.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
         ]
       }
     },

@@ -19,6 +19,8 @@ dependencies = [
   "aiohttp>=3.9,<4",
   "httpx>=0.28,<0.29",
   "pyjwt[crypto]>=2.15,<3",
+  "cryptography>=50.0.2,<51",
+  "jsonschema>=4.26,<5",
 ]
 
 [tool.uv.sources]
