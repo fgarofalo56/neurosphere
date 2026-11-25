@@ -474,6 +474,31 @@ def test_zero_width_inside_credential_is_detected(kind: str) -> None:
         assert result.text == f"x {placeholder(cast('Any', EXPECTED_CATEGORY[kind]))} y"
 
 
+#: One representative per Default_Ignorable_Code_Point block (review of item 5): each must be
+#: stripped so it cannot split a credential past the detectors.
+_IGNORABLE_SAMPLES = tuple(
+    chr(cp)
+    for cp in (
+        0x115F, 0x1160, 0x17B4, 0x180B, 0x2065, 0x2800, 0x3164, 0xFE0F,
+        0xFFA0, 0xFFF0, 0x1BCA0, 0x1D173, 0xE0020, 0xE0100,
+    )
+)  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    "kind", ["aws_access_key_id", "apim_subscription_key_header", "opaque_secret", "jwt"]
+)
+@pytest.mark.parametrize("ignorable", _IGNORABLE_SAMPLES, ids=lambda c: f"U+{ord(c):04X}")
+def test_default_ignorable_inside_credential_is_detected(kind: str, ignorable: str) -> None:
+    cred = CREDENTIAL_GENERATORS[kind](random.Random(8))
+    middle = len(cred) // 2
+    result = _ok(f"key {cred[:middle]}{ignorable}{cred[middle:]} end")
+    assert ignorable not in result.text
+    secret = secret_value(kind, cred)
+    for start in range(len(secret) - 5):
+        assert secret[start : start + 6] not in result.text
+
+
 def test_output_is_normalized_text() -> None:
     result = _ok("\uff46\uff55\uff4c\uff4c\u200bwidth")
     assert result.text == "fullwidth"

@@ -70,18 +70,28 @@ from neurosphere_core.classification.protocol import Detector
 
 __all__ = ["redact"]
 
-#: Zero-width, invisible formatting and bidi control characters removed after NFKC.
+#: Every Unicode Default_Ignorable_Code_Point (DerivedCoreProperties.txt) plus U+2800, removed
+#: after NFKC. A hand-picked subset let variation selectors and tag characters split a key.
 _INVISIBLE: Final[frozenset[int]] = frozenset(
     {
         0x00AD,  # soft hyphen
         0x034F,  # combining grapheme joiner
         0x061C,  # arabic letter mark
-        0x180E,  # mongolian vowel separator
+        *range(0x115F, 0x1161),  # hangul choseong/jungseong fillers
+        *range(0x17B4, 0x17B6),  # khmer inherent vowels
+        *range(0x180B, 0x1810),  # mongolian free variation selectors, vowel separator
         *range(0x200B, 0x2010),  # zero-width space/non-joiner/joiner, LRM, RLM
         *range(0x202A, 0x202F),  # bidi embeddings and overrides
-        *range(0x2060, 0x2065),  # word joiner, invisible operators
-        *range(0x2066, 0x2070),  # bidi isolates, deprecated format characters
+        *range(0x2060, 0x2070),  # word joiner, invisible operators, bidi isolates, deprecated
+        0x2800,  # braille pattern blank (not default-ignorable, but renders as nothing)
+        0x3164,  # hangul filler
+        *range(0xFE00, 0xFE10),  # variation selectors 1-16
         0xFEFF,  # zero-width no-break space / BOM
+        0xFFA0,  # halfwidth hangul filler
+        *range(0xFFF0, 0xFFF9),  # unassigned specials
+        *range(0x1BCA0, 0x1BCA4),  # shorthand format controls
+        *range(0x1D173, 0x1D17B),  # musical symbol formatting
+        *range(0xE0000, 0xE1000),  # tags, variation selectors supplement, reserved
     }
 )
 _STRIP_INVISIBLE: Final[dict[int, None]] = dict.fromkeys(_INVISIBLE)
