@@ -57,13 +57,14 @@ ROUTES: dict[str, Route] = {
 
 async def _run(
     route: Route, registration: ProducerRegistration, capture: EdgeCapture | None, seed: g.Issued
-) -> tuple[list[bytes], str]:
+) -> tuple[list[bytes], str, dict[str, int]]:
     publisher = InMemoryPublisher()
     service = g.ingest_service(publisher, registration)
     if capture is not None:
         service.attach_capture(capture)
     result = await route(service, registration, seed)
-    return [m.to_bytes() for m in publisher.messages], result.model_dump_json()
+    counters = {"cost_center_mismatches": service.cost_center_mismatches}
+    return [m.to_bytes() for m in publisher.messages], result.model_dump_json(), counters
 
 
 class _Replay(g.Issued):
@@ -90,17 +91,25 @@ async def test_capture_off_is_byte_identical_to_no_pipeline(
 
     capture, store, audit, _wrapper = await g.edge_capture(tmp_path, monkeypatch, capture_on=False)
     assert not capture.active
+    stats_before = capture.stats.snapshot()
     replay = _Replay(golden_seed.values)
     attached = await _run(route, registration, capture, replay)
 
     assert replay.values == golden_seed.values
     assert attached == golden
-    messages, _body = golden
+    messages, _body, _counters = golden
     assert messages, "the route must publish something for the comparison to mean anything"
     for raw in messages:
         fields = find_body_fields(json.loads(raw))
         assert fields == []
-        g.assert_no_leak(raw.decode(), golden_seed.values, "an OFF hub message")
-    assert capture.stats.snapshot()["captured"] == 0
+        g.assert_no_leak(raw.decode(), golden_seed.probes(), "an OFF hub message")
+    # Criterion 1: every counter is as without capture. The service counters are compared in
+    # ``attached == golden``; the capture stats are untouched by the OFF run and equal a fresh,
+    # never-used OFF adapter's.
+    pristine, _s, _a, _w = await g.edge_capture(tmp_path, monkeypatch, capture_on=False)
+    stats_after = capture.stats.snapshot()
+    assert stats_after == stats_before
+    assert stats_after == pristine.stats.snapshot()
+    assert stats_after["captured"] == 0
     assert store.index_backend.documents == {}
     assert audit.drafts == []

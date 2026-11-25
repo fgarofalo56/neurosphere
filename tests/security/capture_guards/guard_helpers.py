@@ -15,6 +15,7 @@ test packages shadow each other in one pytest session).
 
 from __future__ import annotations
 
+import base64
 import functools
 import hashlib
 import json
@@ -103,6 +104,7 @@ class Issued:
     """Every canary and credential-shaped value one scenario generated (the leak checks)."""
 
     values: list[str] = field(default_factory=list)
+    credentials: list[str] = field(default_factory=list)
 
     def canary(self) -> str:
         letters = "".join(secrets.choice(string.ascii_lowercase) for _ in range(16))
@@ -112,19 +114,43 @@ class Issued:
         """A GitHub-token-shaped value (the PRP-101 detectors redact it), built from fragments."""
         body = list("".join(secrets.choice(_ALNUM) for _ in range(36)))
         body[0], body[1], body[2] = "Q", "q", "7"
-        return self._keep("gh" + "p_" + "".join(body))
+        value = self._keep("gh" + "p_" + "".join(body))
+        self.credentials.append(value)
+        return value
 
     def _keep(self, value: str) -> str:
         self.values.append(value)
         return value
 
+    def probes(self) -> list[str]:
+        """Every value plus a prefix of each credential (criterion 3: no hash or prefix).
+
+        The prefix is the first ``CREDENTIAL_PREFIX_CHARS`` characters: the fixed 7-character
+        token head plus 5 random alphanumerics (62**5, about 9e8 combinations). Ids, hashes and
+        timestamps in the outputs never contain an underscore followed by this mixed-case run,
+        so a hit cannot be a chance collision; shorter prefixes would match the fixed head alone.
+        """
+        return [*self.values, *(value[:CREDENTIAL_PREFIX_CHARS] for value in self.credentials)]
+
+
+CREDENTIAL_PREFIX_CHARS: Final = 12
+
+
+def _encoded_forms(value: str) -> list[str]:
+    """The value, its sha256 hex, and its standard and URL-safe base64 (padded and not)."""
+    raw = value.encode()
+    forms = [value, hashlib.sha256(raw).hexdigest()]
+    for encoded in (base64.b64encode(raw), base64.urlsafe_b64encode(raw)):
+        text = encoded.decode("ascii")
+        forms.extend([text, text.rstrip("=")])
+    return forms
+
 
 def leaked(text: str, values: Iterable[str]) -> list[str]:
-    """The generated values (or their sha256) that appear in ``text``."""
+    """The generated values that appear in ``text`` as-is, hashed or base64-encoded."""
     found: list[str] = []
     for value in values:
-        digest = hashlib.sha256(value.encode()).hexdigest()
-        if value in text or digest in text:
+        if any(form in text for form in _encoded_forms(value)):
             found.append(value)
     return found
 
@@ -403,6 +429,9 @@ async def run_scenario(
     assert result.accepted == 1
     wrapper.fail = False
 
+    # This span is never captured, by design: the edge stamps no ``domain_id`` on OTLP spans and
+    # a capture policy needs both the registered source and the payload domain (GD-46), so it
+    # is skipped as ``domain_missing``. It still carries a body, so every guard checks it.
     spans = [span("c7ad6b7169203331", {"gen_ai.prompt": f"{issued.canary()} {credential}"})]
     traces = json.dumps(traces_doc(spans)).encode()
     result = await service.ingest_otlp_traces(registration, traces, correlation_id=CORRELATION)

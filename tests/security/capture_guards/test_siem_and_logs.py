@@ -1,8 +1,10 @@
 """PRP-103 criterion 7: SIEM events and log records stay free of captured content.
 
-The SIEM check exports every audit record the capture path sealed. The log check captures
-DEBUG over every logger (propagating or not) for the whole scenario, which includes the
-injected key-wrap failure, and searches message, args and exc_info of every record.
+The SIEM check exports every audit record the capture path sealed. The log check wraps
+``logging.Logger.handle`` for the test's duration, with every logger enabled at every level,
+so it sees each record any logger makes (including loggers created later and loggers that do
+not propagate) before filters or handlers run. It covers the whole scenario, which includes
+the injected key-wrap failure, and searches message, args and exc_info of every record.
 """
 
 from __future__ import annotations
@@ -29,26 +31,26 @@ async def test_siem_events_carry_no_captured_content(
     assert len(records) == (2 if s.capture_on else 0)
     for record in records:
         event = to_siem_event(record)
-        g.assert_no_leak(json.dumps(event), s.issued.values, "a SIEM event")
+        g.assert_no_leak(json.dumps(event), s.issued.probes(), "a SIEM event")
 
 
 @pytest.fixture
-def every_logger(caplog: pytest.LogCaptureFixture) -> Iterator[pytest.LogCaptureFixture]:
-    """DEBUG on the root and every known logger; non-propagating loggers feed caplog too."""
-    caplog.set_level(logging.DEBUG)
-    detached: list[logging.Logger] = []
-    for name, logger in list(logging.root.manager.loggerDict.items()):
-        if not isinstance(logger, logging.Logger):
-            continue
-        caplog.set_level(logging.DEBUG, logger=name)
-        if not logger.propagate:
-            logger.addHandler(caplog.handler)
-            detached.append(logger)
-    try:
-        yield caplog
-    finally:
-        for logger in detached:
-            logger.removeHandler(caplog.handler)
+def all_log_records(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[logging.LogRecord]]:
+    """Every record any logger handles while the test runs, whatever its level or handlers."""
+    seen: list[logging.LogRecord] = []
+    original_handle = logging.Logger.handle
+
+    def recording_handle(self: logging.Logger, record: logging.LogRecord) -> None:
+        seen.append(record)
+        original_handle(self, record)
+
+    def always_enabled(self: logging.Logger, level: int) -> bool:
+        del self, level
+        return True
+
+    monkeypatch.setattr(logging.Logger, "handle", recording_handle)
+    monkeypatch.setattr(logging.Logger, "isEnabledFor", always_enabled)
+    yield seen
 
 
 def _record_text(record: logging.LogRecord) -> str:
@@ -67,17 +69,18 @@ def _record_text(record: logging.LogRecord) -> str:
 async def test_no_log_record_carries_captured_content(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    every_logger: pytest.LogCaptureFixture,
+    all_log_records: list[logging.LogRecord],
     mode: str,
 ) -> None:
     s = await g.run_scenario(tmp_path, monkeypatch, capture_on=mode == "capture_on")
     if s.capture_on:
-        # The failure path really ran inside the captured window.
+        # The failure path really ran inside the recorded window.
         assert s.capture.stats.snapshot()["capture_failed"] == {"key_wrap_failed": 1}
         published = s.published
         smuggled = g.with_body(published[0], s.issued, s.credential)
         await g.run_worker([*published, smuggled])
+        # Non-vacuity: the recorder saw the run's logging, so an empty result means "clean".
+        assert len(all_log_records) >= 1
 
-    for record in every_logger.records:
-        g.assert_no_leak(_record_text(record), s.issued.values, f"log record {record.name}")
-    g.assert_no_leak(every_logger.text, s.issued.values, "the captured log text")
+    for record in all_log_records:
+        g.assert_no_leak(_record_text(record), s.issued.probes(), f"log record {record.name}")

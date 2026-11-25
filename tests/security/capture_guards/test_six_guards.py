@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from neurosphere_core.audit import verify_chain
 from neurosphere_core.audit.content_guard import assert_metadata_only
+from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_core.payload import find_body_fields
 from neurosphere_workers.archive.serialize import build_blob, redact_record
 from neurosphere_workers.ingestion.reasons import QuarantineReason
@@ -87,14 +88,16 @@ async def test_edge_messages_are_body_free(scenario: Scenario) -> None:
     for raw in published:
         fields = find_body_fields(json.loads(raw))
         assert fields == []
-        g.assert_no_leak(raw.decode(), scenario.issued.values, "a published hub message")
+        g.assert_no_leak(raw.decode(), scenario.issued.probes(), "a published hub message")
 
     if scenario.capture_on:
         # The captured content was redacted before it was encrypted and stored.
         ref = scenario.message_for(g.CAPTURED_EVENT).data["payload_ref"]
         content = await scenario.store.read_content(g.CUSTOMER, g.DOMAIN, ref["interaction_id"])
         stored = content.model_dump_json()
-        assert scenario.credential not in stored
+        g.assert_no_leak(stored, scenario.issued.credentials, "stored content")
+        prefix = scenario.credential[: g.CREDENTIAL_PREFIX_CHARS]
+        assert prefix not in stored
         assert "[[ns-redacted:" in stored
 
 
@@ -117,6 +120,7 @@ async def test_worker_accepts_events_and_quarantines_bodies(scenario: Scenario) 
 
 
 async def test_quarantine_record_is_body_free(scenario: Scenario) -> None:
+    _assert_capture_ran(scenario)
     published = scenario.published
     smuggled = g.with_body(published[0], scenario.issued, scenario.credential)
     _result, sinks = await g.run_worker([smuggled])
@@ -124,13 +128,13 @@ async def test_quarantine_record_is_body_free(scenario: Scenario) -> None:
     assert record.payload is not None
     payload_fields = find_body_fields(record.payload)
     assert payload_fields == []
-    g.assert_no_leak(record.model_dump_json(), scenario.issued.values, "the quarantine record")
+    g.assert_no_leak(record.model_dump_json(), scenario.issued.probes(), "the quarantine record")
 
     container = g.FakeBlobContainer()
     await BlobQuarantineSink(container).write(record)
     (blob,) = container.blobs.values()
-    g.assert_no_leak(blob.decode(), scenario.issued.values, "the quarantine blob")
-    g.assert_no_leak(json.dumps(container.metadata), scenario.issued.values, "blob metadata")
+    g.assert_no_leak(blob.decode(), scenario.issued.probes(), "the quarantine blob")
+    g.assert_no_leak(json.dumps(container.metadata), scenario.issued.probes(), "blob metadata")
 
 
 # --- guard 5: archive -----------------------------------------------------------------------------
@@ -146,9 +150,41 @@ async def test_archive_record_is_body_free(scenario: Scenario) -> None:
         record = redact_record(event.model_dump(mode="json"), key)
         fields = find_body_fields(record)
         assert fields == []
-        g.assert_no_leak(json.dumps(record), scenario.issued.values, "an archive record")
+        g.assert_no_leak(json.dumps(record), scenario.issued.probes(), "an archive record")
         blob = build_blob(event, key)
-        g.assert_no_leak(gzip.decompress(blob.data).decode(), scenario.issued.values, "a blob")
+        g.assert_no_leak(gzip.decompress(blob.data).decode(), scenario.issued.probes(), "a blob")
+
+
+async def test_archive_strips_a_body_that_reaches_it(scenario: Scenario) -> None:
+    """``redact_record`` itself drops bodies: feed it an event with canary bodies put back."""
+    _assert_capture_ran(scenario)
+    _result, sinks = await g.run_worker(scenario.published)
+    event = next(
+        e for e in sinks.archive.effects.values() if e.message.event_id == g.CAPTURED_EVENT
+    )
+    issued = scenario.issued
+    data = {
+        **event.message.data,
+        "prompt": f"{issued.canary()} archived {scenario.credential}",
+        "gen_ai.output.messages": [{"role": "assistant", "content": issued.canary()}],
+    }
+    # model_copy skips validation: this is the shape a guard bypass upstream would produce.
+    bodied = event.model_copy(update={"message": event.message.model_copy(update={"data": data})})
+    document = bodied.model_dump(mode="json")
+    planted = find_body_fields(document)
+    assert planted != []
+    key = secrets.token_bytes(32)
+
+    record = redact_record(document, key)
+    fields = find_body_fields(record)
+    assert fields == []
+    g.assert_no_leak(json.dumps(record), issued.probes(), "a redacted archive record")
+
+    blob = build_blob(bodied, key)
+    decoded = json.loads(gzip.decompress(blob.data))
+    blob_fields = find_body_fields(decoded)
+    assert blob_fields == []
+    g.assert_no_leak(json.dumps(decoded), issued.probes(), "an archive blob")
 
 
 # --- guard 6: audit seal --------------------------------------------------------------------------
@@ -168,7 +204,7 @@ async def test_audit_records_are_metadata_only_and_sealed(scenario: Scenario) ->
     for chain_id, draft in drafts:
         assert chain_id == CHAIN
         g.assert_audit_draft_metadata_only(draft)
-        g.assert_no_leak(draft.model_dump_json(), scenario.issued.values, "an audit draft")
+        g.assert_no_leak(draft.model_dump_json(), scenario.issued.probes(), "an audit draft")
 
     assert [r.operation for r in records] == operations
     verification = verify_chain(records, chain_id=CHAIN)
@@ -176,4 +212,37 @@ async def test_audit_records_are_metadata_only_and_sealed(scenario: Scenario) ->
     for record in records:
         document = record.model_dump(mode="json")
         assert_metadata_only(document)
-        g.assert_no_leak(json.dumps(document), scenario.issued.values, "a sealed audit record")
+        g.assert_no_leak(json.dumps(document), scenario.issued.probes(), "a sealed audit record")
+
+
+async def test_audit_refuses_a_draft_with_captured_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Negative case: a capture draft whose free-text detail carries content never seals.
+
+    ON only: the OFF run writes no draft to tamper with.
+    """
+    scenario = await g.run_scenario(tmp_path, monkeypatch, capture_on=True)
+    _chain, draft = scenario.audit.drafts[0]
+    before = await scenario.audit_records()
+    detail = f"user said {scenario.issued.canary()} with {scenario.credential}"
+    outcome = draft.outcome
+    assert outcome is not None
+    tampered = draft.model_copy(update={"outcome": outcome.model_copy(update={"detail": detail})})
+
+    with pytest.raises(InvalidSchemaError) as direct:
+        assert_metadata_only(tampered.model_dump(mode="json"))
+    assert direct.value.reason == "audit_content_rejected"
+
+    with pytest.raises(InvalidSchemaError) as sealed:
+        await scenario.audit.append(CHAIN, tampered)
+    assert sealed.value.reason == "audit_content_rejected"
+    g.assert_no_leak(str(sealed.value), scenario.issued.probes(), "the refusal message")
+
+    after = await scenario.audit_records()
+    assert len(after) == len(before)
+    g.assert_no_leak(
+        json.dumps([r.model_dump(mode="json") for r in after]),
+        scenario.issued.probes(),
+        "the audit chain after a refusal",
+    )
