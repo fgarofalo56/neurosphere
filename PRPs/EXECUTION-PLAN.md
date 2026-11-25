@@ -79,7 +79,7 @@ Gate before the next wave: Hosted hardening and the restored-scope contracts are
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-82: Hosted Azure profile with everything on, against real tenant data, and checked](backlog/PRP-82-hosted-profile-everything-on.md) | sonnet | required | PRP-67 | PRP-67 | - | `prp-82-hosted-everything-on` |
-| 2 | [PRP-102: Encrypted interaction store, retention and legal hold](backlog/PRP-102-encrypted-interaction-store-and-retention.md) | opus | required | none | PRP-107 | - | `prp-102-encrypted-interaction-store` |
+| 2 | [PRP-102: Encrypted interaction store, retention and legal hold](active/PRP-102-encrypted-interaction-store-and-retention.md) | opus | required | none | PRP-107 | - | `prp-102-encrypted-interaction-store` |
 | 3 | [PRP-105: Governance policy engine core (definitions, evaluator, violations, exceptions, decide)](backlog/PRP-105-policy-engine-core.md) | opus | required | none | PRP-102 | yes | `prp-105-policy-engine-core` |
 
 Gate before the next wave: The hosted profile renders with everything on (offline build); detectors are measured on the synthetic corpus; the content store round-trips encrypted; a policy flags a graph violation locally.
@@ -609,7 +609,7 @@ Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-82-hosted-e
 ### PRP-102 (W21)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-102-encrypted-interaction-store-and-retention.md
+/prp:prp-execute PRPs/active/PRP-102-encrypted-interaction-store-and-retention.md
 
 Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-102-encrypted-interaction-store cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. PRP-105 holds the compose stack in this wave: do not run docker compose or make stack-up. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```

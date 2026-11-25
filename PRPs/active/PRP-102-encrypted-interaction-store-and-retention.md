@@ -1,6 +1,6 @@
 ---
 name: PRP-102-encrypted-interaction-store-and-retention
-status: backlog
+status: active
 priority: P0
 order: 102
 review: required
@@ -230,9 +230,9 @@ None run here. A real Key Vault wrap and unwrap, the hosted blob container and t
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
+| 1 | merged | orchestrator, `prp-102-encrypted-interaction-store` | 2026-11-25 s-30eda2: plan approved by the owner (Opus implementers; items 2 and 3 parallel; independent review on items 3, 4, 5; rows 5-7 kept as ASSUMPTIONS). U-1 and U-2 confirmed, see runbook "Verification". Finding: `key-version` is a required wrap/unwrap path segment and `kek_uri` may omit it, so item 3 resolves the current version through Get Key. Runbook nav line pulled forward from item 7 (the nav test requires it) |
+| 2 | in-progress | | |
+| 3 | in-progress | | |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
