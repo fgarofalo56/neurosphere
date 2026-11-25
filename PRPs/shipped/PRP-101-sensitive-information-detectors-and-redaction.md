@@ -1,6 +1,8 @@
 ---
 name: PRP-101-sensitive-information-detectors-and-redaction
-status: backlog
+status: shipped
+shipped: 2026-11-24
+pr: 407
 priority: P0
 order: 101
 review: required
@@ -31,15 +33,15 @@ Out of scope: running detectors on the ingest path or anywhere else (PRP-103); e
 - PRP-70 provides the vocabulary findings must map to: `sensitivity_category` (`pii`, `phi`, `cui`, `pci`, `financial`, `biometric`, `credentials`, `export_controlled`, `legal_privileged`, `other`; `PRPs/backlog/PRP-70-contracts-revision-restored-scope.md:88`).
 
 ## Acceptance criteria
-- [ ] Given text containing a generated credential of each supported kind (JWT, bearer token, private-key block, connection string with an account key, password in a URL, each cloud or vendor key format in the verified list), When redacted with any configuration, Then every occurrence is replaced by the PRP-99 placeholder `[[ns-redacted:<detected_category>]]`, the output contains no substring of the match, and the result carries no hash, length, prefix or suffix of the match.
-- [ ] Given a Luhn-valid card number, Then it is found and redacted to `[[ns-redacted:payment_card]]` by default; a Luhn-invalid digit run of the same shape is not reported as a card. IBAN uses mod 97 and SSN uses the structure rules (area, group and serial exclusions) the same way.
-- [ ] Given a customer dictionary of exact terms and a customer pattern, When the pattern fails the static safety check (length cap, nested quantifier, backreference, lookaround) it is refused at load with a reason code; a valid pattern runs only on bounded chunks, and when the per-part time budget is exhausted the whole part is reported `redaction_failed` and no partial output is returned.
-- [ ] Given any exception inside a detector or the engine, Then the engine returns a `RedactionFailed` result with a reason code and no text; there is no code path that returns the input unredacted.
-- [ ] Findings carry exactly what PRP-99's `DetectionFinding` holds (category, part, detector id, detector version `x.y.z`, count, action `replaced` or `kept`, confidence, placeholder offsets in the redacted text) plus the PRP-70 `sensitivity_category`, and never the matched text; a credential category is always `replaced`.
-- [ ] Every credential format rejected by PRP-99's `secret_free_text` (`tests/contracts/validators.py::check_secret_free_text`) is detected: redacted output of the corpus validates against the `RedactedContent` JSON Schema (not only the Pydantic model, which ignores `not` patterns).
-- [ ] No log record, exception message or `repr` produced by the library contains matched text (caplog test over the full corpus).
-- [ ] The labelled synthetic corpus reports precision and recall per detector; credential detectors and the Luhn card detector reach recall 1.0 on the corpus (GD-19, row 6); the measured table is published in `docs/runbooks/content-classification.md` with the detector-set version, and the runbook states "structured identifiers only: names, postal addresses and free-text health or legal content are not detected".
-- PRP exit: `packages/core/tests/content_detectors`, `tests/security/content_redaction`, ruff, pyright, `validate_planning.py` pass; PR open with CI green.
+- [x] Given text containing a generated credential of each supported kind (JWT, bearer token, private-key block, connection string with an account key, password in a URL, each cloud or vendor key format in the verified list), When redacted with any configuration, Then every occurrence is replaced by the PRP-99 placeholder `[[ns-redacted:<detected_category>]]`, the output contains no substring of the match, and the result carries no hash, length, prefix or suffix of the match. Evidence: `tests/security/content_redaction/test_no_secret_leak.py::test_credentials_never_leak` (3 configs; hashes, encodings, length hints), `::test_placeholders_are_bare_category_tokens`, `packages/core/tests/content_detectors/test_secret_detectors.py` glue parity tests.
+- [x] Given a Luhn-valid card number, Then it is found and redacted to `[[ns-redacted:payment_card]]` by default; a Luhn-invalid digit run of the same shape is not reported as a card. IBAN uses mod 97 and SSN uses the structure rules (area, group and serial exclusions) the same way. Evidence: `test_identifiers.py::test_luhn_valid_cards_found_every_length`, `::test_luhn_invalid_cards_not_found`, `::test_iban_valid_found_invalid_not`, the SSN exclusion tests; card default redact in `test_engine.py`.
+- [x] Given a customer dictionary of exact terms and a customer pattern, When the pattern fails the static safety check (length cap, nested quantifier, backreference, lookaround) it is refused at load with a reason code; a valid pattern runs only on bounded chunks, and when the per-part time budget is exhausted the whole part is reported `redaction_failed` and no partial output is returned. Evidence: `test_customer.py::test_catastrophic_shapes_refused`, `::test_unsafe_patterns_refused_with_detail`; `test_engine.py::test_slow_customer_chunks_exhaust_budget` (`RedactionFailed("budget_exhausted")`, the library's `redaction_failed` result) and the chunk-boundary tests.
+- [x] Given any exception inside a detector or the engine, Then the engine returns a `RedactionFailed` result with a reason code and no text; there is no code path that returns the input unredacted. Evidence: `tests/security/content_redaction/test_fail_closed.py` (raising detectors, 20 malformed and forged output shapes, every engine step monkeypatched, 200-seed property run); engine offset re-validation `engine.py` `_validated`.
+- [x] Findings carry exactly what PRP-99's `DetectionFinding` holds (category, part, detector id, detector version `x.y.z`, count, action `replaced` or `kept`, confidence, placeholder offsets in the redacted text) plus the PRP-70 `sensitivity_category`, and never the matched text; a credential category is always `replaced`. Evidence: `test_models.py` (field parity with the generated contract, credential + kept rejected, DetectionFinding round trip), `test_engine.py` findings and offset tests.
+- [x] Every credential format rejected by PRP-99's `secret_free_text` (`tests/contracts/validators.py::check_secret_free_text`) is detected: redacted output of the corpus validates against the `RedactedContent` JSON Schema (not only the Pydantic model, which ignores `not` patterns). Evidence: `test_engine.py::test_every_kind_redacts_to_secret_free_schema_valid_content` (JSON Schema `interactions/v1/redacted-content.schema.json`), `test_secret_detectors.py` validator-pattern probe test iterating `SECRET_TEXT_PATTERNS`.
+- [x] No log record, exception message or `repr` produced by the library contains matched text (caplog test over the full corpus). Evidence: `test_no_secret_leak.py` (all loggers at DEBUG, zero records; repr/str/dump of results and findings), `::test_leak_oracle_has_teeth`, AST scan in `test_fail_closed.py`.
+- [x] The labelled synthetic corpus reports precision and recall per detector; credential detectors and the Luhn card detector reach recall 1.0 on the corpus (GD-19, row 6); the measured table is published in `docs/runbooks/content-classification.md` with the detector-set version, and the runbook states "structured identifiers only: names, postal addresses and free-text health or legal content are not detected". Evidence: `test_corpus_quality.py::test_gate_recall_is_one_end_to_end` (all gated categories 1.000), runbook table for `ns-detectors-1.0.0` with digest, coverage statement at `docs/runbooks/content-classification.md:13`.
+- PRP exit: `packages/core/tests/content_detectors`, `tests/security/content_redaction`, ruff, pyright, `validate_planning.py` pass; PR open with CI green. Evidence: local gates 2026-11-25 (ruff and pyright repo-wide clean, 1239 passed across the PRP and docs suites, validate_planning exit 0); verify-gates full: lint, typecheck and tests PASS (17608 passed), build FAIL locally only because the worktree's frontend `node_modules` is a Git-Bash symlink Node cannot follow (no frontend change in this PRP; CI frontend builds green); PR #407, CI result recorded below.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -52,6 +54,10 @@ Out of scope: running detectors on the ingest path or anywhere else (PRP-103); e
 | 6 | Quality gate | report only; gate some detectors | Decided by the owner 2026-11-16 (GD-19): only the credential detectors and Luhn-valid payment cards are gated at recall 1.0 on the synthetic corpus; the other detectors report measured recall without a gate |
 | 7 | Unicode evasion | detect on raw text; normalize first | ASSUMPTION: NFKC normalization and removal of zero-width characters before detection; the redacted output is the normalized text |
 | 8 | Rewrite the four existing rule sets | consolidate now; follow-up | Follow-up issue (design PRP-101 scope) |
+| 9 | Category for long opaque runs (item 2 `opaque_secret` is not a PRP-99 `DetectedCategory`) | `other` always redacted; `vendor_api_key`; drop | Decided by the owner 2026-11-24: detector id `opaque_secret`, category `other`, confidence low, always `replaced` (engine forces it regardless of policy); not under the recall 1.0 gate |
+| 10 | Category for a SAS `sig=` parameter | `connection_string`; `url_with_credentials` | Orchestrator 2026-11-24: `connection_string` (a SAS signature is shared-access key material) |
+
+Plan approved by the owner 2026-11-24 (session s-8c3599): rows 5-7 ASSUMPTIONS accepted as written; one independent review pass per code item (items 6 and 7 share one).
 
 ## Context manifest
 
@@ -123,18 +129,18 @@ Parallelization: item 1 first; items 2, 3 and 4 [P] (separate modules); item 5 a
 - Pattern references: `lifecycle/policy.py:19-45`.
 
 ### Item 2 - Credential and secret detectors  [P]
-- Deliverable: `classification/detectors/credentials.py`: JWT, bearer, private-key blocks, connection strings with key material, passwords in URLs, credential phrasing (`password=`, `client_secret:`), verified vendor key formats, long opaque runs labelled `opaque_secret`.
-- Owned files: `packages/core/neurosphere_core/classification/detectors/credentials.py`, `packages/core/tests/content_detectors/test_credentials.py`, `packages/core/tests/content_detectors/synth.py`.
+- Deliverable: `classification/detectors/secret_detectors.py` (renamed 2026-11-24: the acc-guard secret-file rule refuses any path containing "credentials"): JWT, bearer, private-key blocks, connection strings with key material, passwords in URLs, credential phrasing (`password=`, `client_secret:`), verified vendor key formats, long opaque runs labelled `opaque_secret`.
+- Owned files: `packages/core/neurosphere_core/classification/detectors/secret_detectors.py`, `packages/core/tests/content_detectors/test_secret_detectors.py`, `packages/core/tests/content_detectors/synth.py`.
 - Must NOT touch: other detector modules.
 - Depends on: item 1.
 - Acceptance criteria: criterion 1 for each kind; `max_tokens=4096` and `prompt_tokens: 12` are not credentials (copy the negative lookahead idea at `copilot/models/redaction.py:56-62`).
-- Tests: `packages/core/tests/content_detectors/test_credentials.py`.
+- Tests: `packages/core/tests/content_detectors/test_secret_detectors.py`.
 - Pattern references: `copilot/models/redaction.py:36-65`.
 
 ### Item 3 - Structured identifier detectors with checksums  [P]
 - Deliverable: `classification/detectors/identifiers.py`: card (Luhn), IBAN (mod 97), US SSN (structure rules), email, phone (E.164 and separated national formats, flagged low precision), IPv4, IPv6, MAC, GUID.
 - Owned files: `packages/core/neurosphere_core/classification/detectors/identifiers.py`, `packages/core/tests/content_detectors/test_identifiers.py`.
-- Must NOT touch: credentials module.
+- Must NOT touch: secret_detectors module.
 - Depends on: item 1.
 - Acceptance criteria: criterion 2; dates, versions and plain counts are not phones (copy the guards at `copilot/models/redaction.py:68-75`).
 - Tests: `packages/core/tests/content_detectors/test_identifiers.py`.
@@ -214,20 +220,35 @@ None. No external call is made; the model-based detector is not built (GD-6).
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | merged | worktree-agent-aed05eadf2560d344 @ 69df73fb | review APPROVE; gates green (content_detectors + import boundaries + tests/docs 228 passed); orchestrator added Match category/confidence validation and pulled the mkdocs nav line forward from item 8 |
+| 2 | merged | worktree-agent-a5559d51e4828bd4b @ 479f3d53 + rework worktree-agent-a0e04d02db516eedb @ 36c22c2e | review CHANGES REQUIRED (criterion 6 validator gaps: lowercase sk- slug, bearer after `_`, glued JWT, `xsig=`, long URL userinfo; `user@server` URL password); one rework round, confirmed by re-running the reviewer's probe (all detected, output validator-clean, idempotent); 345 passed after merge |
+| 3 | merged | worktree-agent-a123dc9f196a65037 @ 0ae2ead7 | review APPROVE (follow-ups: IBAN country/length table, IPv6 hex-word compressed forms); 203 passed after merge |
+| 4 | merged | worktree-agent-a24fbf0e798524465 @ efeef77e + rework worktree-agent-a2ee628f73be779bf @ 2e567d50 | review CHANGES REQUIRED (cost model ignored nesting/wrapper repeats: accepted patterns 8-30x over the documented bound); one rework round (`too_deep`, depth 2, MAX_COMPLEXITY 160, honest bound 250 ms per 64 KiB per pattern, dictionary 2 s), confirmed by the orchestrator re-running the reviewer's patterns (all refused); 470 passed after merge |
+| 5 | merged | worktree-agent-a26ea51110909ef2c @ 7ea2f11f | review CHANGES REQUIRED (invisible-char strip list was a subset: variation selectors/tags split keys past detection); orchestrator fixed (full Default_Ignorable set) and confirmed: new 56-case test fails on the old engine, passes now; 599 passed + 1 strict xfail (chained assignment leak in item 2's detector, fix-forward lane in flight) |
+| 6 | merged | worktree-agent-a3791096476f50fd3 @ 1425c2d3 | review APPROVE (shared pass with item 7); its gate caught two JSON-escaped leaks (bearer after escaped tab, escaped-quote client secret), fixed forward with the operator lane (5e5764dd); at merge the orchestrator gated the chained context too, pinned the table digest and regenerated the table: every gated category recall 1.000 end to end |
+| 7 | merged | worktree-agent-ac7fd81ae7a69e615 @ 719aea66 | found a fail-open (forged Match offsets bypassing __post_init__); orchestrator fixed `engine._validated`, the 8 strict xfails now pass; review APPROVE (shared pass with item 6; engine rebuild now reuses checked offsets, f465c697); 741 passed |
+| 8 | merged | prp-101-detectors-and-redaction (orchestrator) | runbook complete (detectors, configuration, customer patterns, known limits), mkdocs nav (pulled forward to item 1), changelog fragment, follow-up issues #408 and #409, completion note |
+
+Fix-forward lanes (not numbered items): chained credential assignments (worktree-agent-af9ddd3e901080a39 @ 02e7fc1b, found by item 5); assignment operators `:=`/`=>`/`->`/`<-`/`==`, CLI flags and JSON-escaped text (worktree-agent-af739a51728948b1a @ 50b79646, found by an orchestrator probe and item 6's gate).
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-24, PR #407. CI green on b984d592: 33 check runs succeeded, 1 skipped (deploy to Pages), including CodeQL after fixing one error and two warnings in the new tests. Merge commits on the integration branch: items 1-7 merges plus fix-forward merges (`git log --oneline origin/main..prp-101-detectors-and-redaction`). One pushed commit (5a9a7000, the item 8 docs and completion note) carries a stale message, "test(classification): gate every corpus context...", because the message file was not rewritten. The content is correct; it was left as is (no force-push), and squash-merge drops it.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
+  - Item 2's module is `detectors/secret_detectors.py`, not `credentials.py`: the acc-guard secret-file rule refuses any path containing "credentials".
+  - `Redacted.set_version` follows the PRP-99 `detector_set_version` slug (`ns-detectors-1.0.0`), not x.y.z.
+  - `Finding.offsets` mirrors `DetectionFinding.spans` (at most 64 entries); PRP-103 maps it.
+  - Built-in detectors run on the whole text; only customer detectors are chunked. The reason is that private-key blocks exceed any sensible overlap. The overlap must be at least 2W+2.
+  - The customer-pattern safety check is stricter than the PRP implied. It refuses every unbounded repeat, any bound above 100, nesting deeper than 2 and a cost above 160. The true bound is 250 ms per 64 KiB per pattern, not the first draft's 50 ms.
+  - Added beyond the plan:
+    - full Default_Ignorable stripping
+    - a post-redaction self-check
+    - re-validation of detector match offsets in the engine
+    - the low-confidence bare `sk-` rule (criterion 6 requires it, so ordinary slugs such as `disk-encryption-set-configuration` are over-redacted)
+  - The mkdocs nav line moved from item 8 to item 1, to keep the docs nav test green from the first push.
+- Descoped items: none.
+- OPEN gates: none. No live gate exists; the PRP makes no external call.
+- Env vars for the operator: none. The library has no settings.
 - Follow-up issues:
-- Product check (can an operator use it without editing files):
+  - #408: consolidate the four existing rule sets (Clarification 8).
+  - #409: precision and hardening follow-ups (IBAN, IPv6 and opaque precision; glued `sk_` keys; escaped-quote values; combining marks; finding-count cap; customer cost model; PRP-103 budget headroom).
+- Product check: no. This is a library with no caller. An operator cannot configure dictionaries, patterns or redaction modes without code until PRP-103 (capture policy and ingest edge) and PRP-105 (policy `content_rule`) wire it in, as planned.
