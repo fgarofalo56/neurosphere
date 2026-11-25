@@ -1,7 +1,8 @@
 # Interaction audit: encrypted content store
 
 Status date: 2026-11-25. This runbook covers where opt-in captured interaction content rests
-(PRP-102). Capture itself (PRP-103) and the explorer (PRP-104) add their own sections later.
+(PRP-102) and how the ingest edge captures it (PRP-103, see "Capture at the ingest edge"
+below). The explorer (PRP-104) adds its own section later.
 Nothing in this runbook makes the product capture content: capture stays off by default, and the
 store refuses every write until the customer retention policy opts in.
 
@@ -10,8 +11,12 @@ store refuses every write until the customer retention policy opts in.
 | Piece | Where | State |
 |---|---|---|
 | Envelope encryption | `neurosphere_core.crypto` | Built, tested with a fake Key Vault and the local key |
-| Interaction store (index plus encrypted content) | `neurosphere_core.interactions` | Built; nothing calls it until PRP-103 |
-| Lifecycle data class `interaction_content` | `neurosphere_core.interactions.lifecycle_delete`, `build_targets` | Built; registered only when the worker passes the backends (PRP-103 wires it) |
+| Interaction store (index plus encrypted content) | `neurosphere_core.interactions` | Built; called only by the capture pipeline (PRP-103) |
+| Lifecycle data class `interaction_content` | `neurosphere_core.interactions.lifecycle_delete`, `build_targets` | Built; the worker registers it when the interaction index and content container are configured (PRP-103) |
+| Capture policy store, matcher, capture pipeline | `neurosphere_core.interactions` (`policy`, `policy_store`, `capture`) | Built (PRP-103) |
+| Ingest-edge capture and component `interaction_capture` | `neurosphere_api.ingest.capture`, `runtime/builders/interactions.py` | Built; off by default (PRP-103) |
+| Turning the deployment switch on | `interaction_capture` stored setting | Not loadable yet: the key is still pending in core, so every deployment reports `setting_off` until PRP-108/109 |
+| Executing `capture_policy_change` (propose, approve, activate) | PRP-108 | Planned; until then a policy exists only through the `NS_ENV=local` seed |
 | Cosmos containers | `interaction_index`, `interaction_capture_policies`, `policy_definitions`, `policy_violations`, `policy_exceptions`, `notification_outbox` | Declared in the registry and the IaC export; empty |
 | Hosted Key Vault key, role assignment, content blob container | PRP-109 | OPEN |
 | Live wrap and unwrap against a real vault | PRP-136 (`NS_LIVE_APPROVED=1`) | OPEN |
@@ -25,8 +30,8 @@ Two independent gates must both be open before a single byte of content is store
    No policy, an invalid policy, the opt-in set to false, or no such rule refuses every write with
    `content_retention_not_enabled`. The refusal is counted on `ns.interactions.store.refusals`
    (attribute `ns.reason`); content is never logged.
-2. An approved capture policy exists for the domain and source (PRP-103). Until PRP-103 ships,
-   nothing calls the store at all.
+2. An approved capture policy exists for the domain and source (PRP-103), and the deployment
+   switch is on. See "Capture at the ingest edge" for every gate and its reason code.
 
 Sample retention policy rule (the 90-day default chosen by the owner, GD-5):
 
@@ -41,6 +46,86 @@ Sample retention policy rule (the 90-day default chosen by the owner, GD-5):
 ```
 
 A real policy also lists every other data class it governs; one `data_class` may appear once.
+
+## Capture at the ingest edge
+
+PRP-103 adds a seventh path beside the six metadata-only guards. In every case other than the
+one below, the ingest edge behaves exactly as before: bodies are dropped by key name and nothing
+is kept.
+
+### When content is captured
+
+Only when every gate holds, checked in this order. The first gate that fails is the off reason
+shown on `GET /api/v1/admin/interactions/capture-status` and on the `interaction_capture`
+readiness component (which is optional and never blocks readiness):
+
+| Order | Reason code | Meaning |
+|---|---|---|
+| 1 | `setting_off` | The `interaction_capture` stored setting is absent or `enabled: false` (read at restart) |
+| 2 | `retention_not_enabled` | The retention policy does not opt in to bodies (see above) |
+| 3 | `policy_limit_exceeded` | More than 500 capture policies for the customer; capture fails closed |
+| 4 | `no_policy` | No capture policy exists |
+| 5 | `not_approved` | No policy is `active` with an approving audit id |
+| 6 | `source_mismatch` | The producer's registered source is not in the policy |
+| 7 | `domain_missing` | The event has no `domain_id` (never captured) |
+| 8 | `domain_mismatch` | The event's domain is not the policy's domain |
+| 9 | `not_sampled` | Deterministic sampling by event id left this event out |
+
+Configuration reasons reported instead of a gate when the builder cannot start capture include
+`key_vault_not_configured`, `key_host_refused`, `blob_not_configured`, `cosmos_unconfigured`,
+`local_key_not_allowed`, `capture_env_invalid`, `policy_store_unavailable` (also a policy read
+that takes longer than 15 seconds) and `startup_pending`. Ingest keeps serving in every case.
+
+Only CloudEvents telemetry is captured today. OTLP spans carry no `domain_id` at the edge (the
+domain is resolved later in the workers), so every span is `domain_missing`; a trusted domain
+for OTLP arrives with PRP-111.
+
+### What is stored and what the event carries
+
+The body fields the guard would drop become parts: `prompt` (`prompt`, `gen_ai.prompt`,
+`gen_ai.input.messages`, `messages`, any key ending `.prompt`), `response` (`response`,
+`completion`, `gen_ai.completion`, `gen_ai.output.messages`, any key ending `.response`) and
+`system_instructions` (`gen_ai.system_instructions`). Each part is detected and redacted in
+full, then capped; the cap never cuts a placeholder or keeps part of a detected value, and a
+part the producer already cut never stores its last 512 characters.
+
+Never stored: credentials and secrets (always the placeholder `[[ns-redacted:<category>]]`,
+whatever the policy says) and payment card numbers unless the policy keeps them. Both policy
+redaction modes currently behave as `redact_all_detections` except the policy's kept categories.
+
+The event gets only a `payload_ref`: the pointer `interaction:<interaction_id>`, the redaction
+state, detected categories, detector-set version, capture policy id and version, and a list of
+parts with character counts. It never carries text.
+
+### Failures, shedding and audit
+
+If detection, redaction, key wrap or storage fails, nothing is stored: the event gets a
+`payload_ref` with `redaction_state: redaction_failed` that points to an index-only record, the
+telemetry is still accepted, and `capture_failed` is counted by reason. Each capture appends an
+`interaction.capture` audit record and each drop an `interaction.capture_dropped` record on the
+domain chain, with the request's correlation id and ids and counts only; if that audit write
+fails, the content is deleted.
+
+Capture is shed before telemetry: when in-flight captures reach the stored setting's
+`shed_capture_at_queue_percent` of `NS_INTERACTION_CAPTURE_QUEUE_CAPACITY` (default 64), or a
+policy's `sampling.max_per_minute` is exceeded, the event is published without a `payload_ref`
+and `capture_shed` is counted. At most `NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQUEST` (default
+100) items per request are captured.
+
+### Counters
+
+`captured`, `capture_skipped_no_policy` (by off reason), `capture_failed` (by reason),
+`capture_shed` and `capture_skipped_item_cap`, shown by the capture-status route and the admin
+page `Admin > Capture`. Neither shows content.
+
+### Turning capture on and off
+
+There is no setting toggle or API route that turns capture on. A policy is proposed and approved
+as a `capture_policy_change` action (a domain steward proposes, a second steward approves) once
+PRP-108 ships; until then only the `NS_ENV=local` seed creates one. The matcher reads policies
+once at startup, so restart the API after a policy change. To stop capture, disable the
+`interaction_capture` stored setting and restart, or set `retain_prompt_response_bodies` to
+false. Stored content expires through its retention rule or is purged through the lifecycle API.
 
 ## What the store accepts
 
