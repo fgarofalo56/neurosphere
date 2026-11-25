@@ -141,10 +141,11 @@ def _validated(match: object, detector: Detector, length: int, offset: int) -> M
     start, end = match.start, match.end
     if type(start) is not int or type(end) is not int or not 0 <= start < end <= length:
         raise _Fail("detector_error")
-    # Rebuilding always re-runs Match validation (category, confidence) on detector output.
+    # Rebuilding always re-runs Match validation (category, confidence) on detector output;
+    # it reuses the checked locals so a Match subclass cannot change offsets between reads.
     return Match(
-        start=match.start + offset,
-        end=match.end + offset,
+        start=start + offset,
+        end=end + offset,
         category=match.category,
         confidence=match.confidence,
         detector_id=match.detector_id,
