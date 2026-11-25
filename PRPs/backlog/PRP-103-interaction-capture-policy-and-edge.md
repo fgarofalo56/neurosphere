@@ -269,8 +269,8 @@ None here. Capture end to end on the hosted app (synthetic domain only, enabled 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | agent worktree (item-1) | plan approved by owner 2026-11-25 (s-80ece6, adopted from orphaned s-42e704): waves 1+2, 3, 4, 5+6 (+7), 8 |
-| 2 | in-progress | agent worktree (item-2) | |
+| 1 | merged | prp-103-item-1 @ cc935da9 -> 5f6d36f5 | Review BLOCK (Cosmos multi-property ORDER BY needs composite index) fixed in rework: single ORDER BY + SQL-recording fake, env-only local seed, domain prefix before deny, `policy_limit_exceeded` off reason (>500 policies). Re-verified: 163 passed, ruff/pyright clean, Snyk 0. Plan approved by owner 2026-11-25 (s-80ece6, adopted from orphaned s-42e704): waves 1+2, 3, 4, 5+6 (+7), 8 |
+| 2 | in-progress | prp-103-item-2 @ ade43b9b | verified: ruff/pyright clean, 136 passed, Snyk 0. Review BLOCK: cap applied before redaction keeps part of a spaced card/IBAN in clear; rework round 1 running (redact-then-cap, cancellation shield, RecursionError, envelope error scrub, caplog + payload_ref schema tests). Follow-up: cleanup_failed reconciler. Both redaction_mode values treated as redact-all-except-kept (fail-safe; contract leaves redact_listed undefined) - follow-up |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
