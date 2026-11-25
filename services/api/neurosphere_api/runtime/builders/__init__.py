@@ -392,6 +392,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         data,
         edge,
         gateway,
+        interactions,
         lifecycle,
         mcp,
         planes,
@@ -413,6 +414,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         admin_system.BUILDER,
         sources_status.BUILDER,
         agent_identity.BUILDER,
+        interactions.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
     )
