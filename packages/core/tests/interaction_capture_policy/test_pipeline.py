@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import logging
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -19,14 +21,17 @@ from neurosphere_core.classification import RedactionFailed as RedactionFailedRe
 from neurosphere_core.crypto import WrappedKey
 from neurosphere_core.interactions import (
     CapturePipeline,
+    CaptureRateLimiter,
     ExtractedBody,
+    ExtractedPart,
     InMemoryInteractionStore,
-    MinuteRateLimiter,
     extract_body_parts,
 )
 from neurosphere_core.interactions import capture as capture_module
 from neurosphere_core.payload.guard import find_body_fields
-from pipeline_helpers import (  # pyright: ignore[reportMissingImports]
+
+from . import pipeline_helpers
+from .pipeline_helpers import (
     CUSTOMER,
     DOMAIN,
     AuditRecorder,
@@ -37,10 +42,29 @@ from pipeline_helpers import (  # pyright: ignore[reportMissingImports]
     card_number,
     event,
     github_token,
+    grouped,
+    iban,
     make_store,
+    payload_ref_errors,
     storage_account_key,
     target,
 )
+
+
+@pytest.fixture(autouse=True)
+def no_captured_value_in_logs(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
+    """Every value a test generates is checked against every log record, on every path."""
+    pipeline_helpers.ISSUED.clear()
+    caplog.set_level(logging.DEBUG)
+    yield
+    logged = [caplog.text]
+    for record in caplog.records:
+        logged.append(record.getMessage())
+        logged.append(repr(record.args))
+        logged.append(repr(getattr(record, "__dict__", {})))
+    joined = "\n".join(logged)
+    for value in pipeline_helpers.ISSUED:
+        assert value not in joined
 
 
 def _body(prompt: str, response: str | None = None) -> ExtractedBody:
@@ -85,6 +109,7 @@ def _assert_failed_index_only(
     assert pipe.stats.captured == 0
     assert [e.operation for e in audit.events][-1] == "interaction.capture_dropped"
     assert audit.events[-1].reason == reason
+    _assert_body_free(ref)
 
 
 def _assert_body_free(ref: Any) -> None:
@@ -92,6 +117,7 @@ def _assert_body_free(ref: Any) -> None:
     assert find_body_fields(doc) == []
     assert find_body_fields({"payload_ref": doc}) == []
     assert isinstance(doc["content_parts"], list)
+    assert payload_ref_errors(doc) == []
 
 
 # --- criterion 3: what is stored -----------------------------------------------------------------
@@ -225,6 +251,116 @@ async def test_policy_part_cap_truncates_stored_text(
     part = ref.content_parts[0]
     assert part.truncated is True
     assert part.char_count <= 120
+
+
+@pytest.mark.parametrize("make_value", [card_number, iban], ids=["spaced_card", "grouped_iban"])
+async def test_value_straddling_the_part_cap_is_redacted_whole(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, make_value: Any
+) -> None:
+    # Review repro: the cap falls inside a spaced value. Detection must see the whole value.
+    store = make_store(tmp_path, monkeypatch)
+    pipe = CapturePipeline(store)
+    value = make_value()
+    prefix = "word " * 20
+    prompt = prefix + grouped(value) + " tail"
+    ref = await pipe.capture(
+        _body(prompt), target(max_part_chars=len(prefix) + 9), event(), audit=AuditRecorder()
+    )
+    assert ref is not None and ref.interaction_id is not None
+    assert ref.redaction_state == "redacted"
+    text = await _plaintext(store, ref.interaction_id.root)
+    for group in grouped(value).split(" "):
+        assert group not in text
+    assert "[[ns-redacted" not in text  # the cut fell inside it: dropped whole, never split
+    assert ref.content_parts and ref.content_parts[0].truncated is True
+    _assert_body_free(ref)
+
+
+async def test_cut_raw_part_never_stores_its_tail(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A producer (or the raw bound) cut a card after two groups: no detector recognises the
+    # fragment, so the guarded tail must not be stored.
+    store = make_store(tmp_path, monkeypatch)
+    pipe = CapturePipeline(store)
+    groups = grouped(card_number()).split(" ")
+    text = "word " * 200 + groups[0] + " " + groups[1]
+    body = ExtractedBody((ExtractedPart("prompt", text, truncated=True),))
+    ref = await pipe.capture(body, target(max_part_chars=32768), event(), audit=AuditRecorder())
+    assert ref is not None and ref.interaction_id is not None
+    stored = await _plaintext(store, ref.interaction_id.root)
+    assert groups[0] not in stored and groups[1] not in stored
+    assert "word word" in stored
+    assert ref.content_parts and ref.content_parts[0].truncated is True
+
+
+async def test_hard_cut_without_whitespace_keeps_placeholders_whole(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = make_store(tmp_path, monkeypatch)
+    pipe = CapturePipeline(store)
+    han = chr(0x6C49)
+    card = card_number()
+    prompt = han * 94 + "," + card + "," + han * 50
+    ref = await pipe.capture(
+        _body(prompt), target(max_part_chars=100), event(), audit=AuditRecorder()
+    )
+    assert ref is not None and ref.interaction_id is not None and ref.content_parts
+    content = await store.read_content(CUSTOMER, DOMAIN, ref.interaction_id.root)
+    stored = content.parts[0].text.root
+    assert stored == han * 94 + ","
+    assert card not in stored
+    assert ref.content_parts[0].char_count == 95
+
+
+async def test_per_interaction_budget_applies_to_redacted_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = make_store(tmp_path, monkeypatch)
+    pipe = CapturePipeline(store, max_content_chars=150)
+    prompt = " ".join(["p" * 9] * 10)  # 99 chars
+    response = " ".join(["r" * 9] * 10)
+    ref = await pipe.capture(_body(prompt, response), target(), event(), audit=AuditRecorder())
+    assert ref is not None and ref.content_parts
+    sizes = [(p.part.root, p.char_count, p.truncated) for p in ref.content_parts]
+    assert sizes[0] == ("prompt", 99, False)
+    assert sizes[1][0] == "response" and sizes[1][2] is True
+    assert sum(size for _, size, _ in sizes) <= 150
+
+
+async def test_cancelled_during_audit_keeps_no_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = make_store(tmp_path, monkeypatch)
+    pipe = CapturePipeline(store)
+    entered = asyncio.Event()
+
+    async def hanging_audit(_entry: Any) -> None:
+        entered.set()
+        await asyncio.Event().wait()
+
+    task = asyncio.create_task(
+        pipe.capture(_body(canary()), target(), event(), audit=hanging_audit)
+    )
+    await entered.wait()
+    assert len(store.content_backend.blobs) == 1  # stored, audit not yet written
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert store.content_backend.blobs == {}
+    assert store.index_backend.documents == {}
+    assert pipe.in_flight == 0
+    assert pipe.stats.captured == 0
+
+
+async def test_bad_detector_set_factory_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = make_store(tmp_path, monkeypatch)
+    pipe = CapturePipeline(store, detector_set_for=lambda _t: object())  # type: ignore[arg-type,return-value]
+    audit = AuditRecorder()
+    ref = await pipe.capture(_body(canary()), target(), event(), audit=audit)
+    _assert_failed_index_only(store, ref, audit, "detection_failed", pipe)
 
 
 async def test_mismatched_event_scope_is_not_captured(
@@ -443,7 +579,7 @@ async def test_shed_when_max_per_minute_exceeded(
 ) -> None:
     store = make_store(tmp_path, monkeypatch)
     clock = FakeClock()
-    pipe = CapturePipeline(store, rate_limiter=MinuteRateLimiter(clock=clock))
+    pipe = CapturePipeline(store, rate_limiter=CaptureRateLimiter(clock=clock))
     limited = target(max_per_minute=2)
     results = [
         await pipe.capture(_body(canary()), limited, event(), audit=AuditRecorder())

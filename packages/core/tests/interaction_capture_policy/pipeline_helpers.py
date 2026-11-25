@@ -6,6 +6,8 @@ assembled at runtime from fragments and fresh randomness (gitleaks fingerprints 
 
 from __future__ import annotations
 
+import functools
+import json
 import secrets
 import string
 import uuid
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator
 from neurosphere_core.classification import DEFAULT_SET_VERSION
 from neurosphere_core.crypto import LocalFileKeyWrapper
 from neurosphere_core.interactions import (
@@ -24,6 +27,12 @@ from neurosphere_core.interactions import (
     InMemoryInteractionStore,
 )
 from neurosphere_core.lifecycle.policy import PolicyState, load_policy
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
+
+SCHEMA_ROOT = Path(__file__).resolve().parents[4] / "packages" / "contracts" / "schemas"
+_SCHEMA_ID_PREFIX = "https://neurosphere.invalid/schemas/"
+PAYLOAD_REF_URI = _SCHEMA_ID_PREFIX + "telemetry/v1/telemetry-event.schema.json#/$defs/payload_ref"
 
 CUSTOMER = "acme"
 DOMAIN = "commercial:acme:neurosphere:domain:support"
@@ -33,6 +42,14 @@ KEK_URI = "https://acme-kv.vault.azure.net/keys/ns-content-kek"
 _ALNUM = string.ascii_letters + string.digits
 _UPPER_DIGITS = string.ascii_uppercase + string.digits
 
+#: Every canary and secret-shaped value generated in the current test (log-leak checks).
+ISSUED: list[str] = []
+
+
+def _issue(value: str) -> str:
+    ISSUED.append(value)
+    return value
+
 
 def canary() -> str:
     """A fresh canary the detectors leave alone (so a test can see it survive capture).
@@ -40,7 +57,7 @@ def canary() -> str:
     ``NSCANARY-<uuid4>`` is not usable here: the dashed GUID is itself detected
     (``opaque_secret`` / ``guid``) and replaced, which would hide whether text was kept.
     """
-    return "NSCANARY-" + "".join(secrets.choice(string.ascii_lowercase) for _ in range(16))
+    return _issue("NSCANARY-" + "".join(secrets.choice(string.ascii_lowercase) for _ in range(16)))
 
 
 def _run(alphabet: str, size: int) -> str:
@@ -54,16 +71,16 @@ def _mixed(size: int) -> str:
 
 
 def github_token() -> str:
-    return "gh" + "p_" + _mixed(36)
+    return _issue("gh" + "p_" + _mixed(36))
 
 
 def aws_key_id() -> str:
-    return "AK" + "IA" + _run(_UPPER_DIGITS, 16)
+    return _issue("AK" + "IA" + _run(_UPPER_DIGITS, 16))
 
 
 def storage_account_key() -> str:
     """An Azure storage account-key assignment; returns (labelled text)."""
-    return "Account" + "Key=" + _mixed(86) + "=="
+    return _issue("Account" + "Key=" + _mixed(86) + "==")
 
 
 def card_number() -> str:
@@ -74,7 +91,35 @@ def card_number() -> str:
         value = digit * 2 if index % 2 == 0 else digit
         total += value - 9 if value > 9 else value
     digits.append((10 - total % 10) % 10)
-    return "".join(map(str, digits))
+    return _issue("".join(map(str, digits)))
+
+
+def grouped(value: str) -> str:
+    """``value`` in space-separated groups of four (how cards and IBANs are often written)."""
+    return " ".join(value[i : i + 4] for i in range(0, len(value), 4))
+
+
+def iban() -> str:
+    """A check-digit-valid German IBAN (22 chars), random every call."""
+    bban = "".join(str(secrets.randbelow(10)) for _ in range(18))
+    # ISO 13616: move "DE00" to the end, letters to numbers (D=13, E=14), mod 97.
+    check = 98 - int(bban + "1314" + "00") % 97
+    return _issue(f"DE{check:02d}{bban}")
+
+
+@functools.cache
+def _schema_registry() -> Registry:
+    resources = []
+    for path in sorted(SCHEMA_ROOT.glob("*/v*/*.schema.json")):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        resources.append((doc["$id"], Resource.from_contents(doc, DRAFT202012)))
+    return Registry().with_resources(resources)
+
+
+def payload_ref_errors(doc: Any) -> list[str]:
+    """JSON Schema errors of ``doc`` against ``telemetry-event.schema.json#/$defs/payload_ref``."""
+    validator = Draft202012Validator({"$ref": PAYLOAD_REF_URI}, registry=_schema_registry())
+    return [error.message for error in validator.iter_errors(doc)]
 
 
 def retention(*, opt_in: bool = True) -> PolicyState:

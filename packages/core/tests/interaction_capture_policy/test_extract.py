@@ -6,9 +6,16 @@ import copy
 import json
 from typing import Any
 
-from neurosphere_core.interactions import ExtractedBody, extract_body_parts
+import pytest
+from neurosphere_core.interactions import (
+    RAW_PART_CHARS,
+    CaptureEnvelopeError,
+    ExtractedBody,
+    extract_body_parts,
+)
 from neurosphere_core.payload.guard import drop_body_fields
-from pipeline_helpers import canary  # pyright: ignore[reportMissingImports]
+
+from .pipeline_helpers import canary
 
 
 def _attr(key: str, value: dict[str, Any]) -> dict[str, Any]:
@@ -131,41 +138,54 @@ def test_deep_input_is_walked_iteratively() -> None:
     assert _text(extract_body_parts(node), "prompt") == value
 
 
-def test_per_part_cap_cuts_at_whitespace_and_marks_truncated() -> None:
-    words = " ".join(canary() for _ in range(20))
-    body = extract_body_parts({"prompt": words}, max_part_chars=100)
-    assert body is not None
-    part = body.parts[0]
-    assert part.truncated
-    assert len(part.text) <= 100
-    assert words.startswith(part.text)
-    # no token is cut in half
-    assert all(token in words.split(" ") for token in part.text.split(" "))
-
-
-def test_single_long_token_is_dropped_not_split() -> None:
-    token = "x" * 500
-    assert extract_body_parts({"prompt": token}, max_part_chars=100) is None
-
-
-def test_per_interaction_budget_is_spent_in_part_order() -> None:
-    prompt = " ".join(["p" * 9] * 10)  # 99 chars
-    response = " ".join(["r" * 9] * 10)
-    body = extract_body_parts(
-        {"prompt": prompt, "response": response}, max_part_chars=1000, max_content_chars=150
-    )
-    assert body is not None
-    assert body.parts[0].text == prompt and not body.parts[0].truncated
-    assert body.parts[1].truncated
-    assert sum(p.char_count for p in body.parts) <= 150
-
-
-def test_envelope_part_limit_is_32768() -> None:
+def test_stored_caps_are_not_applied_before_detection() -> None:
+    # Extraction keeps the whole part (up to the raw bound): the policy and envelope caps run
+    # on REDACTED text in the pipeline, so a value straddling a cap is still detected whole.
     text = ("word " * 10_000).strip()
-    body = extract_body_parts({"prompt": text}, max_part_chars=10**6, max_content_chars=10**6)
+    body = extract_body_parts({"prompt": text})
     assert body is not None
-    assert body.parts[0].char_count <= 32768
+    assert body.parts[0].text == text
+    assert not body.parts[0].truncated
+
+
+def test_raw_bound_marks_truncated() -> None:
+    text = "y" * (RAW_PART_CHARS + 10)
+    body = extract_body_parts({"prompt": text})
+    assert body is not None
+    assert body.parts[0].char_count == RAW_PART_CHARS
     assert body.parts[0].truncated
+    small = extract_body_parts({"prompt": "abc def"}, raw_part_chars=3)
+    assert small is not None and small.parts[0].text == "abc" and small.parts[0].truncated
+
+
+def test_too_deep_value_is_skipped_not_raised() -> None:
+    deep: list[object] = []
+    node = deep
+    for _ in range(5000):
+        child: list[object] = []
+        node.append(child)
+        node = child
+    body = extract_body_parts({"prompt": deep, "response": "fine"})
+    assert body is not None
+    assert [p.part for p in body.parts] == ["response"]
+    assert body.skipped == 1
+
+
+def test_to_envelope_errors_carry_no_value() -> None:
+    value = canary()
+    body = extract_body_parts({"prompt": value})
+    assert body is not None
+    with pytest.raises(CaptureEnvelopeError) as raised:
+        body.to_envelope(
+            cloud="commercial",
+            source_id="otel-gateway",
+            event_id="evt-1",
+            trace_id="not-a-trace-id",
+            occurred_at="2026-11-20T10:15:00Z",
+        )
+    assert str(raised.value) == "content_envelope_invalid"
+    assert raised.value.__context__ is None and raised.value.__cause__ is None
+    assert value not in repr(raised.value)
 
 
 def test_control_characters_and_surrogates_are_replaced() -> None:

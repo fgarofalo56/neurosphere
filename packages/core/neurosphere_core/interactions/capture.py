@@ -9,9 +9,16 @@ parts (Clarification 6): ``prompt`` <- ``prompt``, ``gen_ai.prompt``, ``gen_ai.i
 ``messages`` and any ``*.prompt``; ``response`` <- ``response``, ``completion``,
 ``gen_ai.completion``, ``gen_ai.output.messages`` and any ``*.response``;
 ``system_instructions`` <- ``gen_ai.system_instructions``. Structured values (message lists,
-OTLP ``arrayValue`` / ``kvlistValue``) are serialised deterministically to JSON text. Size caps
-cut at a whitespace boundary, so a cap never keeps the front half of a token (a secret cut in
-two may no longer be recognisable by its detector).
+OTLP ``arrayValue`` / ``kvlistValue``) are serialised deterministically to JSON text.
+
+Size caps never run before detection. Extraction only bounds each raw part (``RAW_PART_CHARS``,
+far below the redaction engine's 1,000,000-character budget); the pipeline redacts the whole
+bounded part and caps only the REDACTED text. A detectable value that straddles a cap (a card
+number written in spaced groups, a grouped IBAN) is therefore detected whole and replaced, and a
+cut never falls inside a ``[[ns-redacted:...]]`` placeholder. When a raw part was itself cut
+(the raw bound, or a producer that reports ``truncated``), its final ``TRUNCATION_GUARD_CHARS``
+characters may hold the front half of a value no detector recognises, so that tail is never
+stored.
 
 The pipeline (:class:`CapturePipeline`) admits or sheds (bounded in-flight work, per-policy rate
 limit), redacts every part with PRP-101 (credentials always; other categories unless the policy
@@ -27,10 +34,10 @@ an audit event or a counter label. Only reason codes, ids and counts leave this 
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import re
-import time
 import uuid
 from collections import Counter
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
@@ -44,9 +51,11 @@ from neurosphere_contracts.telemetry.v1.content_envelope import ContentEnvelope
 from neurosphere_contracts.telemetry.v1.telemetry_event import PayloadRef
 from opentelemetry import metrics as otel_metrics
 from opentelemetry.metrics import Meter
+from pydantic import ValidationError
 
 from neurosphere_core.classification import (
     CREDENTIAL_CATEGORIES,
+    PLACEHOLDER_RE,
     DetectorSet,
     Finding,
     Redacted,
@@ -65,6 +74,7 @@ from neurosphere_core.interactions.models import (
     InteractionStoreError,
     format_timestamp,
 )
+from neurosphere_core.interactions.policy import CaptureRateLimiter
 from neurosphere_core.payload.guard import is_body_field, normalize_field_name
 
 __all__ = [
@@ -75,18 +85,20 @@ __all__ = [
     "DEFAULT_QUEUE_CAPACITY",
     "DEFAULT_SHED_PERCENT",
     "MAX_PART_CHARS",
+    "RAW_PART_CHARS",
+    "TRUNCATION_GUARD_CHARS",
     "CaptureAuditEvent",
     "CaptureAuditWriter",
+    "CaptureEnvelopeError",
     "CaptureEvent",
     "CapturePipeline",
-    "CaptureRateLimiter",
+    "CaptureRateLimitProtocol",
     "CaptureStats",
     "CaptureStore",
     "CaptureTarget",
     "ExtractedBody",
     "ExtractedPart",
     "FailureReason",
-    "MinuteRateLimiter",
     "extract_body_parts",
     "interaction_pointer",
     "redaction_config_for",
@@ -100,6 +112,14 @@ DEFAULT_MAX_CONTENT_CHARS: Final = 65536
 DEFAULT_SHED_PERCENT: Final = 80
 #: ``NS_INTERACTION_CAPTURE_QUEUE_CAPACITY`` default (PRP-103 Interfaces provided).
 DEFAULT_QUEUE_CAPACITY: Final = 64
+#: Raw bound per extracted part: four times the stored maximum, so detection sees well past any
+#: stored cut, and far below the redaction engine's 1,000,000-character budget.
+RAW_PART_CHARS: Final = 4 * MAX_PART_CHARS
+#: Characters at the end of a cut raw part that are never stored (a value cut in two there may
+#: be unrecognisable). Covers spaced card numbers, grouped IBANs and every single-line secret.
+TRUNCATION_GUARD_CHARS: Final = 512
+#: How far back a capped cut looks for whitespace before cutting hard.
+_SOFT_CUT_WINDOW: Final = 64
 
 CAPTURE_SOURCE_OTLP_ATTRIBUTES: Final = "otlp_attributes"
 AUDIT_OP_CAPTURE: Final = "interaction.capture"
@@ -110,8 +130,10 @@ _RECORD_SCHEMA_VERSION: Final = "1.2.0"
 _CONTENT_SCHEMA_VERSION: Final = "1.2.0"
 _ENVELOPE_SCHEMA_VERSION: Final = "1.2.0"
 _METER_NAME: Final = "neurosphere_core.interactions.capture"
-#: PRP-99 ``CapturePolicy.redaction_mode``. Both redact every detection except the policy's
-#: kept, non-credential categories; an unknown mode fails closed.
+#: PRP-99 ``CapturePolicy.redaction_mode``. The contract does not define ``redact_listed``
+#: beyond its name, so it currently behaves exactly like ``redact_all_detections`` (fail-safe):
+#: every detection is redacted except the policy's kept, non-credential categories. An unknown
+#: mode fails closed.
 _REDACTION_MODES: Final = frozenset({"redact_all_detections", "redact_listed"})
 
 PartName = Literal["prompt", "response", "system_instructions"]
@@ -149,6 +171,14 @@ def interaction_pointer(interaction_id: str) -> str:
 
 
 # --- extraction ----------------------------------------------------------------------------------
+
+
+class CaptureEnvelopeError(ValueError):
+    """A captured body does not form a valid ``ContentEnvelope``. ``str()`` is the reason only."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,7 +220,26 @@ class ExtractedBody:
         occurred_at: str,
         span_id: str | None = None,
     ) -> ContentEnvelope:
-        """The PRP-99 ``ContentEnvelope`` (needs a trace id, which telemetry items may lack)."""
+        """The PRP-99 ``ContentEnvelope`` (needs a trace id, which telemetry items may lack).
+
+        Raises :class:`CaptureEnvelopeError` (a reason code only, no chain): a pydantic
+        ``ValidationError`` would carry an ``input_value`` excerpt of the captured text.
+        """
+        try:
+            return self._envelope(cloud, source_id, event_id, trace_id, occurred_at, span_id)
+        except ValidationError:
+            pass
+        raise CaptureEnvelopeError("content_envelope_invalid")
+
+    def _envelope(
+        self,
+        cloud: str,
+        source_id: str,
+        event_id: str,
+        trace_id: str,
+        occurred_at: str,
+        span_id: str | None,
+    ) -> ContentEnvelope:
         return ContentEnvelope.model_validate(
             {
                 "schema_version": _ENVELOPE_SCHEMA_VERSION,
@@ -284,17 +333,51 @@ def _sanitize(text: str) -> str:
     return _SURROGATE.sub(_REPLACEMENT_CHAR, _CONTROL.sub(" ", text))
 
 
-def _cut(text: str, limit: int) -> tuple[str, bool]:
-    """At most ``limit`` characters, cut at the last whitespace so no token is split."""
+def _placeholder_spans(text: str) -> list[tuple[int, int]]:
+    return [m.span() for m in PLACEHOLDER_RE.finditer(text)]
+
+
+def _cap_redacted(text: str, limit: int) -> tuple[str, bool]:
+    """At most ``limit`` characters of REDACTED text; never cuts inside a placeholder.
+
+    Detection already ran on the whole text, so any position outside a placeholder is a safe
+    cut. The last whitespace in the final ``_SOFT_CUT_WINDOW`` characters is preferred so words
+    stay whole; without one (CJK, base64) the cut is hard.
+    """
     if len(text) <= limit:
         return text, False
     if limit <= 0:
         return "", True
     end = limit
-    if not text[end].isspace():
-        while end > 0 and not text[end - 1].isspace():
-            end -= 1
+    for start, stop in _placeholder_spans(text):
+        if start < end < stop:
+            end = start
+            break
+    floor = max(0, end - _SOFT_CUT_WINDOW)
+    soft = end
+    while soft > floor and not text[soft - 1].isspace():
+        soft -= 1
+    if soft > floor:
+        end = soft
     return text[:end].rstrip(), True
+
+
+def _drop_unsafe_tail(text: str, guard: int) -> str:
+    """Remove output that may come from the last ``guard`` characters of a cut input.
+
+    Walks back from the end counting each verbatim character as one input character and each
+    placeholder as ONE (a placeholder replaced at least one), so the cut is at or before the
+    output position of input position ``len(input) - guard``.
+    """
+    spans = _placeholder_spans(text)
+    starts_by_end = {stop: start for start, stop in spans}
+    end = len(text)
+    counted = 0
+    while end > 0 and counted < guard:
+        start = starts_by_end.get(end)
+        end = start if start is not None else end - 1
+        counted += 1
+    return text[:end]
 
 
 def _find_body_values(item: Any) -> list[tuple[str, str, Any]]:
@@ -334,23 +417,18 @@ def _find_body_values(item: Any) -> list[tuple[str, str, Any]]:
     return found
 
 
-def extract_body_parts(
-    item: Any,
-    *,
-    max_part_chars: int = MAX_PART_CHARS,
-    max_content_chars: int = DEFAULT_MAX_CONTENT_CHARS,
-) -> ExtractedBody | None:
+def extract_body_parts(item: Any, *, raw_part_chars: int = RAW_PART_CHARS) -> ExtractedBody | None:
     """The body parts of one OTLP span or CloudEvent telemetry item; ``None`` without a body.
 
     Pure and iterative. ``item`` is not changed. Several fields of one kind are joined with a
-    newline in JSON-pointer order. Each part is capped at ``min(max_part_chars, 32768)`` and the
-    interaction at ``max_content_chars`` (spent in prompt, response, system-instructions
-    order); a cut part is ``truncated``. Errors never carry a value.
+    newline in JSON-pointer order. Each part is bounded at ``raw_part_chars`` (at most
+    ``RAW_PART_CHARS``); a bounded part is ``truncated``. This is NOT the stored size: the
+    policy, envelope and per-interaction caps apply after redaction (:class:`CapturePipeline`).
+    Errors never carry a value.
     """
     if not isinstance(item, (dict, list)):
         return None
-    per_part = max(0, min(int(max_part_chars), MAX_PART_CHARS))
-    budget = max(0, int(max_content_chars))
+    bound = max(0, min(int(raw_part_chars), RAW_PART_CHARS))
     texts: dict[PartName, list[str]] = {}
     field_count = 0
     skipped = 0
@@ -361,7 +439,8 @@ def extract_body_parts(
         field_count += 1
         try:
             text = _serialize(value)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RecursionError):
+            # Unserialisable or too deep: the field is not captured (counted, never echoed).
             skipped += 1
             continue
         if text:
@@ -373,13 +452,12 @@ def extract_body_parts(
         chunks = texts.get(kind)
         if not chunks:
             continue
-        joined = _sanitize("\n".join(chunks))
-        capped, cut_part = _cut(joined, per_part)
-        capped, cut_total = _cut(capped, budget)
-        if not capped.strip():
+        joined = "\n".join(chunks)
+        truncated = len(joined) > bound
+        bounded = _sanitize(joined[:bound] if truncated else joined)
+        if not bounded.strip():
             continue
-        budget -= len(capped)
-        parts.append(ExtractedPart(kind, capped, cut_part or cut_total))
+        parts.append(ExtractedPart(kind, bounded, truncated))
     if not parts:
         return None
     return ExtractedBody(tuple(parts), field_count=field_count, skipped=skipped)
@@ -464,30 +542,14 @@ CaptureAuditWriter = Callable[[CaptureAuditEvent], Awaitable[object]]
 
 
 @runtime_checkable
-class CaptureRateLimiter(Protocol):
-    """Per-policy rate limit (``sampling.max_per_minute``); ``False`` sheds the capture."""
+class CaptureRateLimitProtocol(Protocol):
+    """Per-policy rate limit (``sampling.max_per_minute``); ``False`` sheds the capture.
+
+    :class:`~neurosphere_core.interactions.policy.CaptureRateLimiter` (the default) implements
+    it.
+    """
 
     def try_acquire(self, policy_id: str, max_per_minute: int) -> bool: ...
-
-
-class MinuteRateLimiter:
-    """Default token bucket per policy: ``max_per_minute`` tokens, refilled continuously."""
-
-    def __init__(self, *, clock: Callable[[], float] = time.monotonic) -> None:
-        self._clock = clock
-        self._buckets: dict[str, tuple[float, float]] = {}
-
-    def try_acquire(self, policy_id: str, max_per_minute: int) -> bool:
-        if max_per_minute <= 0:
-            return False
-        now = self._clock()
-        tokens, last = self._buckets.get(policy_id, (float(max_per_minute), now))
-        tokens = min(float(max_per_minute), tokens + (now - last) * max_per_minute / 60.0)
-        if tokens < 1.0:
-            self._buckets[policy_id] = (tokens, now)
-            return False
-        self._buckets[policy_id] = (tokens - 1.0, now)
-        return True
 
 
 @runtime_checkable
@@ -549,6 +611,9 @@ class CaptureStats:
 def redaction_config_for(kept_categories: Iterable[str]) -> RedactionConfig:
     """Redact every detection except the policy's kept, non-credential categories (GD-4).
 
+    Used for both ``redaction_mode`` values: ``redact_listed`` currently behaves like
+    ``redact_all_detections`` (fail-safe) until its meaning is decided.
+
     ``payment_card`` and every other category default to ``redact``; a credential category is
     never kept whatever the policy says.
     """
@@ -594,11 +659,6 @@ def _part_sizes(body: ExtractedBody) -> list[dict[str, Any]]:
     ]
 
 
-def _cap_redacted(text: str, limit: int) -> tuple[str, bool]:
-    """Cap redacted text; whitespace cut, so a placeholder is never split."""
-    return _cut(text, limit)
-
-
 def _detection_finding(finding: Finding, text_len: int) -> dict[str, Any]:
     return {
         "category": finding.category,
@@ -626,8 +686,9 @@ class CapturePipeline:
         *,
         queue_capacity: int = DEFAULT_QUEUE_CAPACITY,
         shed_at_percent: int = DEFAULT_SHED_PERCENT,
-        rate_limiter: CaptureRateLimiter | None = None,
+        rate_limiter: CaptureRateLimitProtocol | None = None,
         detector_set_for: Callable[[CaptureTarget], DetectorSet] | None = None,
+        max_content_chars: int = DEFAULT_MAX_CONTENT_CHARS,
         stats: CaptureStats | None = None,
         now: Callable[[], datetime] | None = None,
         meter: Meter | None = None,
@@ -636,10 +697,13 @@ class CapturePipeline:
             raise ValueError("queue_capacity must be at least 1")
         if not 1 <= shed_at_percent <= 100:
             raise ValueError("shed_at_percent must be from 1 to 100")
+        if max_content_chars < 1:
+            raise ValueError("max_content_chars must be at least 1")
         self._store = store
         self._capacity = queue_capacity
         self._shed_percent = shed_at_percent
-        self._limiter: CaptureRateLimiter = rate_limiter or MinuteRateLimiter()
+        self._max_content_chars = max_content_chars
+        self._limiter: CaptureRateLimitProtocol = rate_limiter or CaptureRateLimiter()
         default_set = default_detector_set()
         self._detector_set_for = detector_set_for or (lambda _target: default_set)
         self.stats = stats or CaptureStats()
@@ -713,15 +777,21 @@ class CapturePipeline:
         else:
             try:
                 await self._store_content(interaction_id, captured_at, outcome, target, event)
-            except _CaptureFailed as failure:
-                reason = failure.reason
-            else:
                 ok = await self._audit(
                     audit,
                     self._audit_event(
                         AUDIT_OP_CAPTURE, interaction_id, target, event, outcome, None
                     ),
                 )
+            except _CaptureFailed as failure:
+                reason = failure.reason
+            except BaseException:
+                # Cancelled (or interpreter exit) between the write and its audit record:
+                # content must not outlive the missing audit. The cleanup is shielded so a
+                # second cancellation cannot interrupt it.
+                await asyncio.shield(self._discard(event, interaction_id, captured_at))
+                raise
+            else:
                 if ok:
                     self.stats.captured += 1
                     self._captured_counter.add(1)
@@ -733,9 +803,10 @@ class CapturePipeline:
     def _redact(self, body: ExtractedBody, target: CaptureTarget) -> _Outcome:
         try:
             detector_set = self._detector_set_for(target)
+            version = detector_set.version
         except Exception:
             raise _CaptureFailed("detection_failed") from None
-        if detector_set.version != target.detector_set_version:
+        if version != target.detector_set_version:
             raise _CaptureFailed("detector_set_mismatch")
         if target.redaction_mode not in _REDACTION_MODES:
             raise _CaptureFailed("redaction_failed")
@@ -744,29 +815,37 @@ class CapturePipeline:
         except Exception:
             raise _CaptureFailed("redaction_failed") from None
         limit = max(1, min(target.max_part_chars, MAX_PART_CHARS))
+        budget = self._max_content_chars
         parts: list[dict[str, Any]] = []
         findings: list[Finding] = []
         for item in body.parts:
-            source, cut_in = _cut(item.text, limit)
-            if not source.strip():
-                continue
-            result = redact(source, part=item.part, config=config, detector_set=detector_set)
+            # Detection sees the WHOLE (raw-bounded) part; only the redacted output is capped.
+            result = redact(item.text, part=item.part, config=config, detector_set=detector_set)
             if isinstance(result, RedactionFailed):
                 raise _CaptureFailed(
                     "detection_failed" if result.reason == "detector_error" else "redaction_failed"
                 )
             if not isinstance(result, Redacted):  # pragma: no cover - redact has two outcomes
                 raise _CaptureFailed("redaction_failed")
-            text, cut_out = _cap_redacted(result.text, limit)
+            findings.extend(result.findings)
+            text = result.text
+            guarded = False
+            if item.truncated:
+                text = _drop_unsafe_tail(text, TRUNCATION_GUARD_CHARS)
+                guarded = True
+            text, cut_part = _cap_redacted(text, limit)
+            text, cut_total = _cap_redacted(text, budget)
+            if not text.strip():
+                continue
+            budget -= len(text)
             parts.append(
                 {
                     "part": item.part,
                     "text": text,
-                    "truncated": item.truncated or cut_in or cut_out,
+                    "truncated": guarded or cut_part or cut_total,
                     "findings": [_detection_finding(f, len(text)) for f in result.findings],
                 }
             )
-            findings.extend(result.findings)
         if not parts:
             raise _CaptureFailed("redaction_failed")
         replaced = any(f.action == "replaced" for f in findings)
@@ -875,12 +954,16 @@ class CapturePipeline:
             self.stats.cleanup_failed += 1
 
     async def _discard(self, event: CaptureEvent, interaction_id: str, at: datetime) -> None:
-        """Remove stored content after a failed audit write (blob, then index document)."""
+        """Remove stored content after a failed or cancelled audit write.
+
+        The store deletes blob then index document, but only when the index document exists;
+        the blob is deleted directly as well (idempotent) so an un-indexed blob cannot remain.
+        """
         try:
             await self._store.delete(event.customer_id, event.domain_id, interaction_id)
         except Exception:
             self.stats.cleanup_failed += 1
-            await self._delete_blob(event, interaction_id, at)
+        await self._delete_blob(event, interaction_id, at)
 
     async def _write_failure_record(self, record: InteractionRecord) -> None:
         try:
