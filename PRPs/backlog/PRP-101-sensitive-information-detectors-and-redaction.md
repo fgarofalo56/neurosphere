@@ -219,7 +219,7 @@ None. No external call is made; the model-based detector is not built (GD-6).
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | worktree-agent-aed05eadf2560d344 @ 69df73fb | review APPROVE; gates green (content_detectors + import boundaries + tests/docs 228 passed); orchestrator added Match category/confidence validation and pulled the mkdocs nav line forward from item 8 |
-| 2 | in-progress | | dispatched 2026-11-24 (s-8c3599) |
+| 2 | merged | worktree-agent-a5559d51e4828bd4b @ 479f3d53 + rework worktree-agent-a0e04d02db516eedb @ 36c22c2e | review CHANGES REQUIRED (criterion 6 validator gaps: lowercase sk- slug, bearer after `_`, glued JWT, `xsig=`, long URL userinfo; `user@server` URL password); one rework round, confirmed by re-running the reviewer's probe (all detected, output validator-clean, idempotent); 345 passed after merge |
 | 3 | merged | worktree-agent-a123dc9f196a65037 @ 0ae2ead7 | review APPROVE (follow-ups: IBAN country/length table, IPv6 hex-word compressed forms); 203 passed after merge |
 | 4 | in-progress | | dispatched 2026-11-24 (s-8c3599) |
 | 5 | todo | | |
