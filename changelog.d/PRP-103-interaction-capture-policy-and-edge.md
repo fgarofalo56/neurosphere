@@ -17,7 +17,9 @@
   and content container are configured.
 - A negative test per metadata-only guard with capture on.
 - Settings `NS_INTERACTION_CAPTURE_QUEUE_CAPACITY` (default 64) and
-  `NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQUEST` (default 100).
+  `NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQUEST` (default 100) on the API, and
+  `NS_INTERACTION_CONTENT_CONTAINER` and `NS_INTERACTION_CONTENT_STORAGE_ACCOUNT` on the worker
+  (must match the `interaction_capture` stored setting).
 
 ### Changed
 - The ingest router passes the request correlation id to the traces and events ingest paths.

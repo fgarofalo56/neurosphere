@@ -275,7 +275,7 @@ None here. Capture end to end on the hosted app (synthetic domain only, enabled 
 | 4 | merged | prp-103-item-4 @ 21c17aa3 + 5a581616 | Review APPROVE (250 passed, Snyk 0). Orchestrator follow-ups: 15 s timeout on the startup policy read, `optional.interaction_capture` row in docs/runbooks/system-settings.md (checklist test). Deviation: `interaction_capture` is still in core PENDING_SETTING_KEYS, so every real deployment (local included) reads `setting_off` until PRP-108/109 adds the key; matcher snapshot read once at startup (restart to pick up a policy, Clarification 8). Builder sits before admin (pinned order). App state: interaction_capture, interaction_capture_stats, interaction_capture_policy_store, interaction_capture_off_reason. Env: NS_INTERACTION_CAPTURE_QUEUE_CAPACITY. |
 | 5 | in-progress | agent worktree (item-5) | |
 | 6 | in-progress | agent worktree (item-6) | |
-| 7 | in-progress | agent worktree (item-7) | owner 2026-11-25: do now after item 4, before PRP-107 ships; accept merge-conflict risk with PRP-107's factories.py |
+| 7 | merged | prp-103-item-7 @ 5ce9e54d -> 6f865640 | Owner 2026-11-25: done before PRP-107 ships (conflict risk accepted; diff confined to `_lifecycle_targets` + adjacent helper + one import). Review APPROVE, 83 passed, Snyk 0. Worker reads `NS_INTERACTION_CONTENT_CONTAINER` / `NS_INTERACTION_CONTENT_STORAGE_ACCOUNT` (no stored-settings source in the worker); must match the API's stored setting (runbook) - follow-up: single source / parity check, non-local path tests. |
 | 8 | todo | | owner 2026-11-25: #411 items 1-2 not done here; must land before PRP-108/109 enable capture (record in completion note) |
 
 ## Completion note (filled at ship)

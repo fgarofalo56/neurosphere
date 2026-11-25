@@ -118,6 +118,16 @@ and `capture_shed` is counted. At most `NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQ
 `capture_shed` and `capture_skipped_item_cap`, shown by the capture-status route and the admin
 page `Admin > Capture`. Neither shows content.
 
+### Worker lifecycle target
+
+The worker cannot read stored settings, so it learns the content location from environment
+variables: `NS_INTERACTION_CONTENT_CONTAINER` (unset: no `interaction_content` target, as
+before) and, outside `NS_ENV=local`, `NS_INTERACTION_CONTENT_STORAGE_ACCOUNT` (managed or
+workload identity, as the archive). Under `NS_ENV=local` it uses the Azurite connection string.
+A container without blob access is logged and registers nothing. These values MUST match the
+`content_container` and the storage account of the `interaction_capture` stored setting the API
+uses; if they differ, a purge removes index rows but leaves the encrypted blobs behind.
+
 ### Turning capture on and off
 
 There is no setting toggle or API route that turns capture on. A policy is proposed and approved
