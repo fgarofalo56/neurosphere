@@ -37,6 +37,8 @@ from neurosphere_core.crypto.errors import (
     KEY_HOST_REFUSED,
     KEY_WRAP_UNAVAILABLE,
     EnvelopeError,
+    EnvelopeReason,
+    without_context,
 )
 
 __all__ = [
@@ -220,11 +222,17 @@ class KeyVaultKeyWrapper:
         return ref.versioned_id()
 
     async def wrap(self, data_key: bytes) -> WrappedKey:
+        return await without_context(self._checked_wrap(data_key))
+
+    async def unwrap(self, wrapped: WrappedKey) -> bytes:
+        return await without_context(self._checked_unwrap(wrapped))
+
+    async def _checked_wrap(self, data_key: bytes) -> WrappedKey:
         if not isinstance(data_key, bytes) or not data_key:
             raise EnvelopeError(KEY_WRAP_UNAVAILABLE)
         return await self._bounded(self._wrap(data_key))
 
-    async def unwrap(self, wrapped: WrappedKey) -> bytes:
+    async def _checked_unwrap(self, wrapped: WrappedKey) -> bytes:
         if not isinstance(wrapped, WrappedKey) or wrapped.algorithm != WRAP_ALGORITHM:
             raise EnvelopeError(CONTENT_INTEGRITY_FAILED)
         try:
@@ -267,7 +275,9 @@ class KeyVaultKeyWrapper:
 
     async def _unwrap(self, recorded: _KeyRef, value: bytes) -> bytes:
         async with self._client() as client:
-            body = await self._post(client, recorded, "unwrapkey", value)
+            body = await self._post(
+                client, recorded, "unwrapkey", value, rejected=CONTENT_INTEGRITY_FAILED
+            )
         return _b64decode(body.get("value"))
 
     def _client(self) -> httpx.AsyncClient:
@@ -304,7 +314,13 @@ class KeyVaultKeyWrapper:
         return resolved
 
     async def _post(
-        self, client: httpx.AsyncClient, ref: _KeyRef, operation: str, value: bytes
+        self,
+        client: httpx.AsyncClient,
+        ref: _KeyRef,
+        operation: str,
+        value: bytes,
+        *,
+        rejected: EnvelopeReason = KEY_WRAP_UNAVAILABLE,
     ) -> dict[str, Any]:
         response = await client.post(
             f"{ref.versioned_id()}/{operation}",
@@ -312,6 +328,9 @@ class KeyVaultKeyWrapper:
             headers=await self._headers(),
             json={"alg": WRAP_ALGORITHM, "value": _b64encode(value)},
         )
+        if response.status_code == 400:
+            # Key Vault refused the value or key version as given; on unwrap that is tampering.
+            raise EnvelopeError(rejected)
         return _json_object(response)
 
 

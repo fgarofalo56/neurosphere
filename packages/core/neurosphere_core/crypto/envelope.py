@@ -30,6 +30,7 @@ from neurosphere_core.crypto.errors import (
     CONTENT_INTEGRITY_FAILED,
     KEY_WRAP_UNAVAILABLE,
     EnvelopeError,
+    without_context,
 )
 
 __all__ = [
@@ -243,6 +244,10 @@ def _aead_associated_data(version: int, key_id: str, algorithm: str, aad: bytes)
 
 async def seal(plaintext: bytes, aad: bytes, wrapper: KeyWrapper) -> Envelope:
     """Encrypt ``plaintext`` under a fresh data key; bind ``aad`` and the envelope header."""
+    return await without_context(_seal(plaintext, aad, wrapper))
+
+
+async def _seal(plaintext: bytes, aad: bytes, wrapper: KeyWrapper) -> Envelope:
     if not isinstance(plaintext, bytes) or not isinstance(aad, bytes):
         raise TypeError("seal takes bytes plaintext and bytes aad")
     if len(plaintext) > _MAX_PLAINTEXT or len(aad) > _MAX_CIPHERTEXT // 2:
@@ -284,6 +289,10 @@ async def seal(plaintext: bytes, aad: bytes, wrapper: KeyWrapper) -> Envelope:
 
 async def open_envelope(envelope: Envelope, aad: bytes, wrapper: KeyWrapper) -> bytes:
     """Unwrap the data key and decrypt; any mismatch raises ``content_integrity_failed``."""
+    return await without_context(_open_envelope(envelope, aad, wrapper))
+
+
+async def _open_envelope(envelope: Envelope, aad: bytes, wrapper: KeyWrapper) -> bytes:
     if not isinstance(envelope, Envelope) or not isinstance(aad, bytes):
         raise _integrity()
     if envelope.format_version != ENVELOPE_FORMAT_VERSION:

@@ -233,7 +233,9 @@ async def test_non_200_is_unavailable(status: int) -> None:
     with pytest.raises(EnvelopeError) as caught:
         await wrapper.wrap(os.urandom(32))
     assert str(caught.value) == KEY_WRAP_UNAVAILABLE
-    with pytest.raises(EnvelopeError, match=f"^{KEY_WRAP_UNAVAILABLE}$"):
+    # On unwrap a 400 means Key Vault refused the wrapped value or version: a tampered envelope.
+    unwrap_reason = CONTENT_INTEGRITY_FAILED if status == 400 else KEY_WRAP_UNAVAILABLE
+    with pytest.raises(EnvelopeError, match=f"^{unwrap_reason}$"):
         await wrapper.unwrap(WrappedKey(vault.kid, "RSA-OAEP-256", os.urandom(256)))
     assert len(vault.requests) == 2  # no retry loop, no redirect followed
 
@@ -268,8 +270,12 @@ async def test_timeout_and_transport_errors_are_unavailable() -> None:
         with pytest.raises(EnvelopeError) as caught:
             await _wrapper(vault, handler=handler).wrap(os.urandom(32))
         assert str(caught.value) == KEY_WRAP_UNAVAILABLE
+        # No chain at all: the httpx error (which names the URL) is not even on __context__.
         assert caught.value.__cause__ is None
-        assert caught.value.__suppress_context__
+        assert caught.value.__context__ is None
+        with pytest.raises(EnvelopeError) as sealed:
+            await seal(CANARY.encode(), b"aad", _wrapper(vault, handler=handler))
+        assert sealed.value.__context__ is None
 
 
 async def test_token_failure_is_unavailable() -> None:

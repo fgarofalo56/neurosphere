@@ -176,7 +176,7 @@ async def test_unwrap_failure_maps_to_unavailable() -> None:
         await seal(PLAINTEXT, AAD, broken)
     assert str(caught.value) == KEY_WRAP_UNAVAILABLE
     assert caught.value.__cause__ is None
-    assert caught.value.__suppress_context__
+    assert caught.value.__context__ is None
     lenient = _LenientWrapper()
     envelope = await seal(PLAINTEXT, AAD, lenient)
     with pytest.raises(EnvelopeError) as caught:
