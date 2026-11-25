@@ -272,6 +272,60 @@ async def test_index_failure_removes_the_blob(local_wrapper: Any) -> None:
     assert store.orphan_cleanups["removed"] == 1
 
 
+async def test_create_that_committed_despite_an_error_keeps_the_blob(local_wrapper: Any) -> None:
+    store = InMemoryInteractionStore(local_wrapper, kek_uri=KEK_URI, policy=policy())
+    real_create = store.index_backend.create
+
+    async def committed_then_timed_out(record: InteractionRecord) -> None:
+        await real_create(record)
+        raise InteractionStoreError("interaction_store_unavailable")
+
+    store.index_backend.create = committed_then_timed_out  # type: ignore[method-assign]
+    iid = new_id()
+    stored = await store.put(make_record(iid), make_content(iid), capture_retention_days=30)
+    assert stored.interaction_id.root == iid
+    assert store.orphan_cleanups["removed"] == 0
+    assert (await store.read_content(CUSTOMER, DOMAIN, iid)).interaction_id.root == iid
+
+
+async def test_unreadable_index_after_failed_create_keeps_the_blob(local_wrapper: Any) -> None:
+    store = InMemoryInteractionStore(local_wrapper, kek_uri=KEK_URI, policy=policy())
+    real_get = store.index_backend.get
+    calls = {"get": 0}
+
+    async def failing_create(record: InteractionRecord) -> None:
+        raise InteractionStoreError("interaction_store_unavailable")
+
+    async def get_then_fail(*args: Any) -> InteractionRecord | None:
+        calls["get"] += 1
+        if calls["get"] > 1:
+            raise InteractionStoreError("interaction_store_unavailable")
+        return await real_get(*args)
+
+    store.index_backend.create = failing_create  # type: ignore[method-assign]
+    store.index_backend.get = get_then_fail  # type: ignore[method-assign]
+    iid = new_id()
+    with pytest.raises(InteractionStoreError):
+        await store.put(make_record(iid), make_content(iid), capture_retention_days=30)
+    assert len(store.content_backend.blobs) == 1
+    assert store.orphan_cleanups["kept"] == 1
+
+
+async def test_delete_ignores_a_corrupted_pointer(store: InMemoryInteractionStore) -> None:
+    victim, target = new_id(), new_id()
+    await store.put(make_record(victim), make_content(victim), capture_retention_days=30)
+    await store.put(make_record(target), make_content(target), capture_retention_days=30)
+    docs = store.index_backend.documents
+    victim_pointer = next(
+        d["content_ref"]["pointer"] for d in docs.values() if d["interaction_id"] == victim
+    )
+    target_doc = next(d for d in docs.values() if d["interaction_id"] == target)
+    target_doc["content_ref"]["pointer"] = victim_pointer
+    assert await store.delete(CUSTOMER, DOMAIN, target) is True
+    assert (await store.read_content(CUSTOMER, DOMAIN, victim)).interaction_id.root == victim
+    assert len(store.content_backend.blobs) == 1
+
+
 async def test_read_after_interrupted_delete_is_content_purged_and_rerun_completes(
     store: InMemoryInteractionStore,
 ) -> None:

@@ -333,13 +333,43 @@ class EncryptedInteractionStore:
             ciphertext_sha256=hashlib.sha256(envelope_bytes).hexdigest(),
             byte_length=len(envelope_bytes),
         ).model_dump(mode="json")
+        digest = body["content_ref"]["ciphertext_sha256"]
         try:
             stored = InteractionRecord.model_validate(body)
             await self._index.create(stored)
+        except Exception:
+            committed = await self._after_failed_create(
+                customer_id, domain_id, interaction_id, name, digest
+            )
+            if committed is not None:
+                return committed
+            raise
         except BaseException:
-            await self._remove_orphan(name)
+            # Cancelled mid-create: the outcome is unknown. An unreferenced encrypted blob is
+            # safer than deleting content that a committed index document may point to.
+            self._orphan("kept")
             raise
         return stored
+
+    async def _after_failed_create(
+        self, customer_id: str, domain_id: str, interaction_id: str, name: str, digest: str
+    ) -> InteractionRecord | None:
+        """Decide what a failed index create left behind before touching the blob.
+
+        A create that timed out may still have committed; deleting the blob then would turn a
+        new record into ``content_purged``. Re-read first: our own document means success, no
+        document means a true orphan to remove, an unreadable index means keep the blob.
+        """
+        try:
+            current = await self._index.get(customer_id, domain_id, interaction_id)
+        except Exception:
+            self._orphan("kept")
+            return None
+        ref = current.content_ref if current is not None else None
+        if ref is not None and ref.pointer == name and ref.ciphertext_sha256 == digest:
+            return current
+        await self._remove_orphan(name)
+        return None
 
     async def _remove_orphan(self, name: str) -> None:
         try:
@@ -399,7 +429,13 @@ class EncryptedInteractionStore:
         if record is None:
             return False
         if record.content_ref is not None:
-            await self._content.delete(record.content_ref.pointer)
+            # The computed name, never the stored pointer: a corrupted index document must not
+            # be able to delete another interaction's content.
+            await self._content.delete(
+                content_blob_name(
+                    customer_id, domain_id, parse_timestamp(record.captured_at.root), interaction_id
+                )
+            )
         await self._index.delete(customer_id, domain_id, interaction_id)
         return True
 
