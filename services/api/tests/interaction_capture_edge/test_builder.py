@@ -8,6 +8,7 @@ as ``main.create``'s bootstrap leaves it. Startup hooks are awaited explicitly.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from pathlib import Path
@@ -368,4 +369,22 @@ async def test_policy_store_failure_at_startup_is_disabled_not_failed(tmp_path: 
     await harness.start()
     assert harness.status == ("disabled", "policy_store_unavailable")
     assert not harness.state.registry.get(COMPONENT).blocks_readiness
+    assert harness.app.state.ingest_service.capture is None
+
+
+async def test_hung_policy_read_times_out_as_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Hung(InMemoryCapturePolicyStore):
+        async def list(self, **kwargs: Any) -> Any:  # type: ignore[override]
+            await asyncio.Event().wait()
+
+    monkeypatch.setattr(interactions, "_POLICY_READ_TIMEOUT_SECONDS", 0.05)
+    harness = Harness(
+        tmp_path,
+        snapshot=_snapshot(),
+        backends={"interaction_capture_policy_store": Hung(), **_retention()},
+    )
+    await harness.start()
+    assert harness.status == ("disabled", "policy_store_unavailable")
     assert harness.app.state.ingest_service.capture is None

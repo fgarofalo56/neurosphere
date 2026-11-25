@@ -19,8 +19,9 @@ Gates, in order; the first that fails is the reason:
    ``local_key_not_allowed``, ``local_key_file_missing``, ``blob_not_configured``.
 6. Stores: the interaction store is the Cosmos ``interaction_index`` on the ONE shared client
    plus the content blob container; under ``NS_ENV=local`` without Cosmos it is in-memory (with
-   the local file key). The capture policy store is Cosmos ``interaction_capture_policies``,
-   else in-memory under ``NS_ENV=local``. Elsewhere no Cosmos is ``cosmos_unconfigured``.
+   whichever key wrapper ``InteractionSettings`` configures). The capture policy store is
+   Cosmos ``interaction_capture_policies``, else in-memory under ``NS_ENV=local``. Elsewhere
+   no Cosmos is ``cosmos_unconfigured``.
 7. At startup (``on_startup``): one bounded read of the policies builds the
    :class:`~neurosphere_core.interactions.CaptureMatcher`; a failed read is
    ``policy_store_unavailable``. The matcher's off reason (``no_policy``, ``not_approved``,
@@ -43,6 +44,7 @@ Test seams (``ctx.overrides.backend``): ``retention_policy`` (a ``PolicyState``)
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from collections.abc import Mapping
@@ -107,6 +109,7 @@ ENV_QUEUE_CAPACITY: Final = "NS_INTERACTION_CAPTURE_QUEUE_CAPACITY"
 DEFAULT_QUEUE_CAPACITY: Final = 64
 _DEFAULT_SHED_PERCENT: Final = 80
 _DEFAULT_MAX_CONTENT_CHARS: Final = 65536
+_POLICY_READ_TIMEOUT_SECONDS: Final = 15.0
 
 #: ``app.state`` attribute names (item 5 reads them).
 STATE_EDGE: Final = "interaction_capture"
@@ -324,10 +327,14 @@ def _build(ctx: BuildContext) -> None:
     async def start() -> None:
         # Never raises: capture failing to start must not fail readiness or ingest.
         try:
-            matcher = await CaptureMatcher.from_store(
-                policy_store, setting_enabled=True, retention=retention, customer_id=customer
+            # Bounded: startup hooks run in sequence, so a hung read must not hold up the rest.
+            matcher = await asyncio.wait_for(
+                CaptureMatcher.from_store(
+                    policy_store, setting_enabled=True, retention=retention, customer_id=customer
+                ),
+                timeout=_POLICY_READ_TIMEOUT_SECONDS,
             )
-        except Exception:
+        except Exception:  # includes TimeoutError
             _off(ctx, "policy_store_unavailable")
             return
         edge = EdgeCapture(matcher, pipeline, writer, max_items_per_request=max_items)
