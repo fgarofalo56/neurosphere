@@ -93,6 +93,12 @@ async def _plaintext(store: InMemoryInteractionStore, interaction_id: str) -> st
     return content.model_dump_json()
 
 
+async def _part_texts(store: InMemoryInteractionStore, interaction_id: str) -> str:
+    # Stored part texts only: short value fragments can occur by chance in ids or timestamps.
+    content = await store.read_content(CUSTOMER, DOMAIN, interaction_id)
+    return "\n".join(part.text.root for part in content.parts)
+
+
 def _assert_failed_index_only(
     store: InMemoryInteractionStore, ref: Any, audit: AuditRecorder, reason: str, pipe: Any
 ) -> None:
@@ -268,7 +274,8 @@ async def test_value_straddling_the_part_cap_is_redacted_whole(
     )
     assert ref is not None and ref.interaction_id is not None
     assert ref.redaction_state == "redacted"
-    text = await _plaintext(store, ref.interaction_id.root)
+    text = await _part_texts(store, ref.interaction_id.root)
+    assert "word word" in text
     for group in grouped(value).split(" "):
         assert group not in text
     assert "[[ns-redacted" not in text  # the cut fell inside it: dropped whole, never split
@@ -288,7 +295,7 @@ async def test_cut_raw_part_never_stores_its_tail(
     body = ExtractedBody((ExtractedPart("prompt", text, truncated=True),))
     ref = await pipe.capture(body, target(max_part_chars=32768), event(), audit=AuditRecorder())
     assert ref is not None and ref.interaction_id is not None
-    stored = await _plaintext(store, ref.interaction_id.root)
+    stored = await _part_texts(store, ref.interaction_id.root)
     assert groups[0] not in stored and groups[1] not in stored
     assert "word word" in stored
     assert ref.content_parts and ref.content_parts[0].truncated is True
