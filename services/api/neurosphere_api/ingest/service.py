@@ -4,6 +4,12 @@ Order of work for one request: authenticate (401) -> edge/registration cloud mat
 rate limit (429) -> [router reads the body under the size cap] -> depth scan -> parse ->
 drop prompt/response bodies -> verify claims (403, nothing published) -> map and validate each
 item (invalid items rejected individually) -> publish the valid ones -> result.
+
+Opt-in capture (PRP-103): when an :class:`~neurosphere_api.ingest.capture.EdgeCapture` is
+attached and active, the OTLP traces and CloudEvents telemetry paths extract body parts from the
+parsed document BEFORE the drop, and after mapping put the pipeline's ``payload_ref`` on the
+mapped ``TelemetryEvent`` before its hub message is built. The extracted values are released
+before publish. With no capture attached (or capture off) the path is unchanged.
 """
 
 from __future__ import annotations
@@ -17,6 +23,7 @@ from typing import Any
 from neurosphere_contracts.cost.v1.cost_record import CostRecord
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
+from neurosphere_core.interactions import ExtractedBody
 from neurosphere_core.payload import (
     CLOUDEVENT_TYPE_COST,
     CLOUDEVENT_TYPE_TELEMETRY,
@@ -31,6 +38,12 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from neurosphere_api.ingest import otlp_mapping as om
 from neurosphere_api.ingest.auth import Authenticator, ProducerRegistration
+from neurosphere_api.ingest.capture import (
+    CaptureJob,
+    EdgeCapture,
+    edge_correlation_id,
+    surviving_items,
+)
 from neurosphere_api.ingest.cloudevents import BATCH_MEDIA_TYPE, STRUCTURED_MEDIA_TYPE, CloudEvent
 from neurosphere_api.ingest.limits import TokenBucketLimiter, check_depth
 from neurosphere_api.ingest.publisher import Publisher
@@ -103,6 +116,55 @@ class IngestService:
         self._now = now
         # Cost records whose own tags.cost_center differed from the extension (record wins).
         self.cost_center_mismatches = 0
+        self._capture: EdgeCapture | None = None
+
+    # -- opt-in capture (PRP-103) ----------------------------------------------------------
+    def attach_capture(self, capture: EdgeCapture | None) -> None:
+        """Attach (or with ``None`` detach) the capture adapter. Capture runs only while it is
+        :attr:`EdgeCapture.active`; otherwise the edge behaves exactly as without it."""
+        self._capture = capture
+
+    @property
+    def capture(self) -> EdgeCapture | None:
+        return self._capture
+
+    def _active_capture(self) -> EdgeCapture | None:
+        capture = self._capture
+        if capture is None or not capture.active:
+            return None
+        return capture
+
+    def _load(self, raw: bytes) -> Any:
+        check_depth(raw, self.settings.max_depth)
+        try:
+            return json.loads(raw)
+        except (ValueError, RecursionError) as exc:
+            raise InvalidSchemaError(
+                "Body is not valid JSON.", reason=ReasonCode.MALFORMED_JSON
+            ) from exc
+
+    async def _apply_capture(
+        self,
+        capture: EdgeCapture,
+        producer: ProducerRegistration,
+        jobs: list[CaptureJob],
+        messages: list[HubMessage],
+        received_at: str,
+        correlation_id: str | None,
+    ) -> None:
+        """Capture every job and rebuild the message of each event that got a ``payload_ref``
+        (the updated event is what the hub message is built from). A shed or failure leaves the
+        message as mapped; nothing here can fail the telemetry item."""
+        if not jobs:
+            return
+        for job, event in await capture.run(jobs, edge_correlation_id(correlation_id)):
+            try:
+                messages[job.slot] = self._telemetry_message(
+                    producer, job.scope, event, received_at, job.cost_center
+                )
+            except ValidationError:
+                # Never expected; the item is published as mapped, without the pointer.
+                capture.count_failure("message_rejected")
 
     # -- admission -------------------------------------------------------------------------
     def authorize(self, authorization: str | None) -> ProducerRegistration:
@@ -115,14 +177,7 @@ class IngestService:
 
     # -- parsing ---------------------------------------------------------------------------
     def _parse(self, raw: bytes) -> tuple[Any, dict[str, int]]:
-        check_depth(raw, self.settings.max_depth)
-        try:
-            parsed = json.loads(raw)
-        except (ValueError, RecursionError) as exc:
-            raise InvalidSchemaError(
-                "Body is not valid JSON.", reason=ReasonCode.MALFORMED_JSON
-            ) from exc
-        return drop_body_fields(parsed)
+        return drop_body_fields(self._load(raw))
 
     @staticmethod
     def _envelope_error() -> InvalidSchemaError:
@@ -196,11 +251,26 @@ class IngestService:
         )
 
     # -- OTLP traces -----------------------------------------------------------------------
-    async def ingest_otlp_traces(self, producer: ProducerRegistration, raw: bytes) -> IngestResult:
-        doc, dropped = self._parse(raw)
+    async def ingest_otlp_traces(
+        self,
+        producer: ProducerRegistration,
+        raw: bytes,
+        *,
+        correlation_id: str | None = None,
+    ) -> IngestResult:
+        capture = self._active_capture()
+        bodies: list[ExtractedBody | None] | None = None
+        if capture is None:
+            doc, dropped = self._parse(raw)
+        else:
+            parsed = self._load(raw)
+            bodies = capture.collect(self._raw_spans(parsed))  # before the drop
+            doc, dropped = drop_body_fields(parsed)
+            del parsed
         received_at = _utc_z(self._now())
         messages: list[HubMessage] = []
         rejected: list[RejectedItem] = []
+        jobs: list[CaptureJob] = []
         index = 0
         identity_drops: Counter[str] = Counter()
         for resource_spans in self._list_of(doc, "resourceSpans"):
@@ -214,6 +284,10 @@ class IngestService:
                         event = om.map_span(
                             span, scope, received_at, resource=resource, drops=identity_drops
                         )
+                        if bodies is not None and capture is not None:
+                            body = bodies[index] if index < len(bodies) else None
+                            if body is not None:
+                                jobs.append(CaptureJob(len(messages), scope, event, body))
                         messages.append(
                             self._telemetry_message(producer, scope, event, received_at)
                         )
@@ -222,7 +296,29 @@ class IngestService:
                     index += 1
         for key, count in identity_drops.items():
             dropped[key] = dropped.get(key, 0) + count
+        if capture is not None and bodies is not None:
+            await self._apply_capture(
+                capture, producer, jobs, messages, received_at, correlation_id
+            )
+            # Release the extracted values before publish.
+            jobs.clear()
+            bodies.clear()
         return await self._finish(messages, rejected, [], dropped)
+
+    @staticmethod
+    def _raw_spans(parsed: Any) -> list[Any]:
+        """Every span of the parsed (not yet dropped) document, in the order the mapping loop
+        visits the dropped one. Shape errors yield nothing here; the loop reports them."""
+        spans: list[Any] = []
+        top = parsed.get("resourceSpans") if isinstance(parsed, Mapping) else None
+        for resource_spans in surviving_items(top):
+            middle = (
+                resource_spans.get("scopeSpans") if isinstance(resource_spans, Mapping) else None
+            )
+            for scope_spans in surviving_items(middle):
+                inner = scope_spans.get("spans") if isinstance(scope_spans, Mapping) else None
+                spans.extend(surviving_items(inner))
+        return spans
 
     # -- OTLP metrics ----------------------------------------------------------------------
     async def ingest_otlp_metrics(self, producer: ProducerRegistration, raw: bytes) -> IngestResult:
@@ -278,14 +374,30 @@ class IngestService:
 
     # -- CloudEvents -----------------------------------------------------------------------
     async def ingest_events(
-        self, producer: ProducerRegistration, raw: bytes, content_type: str
+        self,
+        producer: ProducerRegistration,
+        raw: bytes,
+        content_type: str,
+        *,
+        correlation_id: str | None = None,
     ) -> IngestResult:
         media = content_type.split(";", 1)[0].strip().lower()
         if media not in (STRUCTURED_MEDIA_TYPE, BATCH_MEDIA_TYPE):
             raise InvalidSchemaError(
                 "Unsupported media type.", reason=ReasonCode.UNSUPPORTED_MEDIA_TYPE
             )
-        doc, dropped = self._parse(raw)
+        capture = self._active_capture()
+        bodies: list[ExtractedBody | None] | None = None
+        if capture is None:
+            doc, dropped = self._parse(raw)
+        else:
+            parsed = self._load(raw)
+            # Before the drop. A structured event is its own single item.
+            raw_items = surviving_items(parsed) if isinstance(parsed, list) else [parsed]
+            bodies = capture.collect(raw_items)
+            del raw_items
+            doc, dropped = drop_body_fields(parsed)
+            del parsed
         if media == BATCH_MEDIA_TYPE:
             if not isinstance(doc, list):
                 raise self._envelope_error()
@@ -298,11 +410,26 @@ class IngestService:
         received_at = _utc_z(self._now())
         messages: list[HubMessage] = []
         rejected: list[RejectedItem] = []
+        jobs: list[CaptureJob] = []
         for index, item in enumerate(items):
             try:
-                messages.append(self._cloudevent_message(producer, item, received_at))
+                message, scope, telemetry = self._cloudevent_item(producer, item, received_at)
+                if bodies is not None and telemetry is not None:
+                    body = bodies[index] if index < len(bodies) else None
+                    if body is not None:
+                        jobs.append(
+                            CaptureJob(len(messages), scope, telemetry, body, message.cost_center)
+                        )
+                messages.append(message)
             except om.MappingError as exc:
                 rejected.append(RejectedItem(index=index, reason_code=exc.reason))
+        if capture is not None and bodies is not None:
+            await self._apply_capture(
+                capture, producer, jobs, messages, received_at, correlation_id
+            )
+            # Release the extracted values before publish.
+            jobs.clear()
+            bodies.clear()
         return await self._finish(messages, rejected, [], dropped)
 
     @staticmethod
@@ -344,6 +471,13 @@ class IngestService:
     def _cloudevent_message(
         self, producer: ProducerRegistration, item: Any, received_at: str
     ) -> HubMessage:
+        return self._cloudevent_item(producer, item, received_at)[0]
+
+    def _cloudevent_item(
+        self, producer: ProducerRegistration, item: Any, received_at: str
+    ) -> tuple[HubMessage, om.Scope, TelemetryEvent | None]:
+        """The hub message of one CloudEvent, its stamped scope and (telemetry only) the
+        validated ``TelemetryEvent`` the message was built from."""
         try:
             event = CloudEvent.model_validate(item)
         except ValidationError as exc:
@@ -375,9 +509,10 @@ class IngestService:
             if event.type == CLOUDEVENT_TYPE_TELEMETRY:
                 data["ingestion_time"] = received_at
                 telemetry = TelemetryEvent.model_validate(data)
-                return self._telemetry_message(
+                message = self._telemetry_message(
                     producer, scope, telemetry, received_at, event_cost_center
                 )
+                return message, scope, telemetry
             if data.get("observation_source") not in (None, producer.sources[scope.source_id]):
                 # Source authority failure: one bad item must not block the batch (#169).
                 raise om.MappingError(ReasonCode.OBSERVATION_SOURCE_MISMATCH)
@@ -390,7 +525,7 @@ class IngestService:
         cost_center = sanitize_cost_center(getattr(tag, "root", tag)) or event_cost_center
         if cost.kind == "invoiced" and producer.sources[scope.source_id] != "billing":
             raise om.MappingError(ReasonCode.INVOICED_NOT_BILLING)
-        return self._message(
+        message = self._message(
             producer,
             kind=HubMessageKind.COST,
             event_id=cost.cost_id.root,
@@ -400,3 +535,4 @@ class IngestService:
             data=cost.model_dump(mode="json"),
             cost_center=cost_center,
         )
+        return message, scope, None
