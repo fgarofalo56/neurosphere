@@ -270,8 +270,8 @@ None here. Capture end to end on the hosted app (synthetic domain only, enabled 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | prp-103-item-1 @ cc935da9 -> 5f6d36f5 | Review BLOCK (Cosmos multi-property ORDER BY needs composite index) fixed in rework: single ORDER BY + SQL-recording fake, env-only local seed, domain prefix before deny, `policy_limit_exceeded` off reason (>500 policies). Re-verified: 163 passed, ruff/pyright clean, Snyk 0. Plan approved by owner 2026-11-25 (s-80ece6, adopted from orphaned s-42e704): waves 1+2, 3, 4, 5+6 (+7), 8 |
-| 2 | in-progress | prp-103-item-2 @ ade43b9b | verified: ruff/pyright clean, 136 passed, Snyk 0. Review BLOCK: cap applied before redaction keeps part of a spaced card/IBAN in clear; rework round 1 running (redact-then-cap, cancellation shield, RecursionError, envelope error scrub, caplog + payload_ref schema tests). Follow-up: cleanup_failed reconciler. Both redaction_mode values treated as redact-all-except-kept (fail-safe; contract leaves redact_listed undefined) - follow-up |
-| 3 | todo | | |
+| 2 | merged | prp-103-item-2 @ 79f330df -> 3653f60e | Review BLOCK (cap before redaction kept part of a spaced card/IBAN in clear) fixed in rework: redact whole part then cap, guarded tail on cut parts, cancellation shield, RecursionError, scrubbed envelope error, caplog + payload_ref schema tests; one CaptureRateLimiter. Re-verified on integration: 1210 passed, ruff/pyright clean, Snyk 0. Follow-ups: cleanup_failed reconciler; redact_listed undefined in contract (treated as redact_all_detections, fail-safe). |
+| 3 | in-progress | agent worktree (item-3) | |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
