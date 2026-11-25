@@ -31,11 +31,6 @@ from .corpus import (
 from .synth import CREDENTIAL_GENERATORS
 
 RUNBOOK = Path(__file__).resolve().parents[4] / "docs" / "runbooks" / "content-classification.md"
-_CHAINED_FIX = (
-    "PRP-101 item 2 fix lane (secret_detectors.py, PasswordAssignmentDetector): in "
-    "'password: client_secret = <value>' the outer label takes the inner label as its value "
-    "and the real value is left in the output"
-)
 
 
 @pytest.fixture(scope="module")
@@ -100,18 +95,17 @@ def test_every_detector_is_measured(report: QualityReport) -> None:
 
 @pytest.mark.parametrize("category", sorted(GATED_CATEGORIES))
 def test_gate_recall_is_one_end_to_end(report: QualityReport, category: str) -> None:
-    rows = [e for e in report.end_to_end if e.category == category and e.context != CHAINED_CONTEXT]
+    rows = [e for e in report.end_to_end if e.category == category]
     assert rows, f"no {category} spans in the corpus"
     failures = sorted(
         {(e.kind, e.context, e.failed or "leaked") for e in rows if e.leaked or e.failed}
     )
-    redacted, support = report.e2e_recall(category, exclude_contexts=frozenset({CHAINED_CONTEXT}))
+    redacted, support = report.e2e_recall(category)
     assert not failures, (
         f"{category} recall {redacted}/{support} below 1.0; (kind, context, outcome): {failures}"
     )
 
 
-@pytest.mark.xfail(strict=True, reason=_CHAINED_FIX)
 def test_chained_label_context_leaves_no_value(report: QualityReport) -> None:
     rows = [e for e in report.end_to_end if e.context == CHAINED_CONTEXT]
     assert rows
@@ -128,3 +122,7 @@ def test_runbook_carries_the_quality_table_for_this_detector_set() -> None:
     block = text.split(TABLE_START, 1)[1].split(TABLE_END, 1)[0]
     assert TABLE_HEADER in block
     assert f"`{DEFAULT_SET_VERSION}`" in block, "rerun report_quality.py: detector set changed"
+    # The digest changes with any detector or configuration change even without a version bump,
+    # so a stale published table fails here (review follow-up, items 6 and 7).
+    digest = default_detector_set().digest
+    assert f"`{digest}`" in block, "rerun report_quality.py: detector set digest changed"

@@ -62,32 +62,32 @@ Per detector (each detector run alone on every sample):
 | --- | --- | ---: | ---: | ---: | --- | --- |
 | `private_key` | `private_key` | 52 | 1.000 | 1.000 | yes | PEM blocks, truncated blocks spanned to end of text |
 | `jwt` | `jwt` | 26 | 1.000 | 1.000 | yes |  |
-| `bearer_token` | `bearer_token` | 26 | 1.000 | 0.923 | yes |  |
+| `bearer_token` | `bearer_token` | 26 | 1.000 | 1.000 | yes |  |
 | `cloud_access_key` | `cloud_access_key` | 26 | 1.000 | 1.000 | yes |  |
 | `vendor_api_key` | `vendor_api_key` | 260 | 1.000 | 1.000 | yes | includes api-key / subscription-key header and query values |
 | `connection_string` | `connection_string` | 182 | 1.000 | 1.000 | yes | includes AccountKey=, SharedAccessKey=, SAS sig= and SAS URLs |
 | `url_with_credentials` | `url_with_credentials` | 52 | 1.000 | 1.000 | yes |  |
-| `password_assignment` | `password_assignment` | 52 | 1.000 | 0.981 | yes | chained labels leak (strict xfail, item 2 fix lane) |
+| `password_assignment` | `password_assignment` | 52 | 1.000 | 1.000 | yes | chained labels, `:=`/`=>`/`->`/`==` operators, CLI flags, escaped JSON |
 | `opaque_secret` | `other` | 26 | 0.915 | 0.962 | no | category other; not gated (Clarification 9); over-redacts base64 |
 | `payment_card` | `payment_card` | 70 | 1.000 | 1.000 | yes | Luhn-valid only |
 | `iban` | `iban` | 79 | 1.000 | 1.000 | no | mod 97 checked |
 | `us_ssn` | `us_ssn` | 57 | 1.000 | 1.000 | no | separated forms only |
-| `email_address` | `email_address` | 57 | 0.528 | 1.000 | no |  |
-| `phone_number` | `phone_number` | 52 | 1.000 | 1.000 | no | low precision by design |
+| `email_address` | `email_address` | 57 | 0.528 | 1.000 | no | also matches `user:pw@host` inside credential URLs (the URL placeholder wins) |
+| `phone_number` | `phone_number` | 52 | 1.000 | 1.000 | no | confidence low: real prompts carry more digit groups than this corpus |
 | `ip_address` | `ip_address` | 82 | 0.512 | 1.000 | no | 4-part versions read as IPv4; `a::b` slices read as IPv6 |
 | `mac_address` | `mac_address` | 26 | 1.000 | 1.000 | no |  |
 | `guid` | `guid` | 85 | 1.000 | 1.000 | no | includes GUIDs inside Azure resource IDs |
 
-End to end through `redact` with the default configuration (a span counts as redacted when no 6-character fragment of its secret survives; the gate excludes the `chained_label` context, shown separately):
+End to end through `redact` with the default configuration (a span counts as redacted when no 6-character fragment of its secret survives; the gate covers every context, and the `chained_label` context is also shown on its own):
 
 | category | support | redacted | recall | gated | chained-label support | chained-label recall |
 | --- | ---: | ---: | ---: | --- | ---: | ---: |
-| `bearer_token` | 26 | 24 | 0.923 | yes | 0 | n/a |
+| `bearer_token` | 26 | 26 | 1.000 | yes | 0 | n/a |
 | `cloud_access_key` | 26 | 26 | 1.000 | yes | 0 | n/a |
 | `connection_string` | 182 | 182 | 1.000 | yes | 0 | n/a |
 | `jwt` | 26 | 26 | 1.000 | yes | 0 | n/a |
 | `other` | 26 | 25 | 0.962 | no | 0 | n/a |
-| `password_assignment` | 40 | 39 | 0.975 | yes | 12 | 0.417 |
+| `password_assignment` | 52 | 52 | 1.000 | yes | 12 | 1.000 |
 | `payment_card` | 70 | 70 | 1.000 | yes | 0 | n/a |
 | `private_key` | 52 | 52 | 1.000 | yes | 0 | n/a |
 | `url_with_credentials` | 52 | 52 | 1.000 | yes | 0 | n/a |

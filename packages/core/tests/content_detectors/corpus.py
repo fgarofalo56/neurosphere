@@ -906,12 +906,22 @@ _NOTES: Final[Mapping[str, str]] = MappingProxyType(
             ("private_key", "PEM blocks, truncated blocks spanned to end of text"),
             ("vendor_api_key", "includes api-key / subscription-key header and query values"),
             ("connection_string", "includes AccountKey=, SharedAccessKey=, SAS sig= and SAS URLs"),
-            ("password_assignment", "chained labels leak (strict xfail, item 2 fix lane)"),
+            (
+                "password_assignment",
+                "chained labels, `:=`/`=>`/`->`/`==` operators, CLI flags, escaped JSON",
+            ),
             ("opaque_secret", "category other; not gated (Clarification 9); over-redacts base64"),
             ("payment_card", "Luhn-valid only"),
             ("iban", "mod 97 checked"),
             ("us_ssn", "separated forms only"),
-            ("phone_number", "low precision by design"),
+            (
+                "phone_number",
+                "confidence low: real prompts carry more digit groups than this corpus",
+            ),
+            (
+                "email_address",
+                "also matches `user:pw@host` inside credential URLs (the URL placeholder wins)",
+            ),
             ("ip_address", "4-part versions read as IPv4; `a::b` slices read as IPv6"),
             ("guid", "includes GUIDs inside Azure resource IDs"),
         )
@@ -946,8 +956,8 @@ def render_markdown(report: QualityReport, *, today: dt.date) -> str:
     lines += [
         "",
         "End to end through `redact` with the default configuration (a span counts as redacted "
-        "when no 6-character fragment of its secret survives; the gate excludes the "
-        f"`{CHAINED_CONTEXT}` context, shown separately):",
+        "when no 6-character fragment of its secret survives; the gate covers every context, "
+        f"and the `{CHAINED_CONTEXT}` context is also shown on its own):",
         "",
         "| category | support | redacted | recall | gated | chained-label support | "
         "chained-label recall |",
@@ -956,9 +966,9 @@ def render_markdown(report: QualityReport, *, today: dt.date) -> str:
     excluded = frozenset({CHAINED_CONTEXT})
     categories = sorted({e.category for e in report.end_to_end})
     for category in categories:
-        ok, total = report.e2e_recall(category, exclude_contexts=excluded)
-        all_ok, all_total = report.e2e_recall(category)
-        c_ok, c_total = all_ok - ok, all_total - total
+        ok, total = report.e2e_recall(category)
+        rest_ok, rest_total = report.e2e_recall(category, exclude_contexts=excluded)
+        c_ok, c_total = ok - rest_ok, total - rest_total
         gated = "yes" if category in GATED_CATEGORIES else "no"
         lines.append(
             f"| `{category}` | {total} | {ok} | {_ratio(ok / total if total else None)} | "
