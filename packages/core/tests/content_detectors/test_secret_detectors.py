@@ -721,4 +721,6 @@ def test_each_detector_is_linear_on_adversarial_input(name: str) -> None:
         started = time.perf_counter()
         detector.find(text)
         elapsed = time.perf_counter() - started
-        assert elapsed < 1.0, f"{detector.detector_id} took {elapsed:.2f}s on {name}"
+        # Locally the slowest detector takes ~0.7 s per 1 MB input; super-linear backtracking
+        # would take minutes. 3 s keeps that signal without flaking on loaded CI runners.
+        assert elapsed < 3.0, f"{detector.detector_id} took {elapsed:.2f}s on {name}"
