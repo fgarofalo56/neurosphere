@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `38c144fca6928972588cbc56d208702740a05520`. Generated: 2026-11-23.
+> Source commit: `ac6762a1a8295c6cc2ffb9e92583ecba3d42acdc`. Generated: 2026-11-25.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 224 operations on 189 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 227 operations on 192 paths.
 
 ## Status and verification
 
@@ -43,6 +43,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | actions | POST | `/api/v1/actions/domains/{domain}/intents/{intent_id}/validate` | Validate Intent |
 | actions | GET | `/api/v1/actions/emergency-disable` | Read Emergency Disable |
 | actions | PUT | `/api/v1/actions/emergency-disable` | Set Emergency Disable |
+| admin-capture | GET | `/api/v1/admin/interactions/capture-policies` | List Capture Policies |
+| admin-capture | GET | `/api/v1/admin/interactions/capture-policies/{policy_id}` | Get Capture Policy |
+| admin-capture | GET | `/api/v1/admin/interactions/capture-status` | Capture Status |
 | admin-connectors | GET | `/api/v1/admin/sources/connectors` | List Connectors |
 | admin-connectors | POST | `/api/v1/admin/sources/connectors` | Create Connector |
 | admin-connectors | GET | `/api/v1/admin/sources/connectors/{config_id}` | Get Connector |
@@ -327,6 +330,32 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Set Emergency Disable
 - Request body: application/json: `EmergencyDisableBody` (required)
 - Responses: `200` `EmergencyDisableView`; `422` `HTTPValidationError`
+
+### Tag: admin-capture
+
+#### GET `/api/v1/admin/interactions/capture-policies`
+
+- Operation id: `list_capture_policies_api_v1_admin_interactions_capture_policies_get`
+- Summary: List Capture Policies
+- Description: Capture policies (metadata only): scope, sources, parts, redaction mode, kept categories, sampling, retention, state, version and the approval audit id. With `domain_id`, `config.manage` in that domain; without it, customer-level `config.manage`. Read-only: changes are `capture_policy_change` actions.
+- Parameters: `limit` (query), `domain_id` (query)
+- Responses: `200` `CapturePolicyPage`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/interactions/capture-policies/{policy_id}`
+
+- Operation id: `get_capture_policy_api_v1_admin_interactions_capture_policies__policy_id__get`
+- Summary: Get Capture Policy
+- Description: One capture policy (metadata only). `config.manage` on the policy's domain or customer-level; a policy the caller may not read is 404 like an unknown one.
+- Parameters: `policy_id` (path, required)
+- Responses: `200` `CapturePolicyView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/interactions/capture-status`
+
+- Operation id: `capture_status_api_v1_admin_interactions_capture_status_get`
+- Summary: Capture Status
+- Description: Whether interaction capture is on, the off reason code when it is off, policy counts per state and, for customer-level callers, the deployment-wide counters (captured, skipped, failed by reason, shed). Reason `capture_not_configured` when capture was not composed.
+- Parameters: `domain_id` (query)
+- Responses: `200` `CaptureStatusView`; `422` `HTTPValidationError`
 
 ### Tag: admin-connectors
 
