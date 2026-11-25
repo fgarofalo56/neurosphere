@@ -24,8 +24,99 @@ _Placeholder: filled by PRP-101 items 5 and 8 (redaction modes, budget, chunking
 
 ## Measured precision and recall
 
-_Placeholder: filled by PRP-101 item 6 (measured table per detector with the detector-set
-version)._
+Measured on a labelled synthetic corpus (`packages/core/tests/content_detectors/corpus.py`):
+every value is generated at runtime from the seed, no real data and no generated corpus file is
+committed. Positives are every credential kind in `synth.py`, Luhn-valid cards (13 to 19 digits,
+grouped and ungrouped, major-brand prefixes), IBANs (several countries, mod 97 valid), US SSNs,
+emails, phones (E.164 and national), IPv4 and IPv6, MACs and GUIDs (also inside Azure resource
+IDs). Hard negatives label nothing: credential lookalikes, Luhn-invalid card runs, invalid IBAN
+checksums, excluded-area SSNs, dates, times, versions, order numbers, git SHAs, sha256 digests,
+base64 ids and blobs, data URIs, SRI hashes, file paths, Python slices and `max_tokens` /
+`prompt_tokens` / `token_count` lines. Each kind is placed in prose, JSON, YAML, env files, HTTP
+headers, log lines, code, markdown tables and mixed rows, at text start and end and next to
+punctuation.
+
+The precision and recall below apply to that corpus only, within the
+[coverage statement](#content-classification-and-typed-redaction) above (structured
+identifiers only); they are not a claim about real traffic.
+
+Gate (GD-19, Clarification 6): every credential category and Luhn-valid payment cards must
+reach recall 1.0 end to end through `redact` (CI runs
+`packages/core/tests/content_detectors/test_corpus_quality.py`). All other detectors are
+measured and reported without a threshold. `opaque_secret` (category `other`) is not gated
+(Clarification 9).
+
+Regenerate the table after any detector change (the test fails when the table names another
+detector-set version):
+
+```bash
+uv run python packages/core/tests/content_detectors/report_quality.py
+```
+
+<!-- quality-table:start -->
+Detector set `ns-detectors-1.0.0`, digest `6baa0848db10974d24719376a657708beeb650c605ef0a3d3bb8ba554c7b3579`; corpus seed `20261124`, 1456 samples; measured 2026-11-25 with `report_quality.py`.
+
+Per detector (each detector run alone on every sample):
+
+| detector_id | category | support | precision | recall | gated | notes |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| `private_key` | `private_key` | 52 | 1.000 | 1.000 | yes | PEM blocks, truncated blocks spanned to end of text |
+| `jwt` | `jwt` | 26 | 1.000 | 1.000 | yes |  |
+| `bearer_token` | `bearer_token` | 26 | 1.000 | 0.923 | yes |  |
+| `cloud_access_key` | `cloud_access_key` | 26 | 1.000 | 1.000 | yes |  |
+| `vendor_api_key` | `vendor_api_key` | 260 | 1.000 | 1.000 | yes | includes api-key / subscription-key header and query values |
+| `connection_string` | `connection_string` | 182 | 1.000 | 1.000 | yes | includes AccountKey=, SharedAccessKey=, SAS sig= and SAS URLs |
+| `url_with_credentials` | `url_with_credentials` | 52 | 1.000 | 1.000 | yes |  |
+| `password_assignment` | `password_assignment` | 52 | 1.000 | 0.981 | yes | chained labels leak (strict xfail, item 2 fix lane) |
+| `opaque_secret` | `other` | 26 | 0.915 | 0.962 | no | category other; not gated (Clarification 9); over-redacts base64 |
+| `payment_card` | `payment_card` | 70 | 1.000 | 1.000 | yes | Luhn-valid only |
+| `iban` | `iban` | 79 | 1.000 | 1.000 | no | mod 97 checked |
+| `us_ssn` | `us_ssn` | 57 | 1.000 | 1.000 | no | separated forms only |
+| `email_address` | `email_address` | 57 | 0.528 | 1.000 | no |  |
+| `phone_number` | `phone_number` | 52 | 1.000 | 1.000 | no | low precision by design |
+| `ip_address` | `ip_address` | 82 | 0.512 | 1.000 | no | 4-part versions read as IPv4; `a::b` slices read as IPv6 |
+| `mac_address` | `mac_address` | 26 | 1.000 | 1.000 | no |  |
+| `guid` | `guid` | 85 | 1.000 | 1.000 | no | includes GUIDs inside Azure resource IDs |
+
+End to end through `redact` with the default configuration (a span counts as redacted when no 6-character fragment of its secret survives; the gate excludes the `chained_label` context, shown separately):
+
+| category | support | redacted | recall | gated | chained-label support | chained-label recall |
+| --- | ---: | ---: | ---: | --- | ---: | ---: |
+| `bearer_token` | 26 | 24 | 0.923 | yes | 0 | n/a |
+| `cloud_access_key` | 26 | 26 | 1.000 | yes | 0 | n/a |
+| `connection_string` | 182 | 182 | 1.000 | yes | 0 | n/a |
+| `jwt` | 26 | 26 | 1.000 | yes | 0 | n/a |
+| `other` | 26 | 25 | 0.962 | no | 0 | n/a |
+| `password_assignment` | 40 | 39 | 0.975 | yes | 12 | 0.417 |
+| `payment_card` | 70 | 70 | 1.000 | yes | 0 | n/a |
+| `private_key` | 52 | 52 | 1.000 | yes | 0 | n/a |
+| `url_with_credentials` | 52 | 52 | 1.000 | yes | 0 | n/a |
+| `vendor_api_key` | 260 | 260 | 1.000 | yes | 0 | n/a |
+
+`opaque_secret` matches on hard-negative samples: 79 (`base64_blob` 25, `data_uri` 26, `sha256_hex` 2, `sri_hash` 26).
+<!-- quality-table:end -->
+
+Precision counts a match as correct when it overlaps a labelled span of a compatible category
+(credential categories and `other` are compatible with each other). Recall is the share of
+labelled spans of the detector's category that one of its matches overlaps.
+
+Known limits (declared, not bugs):
+
+- US SSNs are found only with `-` or single-space separators; bare 9-digit runs are not.
+- Phone numbers are low precision: separated digit groups such as reference numbers can match.
+- A 4-part version string is a valid IPv4 address and is reported as `ip_address`; Python
+  slices such as `x[a::b]` read as IPv6.
+- A card number directly followed by a separated digit group can be missed (the groups merge
+  into one candidate that fails Luhn).
+- An IPv6 address directly after a colon (no space) is not found.
+- Only ASCII digits are recognised (input is NFKC-normalised first).
+- An email detector match inside a URL with credentials counts against email precision (the
+  engine still replaces the whole URL span as `url_with_credentials`).
+
+`opaque_secret` false-positive classes (over-redaction, accepted): long base64 payloads, data
+URIs, SRI hashes, and a hex digest glued to an uppercase env label (`NOTE=<sha256>`: `=` is a
+key-material character, so the label joins the run). Base64 ids under 40 characters, git SHAs,
+standalone sha256 digests, paths and slugs are not matched.
 
 ## Adding customer dictionaries and patterns
 
