@@ -223,15 +223,30 @@ None. No external call is made; the model-based detector is not built (GD-6).
 | 3 | merged | worktree-agent-a123dc9f196a65037 @ 0ae2ead7 | review APPROVE (follow-ups: IBAN country/length table, IPv6 hex-word compressed forms); 203 passed after merge |
 | 4 | merged | worktree-agent-a24fbf0e798524465 @ efeef77e + rework worktree-agent-a2ee628f73be779bf @ 2e567d50 | review CHANGES REQUIRED (cost model ignored nesting/wrapper repeats: accepted patterns 8-30x over the documented bound); one rework round (`too_deep`, depth 2, MAX_COMPLEXITY 160, honest bound 250 ms per 64 KiB per pattern, dictionary 2 s), confirmed by the orchestrator re-running the reviewer's patterns (all refused); 470 passed after merge |
 | 5 | merged | worktree-agent-a26ea51110909ef2c @ 7ea2f11f | review CHANGES REQUIRED (invisible-char strip list was a subset: variation selectors/tags split keys past detection); orchestrator fixed (full Default_Ignorable set) and confirmed: new 56-case test fails on the old engine, passes now; 599 passed + 1 strict xfail (chained assignment leak in item 2's detector, fix-forward lane in flight) |
-| 6 | in-progress | | dispatched 2026-11-24 (s-8c3599) |
-| 7 | merged | worktree-agent-ac7fd81ae7a69e615 @ 719aea66 | review APPROVE (shared pass with item 6; engine rebuild now reuses checked offsets, f465c697) | found a fail-open (forged Match offsets bypassing __post_init__); orchestrator fixed `engine._validated`, the 8 strict xfails now pass; 741 passed |
-| 8 | todo | | |
+| 6 | merged | worktree-agent-a3791096476f50fd3 @ 1425c2d3 | review APPROVE (shared pass with item 7); its gate caught two JSON-escaped leaks (bearer after escaped tab, escaped-quote client secret), fixed forward with the operator lane (5e5764dd); at merge the orchestrator gated the chained context too, pinned the table digest and regenerated the table: every gated category recall 1.000 end to end |
+| 7 | merged | worktree-agent-ac7fd81ae7a69e615 @ 719aea66 | found a fail-open (forged Match offsets bypassing __post_init__); orchestrator fixed `engine._validated`, the 8 strict xfails now pass; review APPROVE (shared pass with item 6; engine rebuild now reuses checked offsets, f465c697); 741 passed |
+| 8 | merged | prp-101-detectors-and-redaction (orchestrator) | runbook complete (detectors, configuration, customer patterns, known limits), mkdocs nav (pulled forward to item 1), changelog fragment, follow-up issues #408 and #409, completion note |
+
+Fix-forward lanes (not numbered items): chained credential assignments (worktree-agent-af9ddd3e901080a39 @ 02e7fc1b, found by item 5); assignment operators `:=`/`=>`/`->`/`<-`/`==`, CLI flags and JSON-escaped text (worktree-agent-af739a51728948b1a @ 50b79646, found by an orchestrator probe and item 6's gate).
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-25, PR #407.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
+  - Item 2's module is `detectors/secret_detectors.py`, not `credentials.py`: the acc-guard secret-file rule refuses any path containing "credentials".
+  - `Redacted.set_version` follows the PRP-99 `detector_set_version` slug (`ns-detectors-1.0.0`), not x.y.z.
+  - `Finding.offsets` mirrors `DetectionFinding.spans` (at most 64 entries); PRP-103 maps it.
+  - Built-in detectors run on the whole text; only customer detectors are chunked. The reason is that private-key blocks exceed any sensible overlap. The overlap must be at least 2W+2.
+  - The customer-pattern safety check is stricter than the PRP implied. It refuses every unbounded repeat, any bound above 100, nesting deeper than 2 and a cost above 160. The true bound is 250 ms per 64 KiB per pattern, not the first draft's 50 ms.
+  - Added beyond the plan:
+    - full Default_Ignorable stripping
+    - a post-redaction self-check
+    - re-validation of detector match offsets in the engine
+    - the low-confidence bare `sk-` rule (criterion 6 requires it, so ordinary slugs such as `disk-encryption-set-configuration` are over-redacted)
+  - The mkdocs nav line moved from item 8 to item 1, to keep the docs nav test green from the first push.
+- Descoped items: none.
+- OPEN gates: none. No live gate exists; the PRP makes no external call.
+- Env vars for the operator: none. The library has no settings.
 - Follow-up issues:
-- Product check (can an operator use it without editing files):
+  - #408: consolidate the four existing rule sets (Clarification 8).
+  - #409: precision and hardening follow-ups (IBAN, IPv6 and opaque precision; glued `sk_` keys; escaped-quote values; combining marks; finding-count cap; customer cost model; PRP-103 budget headroom).
+- Product check: no. This is a library with no caller. An operator cannot configure dictionaries, patterns or redaction modes without code until PRP-103 (capture policy and ingest edge) and PRP-105 (policy `content_rule`) wire it in, as planned.

@@ -15,12 +15,82 @@ content are not detected.
 
 ## Detectors
 
-_Placeholder: filled by PRP-101 items 2-5 (detector list, kinds, confidence, detector-set
-version)._
+`default_detector_set()` returns detector set `ns-detectors-1.0.0`. Every detector is version
+`1.0.0`. The set's `digest` (SHA-256) covers each detector's id, version, categories and
+`always_redact` flag, plus the customer configuration: dictionary ids with a hash of their terms,
+and pattern ids with their patterns. It never covers content.
+
+| Detector | Category | Confidence | Always redacted | What it finds |
+| --- | --- | --- | --- | --- |
+| `private_key` | `private_key` | high | yes | PEM private-key blocks, through the END line or to the end of the text |
+| `jwt` | `jwt` | high | yes | `eyJ…` header.payload[.signature], also glued to a preceding word |
+| `bearer_token` | `bearer_token` | high | yes | the token after `bearer` (any case), including after JSON-escaped whitespace |
+| `cloud_access_key` | `cloud_access_key` | high | yes | `AKIA` / `ASIA` access key ids |
+| `vendor_api_key` | `vendor_api_key` | high (low for bare `sk-` slugs) | yes | GitHub `ghp_` `gho_` `ghu_` `ghs_` `ghr_` `github_pat_` (stateless `ghs_` too), `sk-` / `sk_` / `pk_`, `xoxb-` `xoxa-` `xoxp-`, `api-key` / `Ocp-Apim-Subscription-Key` header values and `subscription-key` query values |
+| `connection_string` | `connection_string` | high | yes | Azure Storage, Event Hubs and Service Bus connection strings, `AccountKey=` / `SharedAccessKey=`, Event Hubs SAS tokens, storage SAS `sig=` values and SAS URLs |
+| `url_with_credentials` | `url_with_credentials` | high | yes | `scheme://user:password@host`, including usernames that contain `@` |
+| `password_assignment` | `password_assignment` | medium | yes | the value after a credential label (`password`, `client_secret`, `api_key`, `secret`, `token`, …) with `=` `:` `:=` `=>` `->` `<-` `==` `===` `!=` or `is`, chained labels, CLI flags (`--password`, `--client-secret`, `-Password`, …), quoted and JSON-escaped values; token-accounting labels (`max_tokens`, `prompt_tokens`, `token_count`) and metadata suffixes are excluded |
+| `opaque_secret` | `other` | low | yes | runs of 40 or more key-material characters with mixed case and digits and high entropy (unknown key formats) |
+| `payment_card` | `payment_card` | high | no (default redact) | 13 to 19 digits, grouped or not, Luhn-valid only |
+| `iban` | `iban` | high | no | ISO 13616 IBANs, mod 97 checked |
+| `us_ssn` | `us_ssn` | medium | no | `AAA-GG-SSSS` with `-` or space separators, area / group / serial exclusions applied |
+| `email_address` | `email_address` | high | no | email addresses |
+| `phone_number` | `phone_number` | low | no | E.164 and separated national formats; dates, versions, SSNs, times and card numbers are excluded |
+| `ip_address` | `ip_address` | medium | no | IPv4 and IPv6, validated with the standard library |
+| `mac_address` | `mac_address` | high | no | colon, hyphen and Cisco dotted MAC addresses |
+| `guid` | `guid` | high | no | 8-4-4-4-12 GUIDs |
+
+Each category maps to a PRP-70 `sensitivity_category`:
+
+- `credentials`: the eight credential categories, and `opaque_secret` matches.
+- `pci`: `payment_card`.
+- `financial`: `iban`.
+- `pii`: SSN, email, phone, IP and MAC addresses.
+- The configured value: customer terms and patterns.
+- None: `guid`.
 
 ## Configuration
 
-_Placeholder: filled by PRP-101 items 5 and 8 (redaction modes, budget, chunking)._
+Call `redact(text, *, part, config, detector_set, budget)`. The result is either
+`Redacted(text, findings, set_version)` or `RedactionFailed(reason)`.
+
+- **Modes.** `RedactionConfig(default_mode="redact", modes={...})` sets `redact` or `keep` per
+  category.
+  - The eight credential categories cannot be configured to `keep`: the model refuses the
+    configuration, and `mode_for` returns `redact` for them anyway.
+  - Detectors marked "always redacted" are replaced whatever the mode, including
+    `opaque_secret`, whose category is `other`.
+  - `payment_card` is redacted by default, but a capture policy can set it to `keep`.
+- **Findings.** There is one finding per category, detector and action, with:
+  - `count`.
+  - `offsets`: up to 64 placeholder (or kept) spans in the redacted text; the count stays exact.
+  - Confidence, detector version and `sensitivity_category`.
+  - Never the matched text.
+- **Normalisation.** Input is NFKC-normalised. Every Unicode Default_Ignorable_Code_Point is
+  removed, along with U+2800. The redacted output is the normalised text.
+- **Overlaps.** Overlapping matches form one cluster, and the whole cluster is replaced by one
+  placeholder, so a credential is never partly kept. The placeholder category is chosen in this
+  order: a credential category first, then other always-redacted detectors, then categories the
+  configuration redacts, with the longer span winning within a tier.
+- **Budget.** `RedactionBudget` sets the limits:
+  - `max_input_chars` (default 1,000,000).
+  - `max_seconds` (default 2.0).
+  - `chunk_chars` (default 8192) and `chunk_overlap` (default 512).
+
+  Built-in detectors run on the whole text; customer detectors run on overlapping chunks. A set
+  whose largest customer match width `W` does not satisfy `chunk_overlap >= 2*W + 2` is refused
+  with `pattern_unsafe`. With the defaults, that allows dictionary terms up to 255 case-folded
+  characters. The deadline is checked between detector calls. A 1 MB part of prose takes about
+  1.6 s on the reference machine, so the largest parts have little headroom on slow hosts.
+- **Fail closed.** Every exception, malformed detector output, deadline overrun or oversize
+  input returns `RedactionFailed` with one of four reasons: `detector_error`,
+  `budget_exhausted`, `pattern_unsafe` or `input_too_large`. It never returns the input or a
+  partial output. Before returning, the output is re-scanned with every always-redacted
+  detector, and any hit fails the part. Categories that are only configured to redact are not
+  re-scanned.
+- **No logging.** The library logs nothing. No exception, `repr` or finding contains matched
+  text. `tests/security/content_redaction` enforces this, along with the absence of hashes,
+  encodings and length hints.
 
 ## Measured precision and recall
 
@@ -112,6 +182,15 @@ Known limits (declared, not bugs):
 - Only ASCII digits are recognised (input is NFKC-normalised first).
 - An email detector match inside a URL with credentials counts against email precision (the
   engine still replaces the whole URL span as `url_with_credentials`).
+- A combining mark (for example U+0301) inserted inside a value composes with the previous
+  letter under NFKC and can defeat detection of some kinds; it is not stripped because it is
+  not default-ignorable.
+- Inside an escaped-JSON string, a credential value that itself contains an escaped quote ends
+  the `password_assignment` span early, so the rest of that value can survive.
+- `sk_` / `pk_` / `xoxb-` keys glued directly after letters or digits (no separator) are not
+  matched by `vendor_api_key`; long ones are still caught by `opaque_secret`.
+- A part with more than 100,000 findings fails closed (`detector_error`): the finding count is
+  capped by the PRP-99 contract.
 
 `opaque_secret` false-positive classes (over-redaction, accepted): long base64 payloads, data
 URIs, SRI hashes, and a hex digest glued to an uppercase env label (`NOTE=<sha256>`: `=` is a
@@ -120,8 +199,50 @@ standalone sha256 digests, paths and slugs are not matched.
 
 ## Adding customer dictionaries and patterns
 
-_Placeholder: filled by PRP-101 items 4 and 8 (dictionary limits, pattern safety check, reason
-codes)._
+Customer detectors are passed to `default_detector_set(dictionaries=..., patterns=...)`. This
+release has no settings screen or API for them: PRP-103 (capture policy) and PRP-105 (policy
+`content_rule`) will carry them, so for now they are configured in code only.
+
+**Dictionaries (`CustomerDictionary`).**
+
+- Each dictionary has a slug id, exact terms, a `sensitivity_category` and a confidence.
+- Limits: up to 10,000 terms, each 1 to 256 characters (255 with the default chunk overlap).
+- Matching is case-folded and word-bounded, so a term never matches inside a longer word, and
+  offsets map back to the original text.
+- Validation errors never echo a term.
+- Worst case is about 2 s per 64 KiB for one dictionary, for example a long punctuation-only
+  term over a run of the same punctuation. Typical text is much faster.
+
+**Patterns (`CustomerPattern`).**
+
+- Each pattern has a slug id, a Python `re` pattern, a `sensitivity_category` and a confidence.
+- Python `re` cannot be interrupted mid-match. A static safety check therefore runs at load and
+  refuses any pattern that could backtrack badly.
+- A refused pattern raises `PatternRefused(reason_code="pattern_unsafe", detail=...)`. The
+  message carries only the codes, never the pattern.
+- The check runs in this order, and the first failure wins:
+  - `too_long`: more than 256 characters, or empty.
+  - `invalid`: does not compile, or contains a construct the check does not know.
+  - `flags`: any inline flag except `(?i)`.
+  - `backreference`, `conditional`, `lookaround`.
+  - `nested_quantifier`, then `quantified_alternation`: a repeated group that contains `|`.
+  - `unbounded_repeat_cap`: `*`, `+`, `{n,}`, or any bound above 100.
+  - `too_deep`: groups nested more than 2 levels.
+  - `empty_match`.
+  - `too_complex`: an estimated cost above 160.
+- The documented bound for an accepted pattern is 250 ms per 64 KiB on the reference machine
+  (1 s allowed on CI). The worst accepted pattern measured about 100 to 160 ms.
+
+Writing patterns that pass:
+
+- Give every repeat an explicit bound: `[0-9]{6}`, `[A-Z]{2}[0-9]{6,8}`, `(?i)case-[0-9]{4,10}`.
+- Some ordinary-looking patterns are refused because their cost estimate is too high:
+  `[0-9]{1,20}`, `[a-z]{1,30}[0-9]`, `[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}`.
+- Prefer fixed-width IDs with a literal prefix (`EMP-[0-9]{6}`, `PRJ[A-Z]{3}[0-9]{4}`).
+- Test a pattern with `check_pattern_safety(pattern)` before configuring it.
+
+A dictionary term or pattern match that falls inside an existing `[[ns-redacted:...]]`
+placeholder is ignored, unless it covers the whole placeholder.
 
 ## Sources
 
