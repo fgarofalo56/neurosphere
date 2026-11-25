@@ -9,6 +9,7 @@ longest first, non-overlapping; then the rest; each span becomes ``placeholder(c
 from __future__ import annotations
 
 import importlib.util
+import json
 import random
 import re
 import sys
@@ -414,10 +415,226 @@ def test_quoted_values_are_spanned_whole(quote: str) -> None:
                     assert _redact(text).endswith(" next"), tag
 
 
+_OP_LABELS = (
+    "password",
+    "Password",
+    "db_password",
+    "client_secret",
+    "api_key",
+    "secret",
+    "pwd",
+    "token",
+    "passwd",
+)
+_OPERATORS = (
+    ":=",
+    " := ",
+    ":= ",
+    "=>",
+    " => ",
+    "->",
+    " -> ",
+    "<-",
+    " <- ",
+    " == ",
+    "==",
+    " === ",
+    " != ",
+    "=",
+    ": ",
+)
+_LABEL_QUOTES = ("", "'", '"')
+_OP_CONTEXTS = (
+    "{}",
+    "the config says {} today",
+    '{{ {}, "n": 1 }}',
+    "    if ({}) {{ return; }}",
+    "line one\n{}\nline three",
+)
+
+
+@pytest.mark.parametrize("op", _OPERATORS)
+@pytest.mark.parametrize("label", _OP_LABELS)
+def test_every_operator_spans_the_value(label: str, op: str) -> None:
+    """``password := v``, ``'password' => 'v'``, ``password <- v``, ``password == "v"``."""
+    for label_quote in _LABEL_QUOTES:
+        for value_quote in ("", "'", '"'):
+            for seed in range(3):
+                value = assignment_value(random.Random(f"op:{label}:{op}:{seed}"), 16, 16)
+                text = f"{label_quote}{label}{label_quote}{op}{value_quote}{value}{value_quote}"
+                tag = f"{text!r} seed {seed}"
+                for template in _OP_CONTEXTS:
+                    _assert_value_gone(template.format(text), value, tag)
+                    assert label in _redact(template.format(text)), tag
+
+
+def _json_wrapped(text: str) -> tuple[str, str, str]:
+    """``text`` as a JSON string once and twice (JSON inside a tool-call argument string)."""
+    once = json.dumps({"arguments": text})
+    return once, json.dumps({"arguments": once}), json.dumps(json.dumps({"cfg": text}))
+
+
+@pytest.mark.parametrize("op", _OPERATORS)
+@pytest.mark.parametrize("label", _OP_LABELS)
+def test_every_operator_spans_json_escaped_values(label: str, op: str) -> None:
+    """``\\"AZURE_CLIENT_SECRET\\": \\"v\\"``: escaped quotes around the label and the value."""
+    for label_quote in _LABEL_QUOTES:
+        for value_quote in ("", "'", '"'):
+            for seed in range(2):
+                value = assignment_value(random.Random(f"json:{label}:{op}:{seed}"), 16, 16)
+                text = f"{label_quote}{label}{label_quote}{op}{value_quote}{value}{value_quote}"
+                for wrapped in _json_wrapped(text):
+                    _assert_value_gone(wrapped, value, f"{wrapped!r}")
+                    assert label in _redact(wrapped), wrapped
+
+
+@pytest.mark.parametrize("label", ["AZURE_CLIENT_SECRET", "client_secret", "password", "apiKey"])
+def test_tool_call_arguments_with_escaped_json_are_redacted(label: str) -> None:
+    for seed in range(10):
+        rng = random.Random(f"toolcall:{label}:{seed}")
+        value = assignment_value(rng, 12, 39)
+        spaced = f"{assignment_value(rng, 8, 8)} {value}"
+        for body in ({label: value, "n": 1}, {"env": {label: value}}, {label: spaced}):
+            for wrapped in (json.dumps(json.dumps(body)), json.dumps({"a": json.dumps(body)})):
+                _assert_value_gone(wrapped, value, f"{wrapped!r}")
+                kept = _redact(wrapped).replace(placeholder("password_assignment"), "")
+                assert kept.count(label) == wrapped.count(label), wrapped
+
+
+_BEARER_SEPARATORS = ("\t", "\n", "\r\n", " \t", "\t\t", " ")
+
+
+@pytest.mark.parametrize("sep", _BEARER_SEPARATORS, ids=repr)
+def test_bearer_with_json_escaped_separators(sep: str) -> None:
+    for seed in range(20):
+        credential = CREDENTIAL_GENERATORS["bearer_token"](random.Random(f"bjson:{sep}:{seed}"))
+        token = secret_value("bearer_token", credential)
+        word = credential.split(None, 1)[0]
+        raw = f"Authorization: {word}{sep}{token}"
+        for wrapped in (
+            json.dumps(raw),
+            json.dumps(json.dumps(raw)),
+            json.dumps({"headers": {"Authorization": f"{word}{sep}{token}"}}),
+            json.dumps(json.dumps({"headers": {"Authorization": f"{word}{sep}{token}"}})),
+        ):
+            assert BY_ID["bearer_token"].find(wrapped), wrapped
+            _assert_value_gone(wrapped, token, f"{wrapped!r}")
+            assert word in _redact(wrapped)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        json.dumps({"token_count": 12, "max_tokens": 4096}),
+        json.dumps(json.dumps({"token_count": 12, "secret_name": "storage-primary"})),
+        json.dumps(json.dumps({"password": None, "token": "4096"})),
+        json.dumps("bearer\tok"),
+        json.dumps("the bearer\nof news"),
+    ],
+)
+def test_json_escaped_lookalikes_are_not_detected(text: str) -> None:
+    found = [(m.detector_id, m.start, m.end) for m in _all_matches(text)]
+    assert found == [], text
+
+
+@pytest.mark.parametrize("op", _OPERATORS)
+def test_chains_work_with_every_operator(op: str) -> None:
+    for seed in range(5):
+        value = assignment_value(random.Random(f"opchain:{op}:{seed}"), 16, 16)
+        for inner in ("client_secret", "api_key", "pwd"):
+            text = f"password{op}{inner}{op}{value}"
+            _assert_value_gone(f"cfg {text} tail", value, f"{text!r}")
+            assert "tail" in _redact(f"cfg {text} tail")
+
+
+_FLAGS = (
+    "--password",
+    "--db-password",
+    "--client-secret",
+    "--api-key",
+    "--secret",
+    "--token",
+    "-Password",
+    "-ClientSecret",
+)
+_FLAG_FORMS = (" {}", "={}", "  {}", " '{}'", ' "{}"', "\t{}")
+_FLAG_CONTEXTS = (
+    "{}",
+    "mytool deploy {} --verbose",
+    "Connect-Thing -Server db01 {} -Force",
+    "run: |\n  cli login {}\n",
+)
+
+
+@pytest.mark.parametrize("flag", _FLAGS)
+def test_cli_flags_span_the_value(flag: str) -> None:
+    for form in _FLAG_FORMS:
+        for seed in range(5):
+            value = assignment_value(random.Random(f"flag:{flag}:{seed}"), 16, 16)
+            text = flag + form.format(value)
+            for template in _FLAG_CONTEXTS:
+                full = template.format(text)
+                _assert_value_gone(full, value, f"{full!r}")
+                redacted = _redact(full)
+                assert flag in redacted, full
+                for kept in ("--verbose", "-Server db01", "-Force"):
+                    if kept in full:
+                        assert kept in redacted, full
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "--max-tokens 4096",
+        "--max-token 4096",
+        "--token-count 12",
+        "--token 4096",
+        "--secret-name storage-primary",
+        "--verbose --dry-run",
+        "-Server db01 -Force",
+        "token_count => 12",
+        "prompt_tokens -> 5",
+        "max_tokens := 4096",
+        "completion_tokens == 345",
+        "secret_name => storage-primary",
+        "x <- 3",
+        "a <- b",
+        "step one -> step two",
+        "data => result",
+        "if count == 3",
+        "value != other",
+        "password => null",
+        "--password true",
+        "the well-known secret handshake",
+    ],
+)
+def test_operator_and_flag_lookalikes_are_not_detected(text: str) -> None:
+    found = [(m.detector_id, m.start, m.end) for m in _all_matches(text)]
+    assert found == [], text
+
+
+def test_label_arrow_in_prose_is_over_redacted() -> None:
+    """Accepted false positive: a credential label then an arrow spans the next word."""
+    redacted = _redact("password -> reset flow")
+    assert redacted == "password -> " + placeholder("password_assignment") + " flow"
+
+
 def test_placeholders_trigger_nothing() -> None:
     for category in sorted(ALL_CATEGORIES):
         text = placeholder(cast("Category", category))
-        for wrapper in ("{}", "password={}", "Bearer {}", "api-key: {}", '"secret": "{}"'):
+        for wrapper in (
+            "{}",
+            "password={}",
+            "Bearer {}",
+            "api-key: {}",
+            '"secret": "{}"',
+            "password => {}",
+            "password := '{}'",
+            "client_secret <- {}",
+            'password == "{}"',
+            "--password {}",
+            "-ClientSecret '{}'",
+        ):
             assert _all_matches(wrapper.format(text)) == []
 
 
@@ -472,6 +689,28 @@ _ADVERSARIAL = {
     "quote-open-repeat": _rep("pwd" + "='"),
     "escaped-quote-repeat": "pwd" + '="' + '\\"' * (_ONE_MB // 2),
     "doubled-quote-repeat": "pwd" + "='" + "''a" * (_ONE_MB // 3),
+    "fat-arrow-chain-repeat": _rep("password => "),
+    "fat-arrow-tight-repeat": _rep("password=>"),
+    "walrus-chain-repeat": _rep("password := "),
+    "thin-arrow-tight-repeat": _rep("password->"),
+    "left-arrow-repeat": _rep("a<-"),
+    "label-left-arrow-repeat": _rep("pwd<-"),
+    "comparison-repeat": _rep("password === "),
+    "label-dash-repeat": _rep("db_password-"),
+    "flag-repeat": _rep("--password "),
+    "flag-tight-repeat": _rep("--password"),
+    "flag-other-repeat": _rep("--x y "),
+    "flag-quote-open-repeat": _rep('-a "'),
+    "flag-dash-run": "--" + "a" * _ONE_MB,
+    "escaped-quote-run": "\\" + '"' + "\\" * _ONE_MB,
+    "escaped-quote-pair-repeat": _rep("\\" + '"'),
+    "escaped-value-open-repeat": _rep("pwd=" + "\\" + '"'),
+    "escaped-value-unterminated": "pwd=" + "\\" + '"' + "a" * _ONE_MB,
+    "escaped-label-repeat": _rep("\\" + '"' + "password" + "\\" + '": '),
+    "escaped-tab-repeat": _rep("\\t"),
+    "bearer-escaped-tab-run": "bearer" + "\\t" * (_ONE_MB // 2) + "[",
+    "bearer-escaped-tab-repeat": _rep("bearer" + "\\t"),
+    "bearer-backslash-run": "bearer" + "\\" * _ONE_MB,
 }
 
 
