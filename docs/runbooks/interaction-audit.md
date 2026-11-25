@@ -116,7 +116,7 @@ and `capture_shed` is counted. At most `NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQ
 
 `captured`, `capture_skipped_no_policy` (by off reason), `capture_failed` (by reason),
 `capture_shed` and `capture_skipped_item_cap`, shown by the capture-status route and the admin
-page `Admin > Capture`. Neither shows content.
+page Admin, Interaction capture (`/admin/capture`). Neither shows content.
 
 ### Worker lifecycle target
 
