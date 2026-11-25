@@ -27,7 +27,13 @@ from neurosphere_core.classification import (
 )
 from neurosphere_core.classification.detectors.secret_detectors import secret_detectors
 
-from .synth import CREDENTIAL_GENERATORS, EXPECTED_CATEGORY, NEGATIVE_LOOKALIKES, secret_value
+from .synth import (
+    CREDENTIAL_GENERATORS,
+    EXPECTED_CATEGORY,
+    NEGATIVE_LOOKALIKES,
+    assignment_value,
+    secret_value,
+)
 
 _PATH = Path(__file__).resolve().parents[4] / "tests" / "contracts" / "validators.py"
 _SPEC = importlib.util.spec_from_file_location("ns_contract_validators_prp101_item2", _PATH)
@@ -341,6 +347,73 @@ def test_negative_lookalikes_are_not_detected(seed: int) -> None:
         assert found == [], f"lookalike #{NEGATIVE_LOOKALIKES(random.Random(seed)).index(text)}"
 
 
+def _assert_value_gone(text: str, value: str, label: str) -> None:
+    redacted = _redact(text)
+    assert check_secret_free_text(redacted) == [], label
+    fragments = {value[i : i + 6] for i in range(len(value) - 5)}
+    survivors = [f for f in fragments if f in redacted and f not in text.replace(value, "")]
+    assert not survivors, f"{label}: a fragment survived"
+    assert _all_matches(redacted) == [], f"{label}: not idempotent"
+
+
+_CHAIN_OUTER = ("password", "token", "secret", "api_key")
+_CHAIN_INNER = ("password", "client_secret", "api_key", "secret", "pwd")
+_CHAIN_OPS = ("=", ":", " = ", ": ")
+_CHAIN_QUOTES = ("", "'", '"')
+
+
+@pytest.mark.parametrize("inner", _CHAIN_INNER)
+@pytest.mark.parametrize("outer", _CHAIN_OUTER)
+def test_chained_labels_span_the_inner_value(outer: str, inner: str) -> None:
+    """``password: client_secret = 'v'``: the outer label must not take the inner label as
+    its value and leave the real value behind."""
+    for op in _CHAIN_OPS:
+        for quote in _CHAIN_QUOTES:
+            for seed in range(5):
+                value = assignment_value(random.Random(f"chain:{outer}:{inner}:{seed}"))
+                text = f"{outer}: {inner}{op}{quote}{value}{quote}"
+                label = f"{outer}/{inner}/{op!r}/{quote!r}/{seed}"
+                for template in CONTEXTS:
+                    _assert_value_gone(template.format(text), value, label)
+
+
+@pytest.mark.parametrize("depth", [2, 3, 5, 12])
+def test_label_chains_of_any_depth_are_spanned(depth: int) -> None:
+    labels = (_CHAIN_OUTER + _CHAIN_INNER) * depth
+    for seed in range(5):
+        rng = random.Random(f"depth:{depth}:{seed}")
+        value = assignment_value(rng)
+        chain = "".join(f"{rng.choice(labels)}{rng.choice(_CHAIN_OPS)}" for _ in range(depth))
+        _assert_value_gone(f"cfg {chain}'{value}' tail", value, f"depth {depth} seed {seed}")
+        assert "tail" in _redact(f"cfg {chain}'{value}' tail")
+
+
+def test_metadata_outer_label_still_lets_the_inner_label_match() -> None:
+    value = assignment_value(random.Random(31))
+    for outer in ("token_count", "secret_name", "max_tokens"):
+        _assert_value_gone(f"{outer}: client_secret = {value}", value, outer)
+
+
+@pytest.mark.parametrize("quote", ["'", '"'])
+def test_quoted_values_are_spanned_whole(quote: str) -> None:
+    for seed in range(10):
+        rng = random.Random(f"quoted:{quote}:{seed}")
+        first, second = assignment_value(rng), assignment_value(rng)
+        bodies = {
+            "spaces": f"{first} and {second}",
+            "escaped": f"{first}\\{quote} {second}",
+            "doubled": f"{first}{quote}{quote}s {second}",
+        }
+        for name, body in bodies.items():
+            for label in ("password", "client_secret", "pwd"):
+                for op in ("=", ": ", " = "):
+                    text = f"{label}{op}{quote}{body}{quote} next"
+                    tag = f"{name} {label}{op!r} seed {seed}"
+                    _assert_value_gone(text, first, tag)
+                    _assert_value_gone(text, second, tag)
+                    assert _redact(text).endswith(" next"), tag
+
+
 def test_placeholders_trigger_nothing() -> None:
     for category in sorted(ALL_CATEGORIES):
         text = placeholder(cast("Category", category))
@@ -390,6 +463,15 @@ _ADVERSARIAL = {
     "url-user-no-colon": "x://" + "u@" * (_ONE_MB // 2),
     "url-scheme-colon-repeat": _rep("x://x:x"),
     "xsig-repeat": _rep("xsig="),
+    "label-chain-repeat": _rep("password: "),
+    "label-chain-tight-repeat": _rep("password:"),
+    "metadata-chain-repeat": _rep("token_count: "),
+    "metadata-chain-tight-repeat": _rep("token_count:"),
+    "mixed-chain-repeat": _rep("token_count: client_secret = "),
+    "quoted-chain-repeat": _rep("password: 'secret': "),
+    "quote-open-repeat": _rep("pwd" + "='"),
+    "escaped-quote-repeat": "pwd" + '="' + '\\"' * (_ONE_MB // 2),
+    "doubled-quote-repeat": "pwd" + "='" + "''a" * (_ONE_MB // 3),
 }
 
 
