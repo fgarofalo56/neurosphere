@@ -110,6 +110,7 @@ __all__ = [
     "POLICY_VIOLATIONS_CONTAINER",
     "QUERY_EQ_FIELDS",
     "QUERY_IN_FIELDS",
+    "QUERY_NE_FIELDS",
     "VIOLATION_MODIFIED",
     "VIOLATION_NOT_FOUND",
     "VIOLATION_RESOLVED",
@@ -130,6 +131,7 @@ __all__ = [
     "ObservedViolation",
     "PolicyDefinitionStore",
     "PolicyPublishedError",
+    "ResolveReport",
     "StoredBinding",
     "StoredEvaluationStatus",
     "StoredException",
@@ -168,6 +170,8 @@ MAX_VERSIONS: Final = 1000
 MAX_DOMAIN_FILTER: Final = 500
 _MAX_GENERATIONS: Final = 1000
 _MAX_RESOLVE: Final = 1000
+#: ``resolve_missing`` reads at most this many batches of ``_MAX_RESOLVE`` rows per call.
+_MAX_RESOLVE_BATCHES: Final = 50
 _UPSERT_ATTEMPTS: Final = 3
 
 # --- reason codes -------------------------------------------------------------------------------
@@ -210,6 +214,9 @@ QUERY_EQ_FIELDS: Final = frozenset(
 )
 #: Fields a structured query may test for membership in a list of values.
 QUERY_IN_FIELDS: Final = frozenset({"domain_id", "status"})
+#: Fields a structured query may test for inequality. A document whose field is missing or
+#: null never matches (Cosmos compares across types as undefined, which filters the row out).
+QUERY_NE_FIELDS: Final = frozenset({"last_run_id"})
 
 _EXCEPTION_TRANSITIONS: Final[Mapping[str, frozenset[str]]] = {
     "requested": frozenset({"approved", "rejected", "expired", "revoked"}),
@@ -317,6 +324,7 @@ class DocumentQuery:
     domain_id: str | None = None
     equals: tuple[tuple[str, Any], ...] = ()
     any_of: tuple[tuple[str, tuple[Any, ...]], ...] = ()
+    not_equals: tuple[tuple[str, Any], ...] = ()
     after: str | None = None
     descending: bool = False
 
@@ -327,7 +335,14 @@ class DocumentQuery:
         for name, values in self.any_of:
             if name not in QUERY_IN_FIELDS or not values:
                 raise ValueError(f"field {name!r} is not queryable by membership")
-        names = [n for n, _ in self.equals] + [n for n, _ in self.any_of]
+        for name, _ in self.not_equals:
+            if name not in QUERY_NE_FIELDS:
+                raise ValueError(f"field {name!r} is not queryable by inequality")
+        names = (
+            [n for n, _ in self.equals]
+            + [n for n, _ in self.any_of]
+            + [n for n, _ in self.not_equals]
+        )
         if len(names) != len(set(names)):
             raise ValueError("a field may be tested once per query")
         if not 1 <= self.limit <= MAX_VERSIONS + 1:
@@ -437,6 +452,18 @@ class ObservedViolation:
 
     stored: StoredViolation
     created: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ResolveReport:
+    """Result of :meth:`ViolationStore.resolve_missing_report`.
+
+    ``truncated`` is True when the batch cap stopped the pass before every stale violation was
+    read: the rest stay active and the caller reports the rule ``truncated``.
+    """
+
+    resolved: tuple[StoredViolation, ...]
+    truncated: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -565,6 +592,19 @@ class ViolationStore(Protocol):
     ) -> builtins.list[StoredViolation]:
         """Resolve active violations of the rule that run ``run_id`` did not observe. Call only
         after a COMPLETE (not truncated, not failed) run of that rule over ``domain_ids``."""
+        ...
+
+    async def resolve_missing_report(
+        self,
+        customer_id: str,
+        domain_ids: Sequence[str],
+        *,
+        run_id: str,
+        policy_id: str,
+        rule_id: str,
+        now: datetime,
+    ) -> ResolveReport:
+        """:meth:`resolve_missing` plus whether the batch cap left stale violations unread."""
         ...
 
     async def set_exception(
@@ -813,13 +853,21 @@ class DocumentPolicyDefinitionStore:
                 after=decode_cursor(page.cursor) if page.cursor else None,
             )
         )
+        # De-duplicate versions over every fetched row (the look-ahead row included, so a newer
+        # version just past the page drops the stale one here and is listed on the next page),
+        # but page on the RAW rows: a stale ``superseded=False`` version dropped by the de-dup
+        # must not end the listing early (review A, PRP-105 item 3).
         latest: dict[str, dict[str, Any]] = {}
         for row in rows:
             seen = latest.get(row["policy_id"])
             if seen is None or row["policy_version"] > seen["policy_version"]:
                 latest[row["policy_id"]] = row
-        kept = [r for r in rows if latest[r["policy_id"]] is r]
-        return _page([self._load(r) for r in kept], [r["sort_key"] for r in kept], page.page_size)
+        head = rows[: page.page_size]
+        kept = [r for r in head if latest[r["policy_id"]] is r]
+        cursor = (
+            encode_cursor(head[-1]["sort_key"]) if len(rows) > page.page_size and head else None
+        )
+        return Page[StoredPolicy](items=tuple(self._load(r) for r in kept), next_cursor=cursor)
 
     async def list_published(
         self,
@@ -979,10 +1027,26 @@ class DocumentEvaluationStatusStore:
 
 
 class DocumentViolationStore:
-    """:class:`ViolationStore` written once over a :class:`DocumentBackend`."""
+    """:class:`ViolationStore` written once over a :class:`DocumentBackend`.
 
-    def __init__(self, backend: DocumentBackend) -> None:
+    ``resolve_batch`` rows are read per ``resolve_missing`` query and at most
+    ``resolve_max_batches`` queries run per call; past that the report says ``truncated``.
+    """
+
+    def __init__(
+        self,
+        backend: DocumentBackend,
+        *,
+        resolve_batch: int = _MAX_RESOLVE,
+        resolve_max_batches: int = _MAX_RESOLVE_BATCHES,
+    ) -> None:
+        if not 1 <= resolve_batch <= MAX_VERSIONS:
+            raise ValueError("resolve_batch out of range")
+        if resolve_max_batches < 1:
+            raise ValueError("resolve_max_batches must be at least 1")
         self._backend = backend
+        self._resolve_batch = resolve_batch
+        self._resolve_max_batches = resolve_max_batches
 
     @staticmethod
     def _document(violation: PolicyViolation, last_run_id: str | None) -> dict[str, Any]:
@@ -1102,19 +1166,59 @@ class DocumentViolationStore:
         domains = _check_domains(domain_ids)
         if not domains:
             return []
-        rows = await self._backend.query(
-            DocumentQuery(
-                customer_id=customer_id,
-                limit=_MAX_RESOLVE,
-                equals=(
-                    ("doc_kind", DOC_KIND_VIOLATION),
-                    ("policy_id", policy_id),
-                    ("rule_id", rule_id),
-                ),
-                any_of=(("domain_id", domains), ("status", _ACTIVE_VIOLATION)),
-            )
+        report = await self.resolve_missing_report(
+            customer_id,
+            domains,
+            run_id=run_id,
+            policy_id=policy_id,
+            rule_id=rule_id,
+            now=now,
         )
+        return builtins.list(report.resolved)
+
+    async def resolve_missing_report(
+        self,
+        customer_id: str,
+        domain_ids: Sequence[str],
+        *,
+        run_id: str,
+        policy_id: str,
+        rule_id: str,
+        now: datetime,
+    ) -> ResolveReport:
+        domains = _check_domains(domain_ids)
+        if not domains:
+            return ResolveReport(resolved=(), truncated=False)
         resolved_at = _timestamp(now)
+        resolved: builtins.list[StoredViolation] = []
+        after: str | None = None
+        for batch in range(self._resolve_max_batches):
+            # Rows this run already observed are excluded by the query itself, so they never
+            # count against the batch; ``after`` pages past rows left active by a lost race.
+            rows = await self._backend.query(
+                DocumentQuery(
+                    customer_id=customer_id,
+                    limit=self._resolve_batch,
+                    equals=(
+                        ("doc_kind", DOC_KIND_VIOLATION),
+                        ("policy_id", policy_id),
+                        ("rule_id", rule_id),
+                    ),
+                    any_of=(("domain_id", domains), ("status", _ACTIVE_VIOLATION)),
+                    not_equals=(("last_run_id", run_id),),
+                    after=after,
+                )
+            )
+            resolved.extend(await self._resolve_rows(rows, run_id, resolved_at))
+            if len(rows) < self._resolve_batch:
+                return ResolveReport(resolved=tuple(resolved), truncated=False)
+            if batch + 1 < self._resolve_max_batches:
+                after = str(rows[-1]["sort_key"])
+        return ResolveReport(resolved=tuple(resolved), truncated=True)
+
+    async def _resolve_rows(
+        self, rows: Sequence[Mapping[str, Any]], run_id: str, resolved_at: str
+    ) -> builtins.list[StoredViolation]:
         resolved: builtins.list[StoredViolation] = []
         for row in rows:
             if row.get("last_run_id") == run_id:

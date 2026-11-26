@@ -100,6 +100,9 @@ class InMemoryDocumentBackend:
                 continue
             if any(name not in doc or doc[name] not in values for name, values in query.any_of):
                 continue
+            # Cosmos semantics: a missing or null field is undefined under ``!=`` (no match).
+            if any(doc.get(name) is None or doc[name] == value for name, value in query.not_equals):
+                continue
             key = doc.get("sort_key")
             if not isinstance(key, str):
                 continue
@@ -128,9 +131,17 @@ class InMemoryEvaluationStatusStore(DocumentEvaluationStatusStore):
 
 
 class InMemoryViolationStore(DocumentViolationStore):
-    def __init__(self, backend: InMemoryDocumentBackend | None = None) -> None:
+    def __init__(
+        self,
+        backend: InMemoryDocumentBackend | None = None,
+        *,
+        resolve_batch: int = 1000,
+        resolve_max_batches: int = 50,
+    ) -> None:
         self.backend = backend or InMemoryDocumentBackend()
-        super().__init__(self.backend)
+        super().__init__(
+            self.backend, resolve_batch=resolve_batch, resolve_max_batches=resolve_max_batches
+        )
 
 
 class InMemoryExceptionStore(DocumentExceptionStore):
