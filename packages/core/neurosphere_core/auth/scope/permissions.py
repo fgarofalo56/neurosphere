@@ -7,13 +7,14 @@ applies tenant-wide and there is no wildcard, superuser or bypass permission any
 =================  ====================================================================
 Role               Permissions (within the domains the assignment names)
 =================  ====================================================================
-viewer             data.read, grant.read
+viewer             data.read, grant.read, govpolicy.read
 analyst            viewer + data.export, report.create, action.propose
-domain_steward     analyst + catalog.curate, action.approve, action.execute, grant.write
+domain_steward     analyst + catalog.curate, action.approve, action.execute, grant.write,
+                   govpolicy.manage
 admin              data.read, config.manage, policy.manage, revocation.manage, grant.read,
-                   grant.write, lifecycle.manage
-security_auditor   audit.read, audit.export, evidence.read  (no data.read: auditors read
-                   evidence, not data)
+                   grant.write, lifecycle.manage, govpolicy.read, govpolicy.manage
+security_auditor   audit.read, audit.export, evidence.read, govpolicy.read  (no data.read:
+                   auditors read evidence, not data)
 =================  ====================================================================
 
 "Pro" is an Analyst capability tier (C6), not a role: it confers nothing from the Admin row.
@@ -29,6 +30,12 @@ on exactly one named resource and never add a role or a domain.
 ``lifecycle.manage`` (Admin; PRP-65, used by PRP-23) governs data-lifecycle requests, holds and
 mappings. ``audit.export`` (Security Auditor only; PRP-65 clarification 8) governs bulk audit
 export and SIEM forwarding; Admin never reads audit.
+
+``govpolicy.read`` / ``govpolicy.manage`` (PRP-105, owner decision GD-21) govern governance
+policies, violations, exceptions and enforcement bindings: every role but the interaction
+investigator reads them; Domain Steward and Admin draft and record. Publishing is an action
+intent, approved under ``action.approve`` (GD-20), never this permission alone. They are
+unrelated to ``policy.manage``, the identity principal-policy permission.
 
 Customer-wide (deployment-scoped) authority (#114): there is still no customer-wide role and no
 wildcard. A change that applies to the whole customer requires the permission on ONE reserved
@@ -96,15 +103,18 @@ class Permission(StrEnum):
     GRANT_WRITE = "grant.write"
     LIFECYCLE_MANAGE = "lifecycle.manage"
     AUDIT_EXPORT = "audit.export"
+    GOVPOLICY_READ = "govpolicy.read"
+    GOVPOLICY_MANAGE = "govpolicy.manage"
 
 
-_VIEWER = frozenset({Permission.DATA_READ, Permission.GRANT_READ})
+_VIEWER = frozenset({Permission.DATA_READ, Permission.GRANT_READ, Permission.GOVPOLICY_READ})
 _ANALYST = _VIEWER | {Permission.DATA_EXPORT, Permission.REPORT_CREATE, Permission.ACTION_PROPOSE}
 _STEWARD = _ANALYST | {
     Permission.CATALOG_CURATE,
     Permission.ACTION_APPROVE,
     Permission.ACTION_EXECUTE,
     Permission.GRANT_WRITE,
+    Permission.GOVPOLICY_MANAGE,
 }
 _ADMIN = frozenset(
     {
@@ -115,9 +125,18 @@ _ADMIN = frozenset(
         Permission.GRANT_READ,
         Permission.GRANT_WRITE,
         Permission.LIFECYCLE_MANAGE,
+        Permission.GOVPOLICY_READ,
+        Permission.GOVPOLICY_MANAGE,
     }
 )
-_AUDITOR = frozenset({Permission.AUDIT_READ, Permission.AUDIT_EXPORT, Permission.EVIDENCE_READ})
+_AUDITOR = frozenset(
+    {
+        Permission.AUDIT_READ,
+        Permission.AUDIT_EXPORT,
+        Permission.EVIDENCE_READ,
+        Permission.GOVPOLICY_READ,
+    }
+)
 
 ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType(
     {

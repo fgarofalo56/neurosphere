@@ -37,11 +37,19 @@ from .scope_helpers import (
 P = Permission
 
 EXPECTED = {
-    Role.VIEWER: {P.DATA_READ, P.GRANT_READ},
-    Role.ANALYST: {P.DATA_READ, P.GRANT_READ, P.DATA_EXPORT, P.REPORT_CREATE, P.ACTION_PROPOSE},
+    Role.VIEWER: {P.DATA_READ, P.GRANT_READ, P.GOVPOLICY_READ},
+    Role.ANALYST: {
+        P.DATA_READ,
+        P.GRANT_READ,
+        P.GOVPOLICY_READ,
+        P.DATA_EXPORT,
+        P.REPORT_CREATE,
+        P.ACTION_PROPOSE,
+    },
     Role.DOMAIN_STEWARD: {
         P.DATA_READ,
         P.GRANT_READ,
+        P.GOVPOLICY_READ,
         P.DATA_EXPORT,
         P.REPORT_CREATE,
         P.ACTION_PROPOSE,
@@ -49,6 +57,7 @@ EXPECTED = {
         P.ACTION_APPROVE,
         P.ACTION_EXECUTE,
         P.GRANT_WRITE,
+        P.GOVPOLICY_MANAGE,  # PRP-105 GD-21
     },
     Role.ADMIN: {
         P.DATA_READ,
@@ -58,17 +67,20 @@ EXPECTED = {
         P.GRANT_READ,
         P.GRANT_WRITE,
         P.LIFECYCLE_MANAGE,  # PRP-65 clarification 9
+        P.GOVPOLICY_READ,  # PRP-105 GD-21
+        P.GOVPOLICY_MANAGE,
     },
     Role.SECURITY_AUDITOR: {
         P.AUDIT_READ,
         P.AUDIT_EXPORT,  # PRP-65 clarification 8: auditor only, Admin never reads audit
         P.EVIDENCE_READ,
+        P.GOVPOLICY_READ,  # PRP-105 GD-21: auditors read governance policy state
     },
     # PRP-99 item 5: inert until PRP-104 assigns interaction.read and interaction.export.
     Role.INTERACTION_INVESTIGATOR: set(),
 }
 # Held by Admin and Domain Steward alike (PRP-33 item 5), so not an admin-only permission.
-SHARED_ADMIN_STEWARD = {P.GRANT_WRITE}
+SHARED_ADMIN_STEWARD = {P.GRANT_WRITE, P.GOVPOLICY_MANAGE}
 
 
 @pytest.mark.parametrize("role_", list(Role))
@@ -252,3 +264,24 @@ def test_prp65_permissions_have_exactly_one_holder() -> None:
     assert {r for r in Role if P.AUDIT_EXPORT in role_permissions(r)} == {Role.SECURITY_AUDITOR}
     # Neither is a grant permission: a resource-scoped grant can never confer them.
     assert not {P.LIFECYCLE_MANAGE, P.AUDIT_EXPORT} & set(GRANT_PERMISSIONS.values())
+
+
+def test_govpolicy_permissions_follow_gd21() -> None:
+    """PRP-105 GD-21: every role but the investigator reads; Steward and Admin manage."""
+    assert (P.GOVPOLICY_READ.value, P.GOVPOLICY_MANAGE.value) == (
+        "govpolicy.read",
+        "govpolicy.manage",
+    )
+    readers = {r for r in Role if P.GOVPOLICY_READ in role_permissions(r)}
+    managers = {r for r in Role if P.GOVPOLICY_MANAGE in role_permissions(r)}
+    assert readers == {
+        Role.VIEWER,
+        Role.ANALYST,
+        Role.DOMAIN_STEWARD,
+        Role.ADMIN,
+        Role.SECURITY_AUDITOR,
+    }
+    assert managers == {Role.DOMAIN_STEWARD, Role.ADMIN}
+    # Unrelated to the identity principal-policy permission, and never a grant permission.
+    assert P.POLICY_MANAGE.value == "policy.manage"
+    assert not {P.GOVPOLICY_READ, P.GOVPOLICY_MANAGE} & set(GRANT_PERMISSIONS.values())
