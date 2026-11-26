@@ -10,7 +10,8 @@ enforcement point can block), :mod:`.store` (store protocols, typed errors and t
 logic), :mod:`.memory_store` and :mod:`.cosmos_store` (the two backends); item 3 adds
 :mod:`.evaluate` (the evaluation run), :mod:`.exceptions` (exception requests and their HITL
 read-back), :mod:`.projection` (the catalog ``Policy`` entity), :mod:`.lifecycle` (publish and
-retire), :mod:`.actions` (the intent diff grammars) and :mod:`.events` (the violation event sink).
+retire), :mod:`.actions` (the intent diff grammars) and :mod:`.events` (the violation event sink);
+item 4 adds :mod:`.decide` (the in-process decision function, :class:`PolicyDecider`).
 """
 
 from neurosphere_core.governance.policy.actions import (
@@ -43,6 +44,14 @@ from neurosphere_core.governance.policy.cosmos_store import (
     CosmosPolicyDefinitionStore,
     CosmosViolationStore,
     create_policy_containers,
+)
+from neurosphere_core.governance.policy.decide import (
+    DECIDABLE_KINDS,
+    AuditDecisionRecorder,
+    DecisionAuditRecorder,
+    MatchBinding,
+    PolicyDecider,
+    PolicyDecision,
 )
 from neurosphere_core.governance.policy.evaluate import (
     EvaluationBudget,
@@ -143,6 +152,7 @@ from neurosphere_core.governance.policy.validation import (
 )
 
 __all__ = [
+    "DECIDABLE_KINDS",
     "DEFAULT_EXCEPTION_MAX_DAYS",
     "DETECTIVE_EVALUATION_CAN_BLOCK",
     "ENFORCEMENT_BINDING_ENTITY_TYPE",
@@ -155,12 +165,14 @@ __all__ = [
     "POINTS_BY_RULE_KIND",
     "POLICY_SCHEMA_VERSION",
     "RULE_KINDS",
+    "AuditDecisionRecorder",
     "BindingStore",
     "CosmosBindingStore",
     "CosmosEvaluationStatusStore",
     "CosmosExceptionStore",
     "CosmosPolicyDefinitionStore",
     "CosmosViolationStore",
+    "DecisionAuditRecorder",
     "EvaluationBudget",
     "EvaluationRun",
     "EvaluationStatus",
@@ -183,11 +195,14 @@ __all__ = [
     "InMemoryViolationStore",
     "LifecycleAuditContext",
     "LifecycleOutcome",
+    "MatchBinding",
     "ModeChangeDiff",
     "NoopViolationEventSink",
     "ObservedViolation",
     "PermissionCheck",
     "PointCapability",
+    "PolicyDecider",
+    "PolicyDecision",
     "PolicyDefinitionStore",
     "PolicyEvaluator",
     "PolicyLifecycle",
