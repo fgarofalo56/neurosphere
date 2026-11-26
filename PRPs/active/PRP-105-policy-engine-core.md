@@ -162,6 +162,7 @@ tier2_appends:
   - services/api/tests/runtime_gateway_builder/test_gateway_builder.py
   - services/api/tests/runtime_data/data_helpers.py
   - services/workers/tests/worker_roles/test_roles.py
+  - services/workers/tests/azure_monitor_ai_role/test_default_noop.py
   - mkdocs.yml
 must_not_touch:
   - packages/contracts/**
@@ -284,7 +285,7 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 | 2 | merged | worktree-agent-abc05e501df34c26f | 5703e615 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED; follow-ups #417; draft PR 416 |
 | 3 | merged | worktree-agent-a015d8b9f985af658 | db9fb6e9 merged as 04ba198e 2026-11-25; review A fixes included; review B CHANGES REQUIRED (blocking: exception self-approval via retry path) -> rework 0a8d713c merged as a3fde3b9 2026-11-26, Haiku confirm CONFIRMED; gates 952 passed, Snyk 0; contract gap #418 (justification text) |
 | 4 | merged | worktree-agent-a704f5021d19aa845 | 1914691a merged as 1f307158 2026-11-26; review B non-blocking fixes (model_allow_list domain governance, expiry/scope guard tests) in rework a3fde3b9; gates 952 passed, Snyk 0 |
-| 5 | in-progress | (agent worktree) | dispatched 2026-11-26, opus |
+| 5 | review | worktree-agent-a530dffe955931ce6 | 33a78ec0 merged as 2cfea1a4 2026-11-26; orchestrator relaxed azure_monitor_ai_role/test_default_noop.py "role last" pin to membership; full services/workers/tests 1073 passed, ruff/format/pyright clean; awaits checkpoint review C |
 | 6 | in-progress | (agent worktree) | dispatched 2026-11-26, opus; brief adds inventory lines: runtime_routes/test_manifest_routes_serve.py, docs/runbooks/system-settings.md row, openapi.json + docs/reference regen |
 | 7 | todo | | |
 | 8 | todo | | |
