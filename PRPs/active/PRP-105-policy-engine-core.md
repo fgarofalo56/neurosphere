@@ -278,9 +278,9 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | (agent worktree) | dispatched 2026-11-25, opus |
-| 2 | verifying | worktree-agent-abc05e501df34c26f | 5703e615; orchestrator re-ran ruff/format/pyright/pytest (33 passed) 2026-11-25; awaits item 1 merge + checkpoint review A |
-| 3 | todo | | |
+| 1 | merged | worktree-agent-a3256cd8dd0c738f4 | b03fe4a4+4612ced3 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED (mutation tests killed 5/7, 2 survivors non-gaps); follow-ups #417; draft PR 416 |
+| 2 | merged | worktree-agent-abc05e501df34c26f | 5703e615 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED; follow-ups #417; draft PR 416 |
+| 3 | in-progress | (agent worktree) | dispatched 2026-11-25, opus; also carries review A fixes: policy list cursor from raw rows, resolve_missing 1000-row cap |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
