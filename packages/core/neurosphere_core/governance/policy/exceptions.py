@@ -11,7 +11,11 @@ Request (:class:`ExceptionRequester`):
   90, never above the contract's 365) after the request;
 * the exception id and the HITL item id are derived from the violation id and a request ordinal
   (exceptions of the violation already closed + 1), so a retried request derives the same ids and
-  ends in ``stale_version`` ``review_item_exists`` instead of a second review;
+  ends in ``stale_version`` ``review_item_exists`` instead of a second review. Only the SAME
+  requester may retry: when the derived exception already exists under another
+  ``requested_by`` (its review item was never opened), the request is ``stale_version``
+  ``exception_exists``, so a second principal can never become the maker of the first one's
+  request;
 * a ``policy_exception`` HITL item is opened with ``subject_ref`` = the violation's canonical id
   and the requester as maker, so the shipped self-approval rule refuses the requester as
   reviewer (``self_approval_forbidden``); reviewers need ``catalog.curate`` (``hitl/policy.py``);
@@ -28,6 +32,12 @@ means: approved and unexpired); ``rejected`` or an expired review -> the excepti
 violation stays ``open``; an approved exception past its expiry -> ``expired`` and the violation
 returns to ``open``. Each decision is audited ``govpolicy.exception_decide`` and sent to the
 :class:`~.events.ViolationEventSink`.
+
+Separation of duties is re-checked on read-back, independent of HITL: an ``approved`` review
+whose reviewer IS the exception's ``requested_by``, or whose item maker is not
+``requested_by``, is never honoured. The exception is closed ``rejected`` (terminal, so the
+violation stays ``open`` and a fresh request can be made), the audit ``after`` record carries
+detail ``self_approval_refused`` and the pass counts it in ``self_approval_refused``.
 """
 
 from __future__ import annotations
@@ -96,6 +106,7 @@ __all__ = [
     "OPERATION_EXCEPTION_DECIDE",
     "OPERATION_EXCEPTION_REQUEST",
     "REQUESTER_UNRESOLVABLE",
+    "SELF_APPROVAL_REFUSED",
     "VIOLATION_NOT_OPEN",
     "ExceptionReconciler",
     "ExceptionRequest",
@@ -122,6 +133,9 @@ VIOLATION_NOT_OPEN: Final = "violation_not_open"
 INVALID_JUSTIFICATION: Final = "invalid_justification"
 INVALID_EXCEPTION_EXPIRY: Final = "invalid_exception_expiry"
 REQUESTER_UNRESOLVABLE: Final = "requester_unresolvable"
+#: Audit detail of an approval the reconciler refused (reviewer or maker is not separated from
+#: the requester); the exception is closed ``rejected``.
+SELF_APPROVAL_REFUSED: Final = "self_approval_refused"
 
 #: Fixed namespace of the deterministic exception and review-item ids (never change).
 _NAMESPACE: Final = uuid.UUID("9b2f1c64-7e0d-4a38-b5c1-2d6e8f0a4c17")
@@ -337,6 +351,12 @@ class ExceptionRequester:
                 existing = await self._exceptions.get(customer, request.domain_id, exception_id)
                 if existing is None:
                     raise
+                if existing.exception.requested_by.root != requester:
+                    # Another principal's open request on this violation. Re-opening its review
+                    # under THIS caller as maker would let the original requester approve it.
+                    raise GovernancePolicyStaleError(
+                        EXCEPTION_EXISTS, "another principal's request is open"
+                    ) from None
                 made = existing  # a retry: opening the review below reports review_item_exists
             item = await self._hitl.open_item(
                 kind="policy_exception",
@@ -436,9 +456,22 @@ class ExceptionSyncSummary:
     violations_excepted: int = 0
     violations_reopened: int = 0
     reviewer_unresolved: int = 0
+    self_approval_refused: int = 0
     failed: int = 0
     truncated: bool = False
     decided_ids: list[str] = field(default_factory=list)
+
+
+def _self_approved(exception: PolicyException, item: ReviewItem, reviewer: str) -> bool:
+    """True when an approval would let the requester approve their own exception.
+
+    Either the reviewer IS the requester, or the review item's maker is not the requester (so
+    HITL's maker-checker compared the reviewer against somebody else).
+    """
+    requester = exception.requested_by.root
+    maker = item.maker_principal_id
+    maker_id = str(getattr(maker, "root", maker)) if maker is not None else None
+    return reviewer == requester or maker_id != requester
 
 
 class ExceptionReconciler:
@@ -542,6 +575,23 @@ class ExceptionReconciler:
             summary.reviewer_unresolved += 1
             return
         decided_at = item.decided_at or now
+        if state == "approved" and _self_approved(exception, item, reviewer):
+            # The review cannot stand: close it rejected (terminal, audited, violation stays open).
+            await self._decide(
+                ctx,
+                stored,
+                "rejected",
+                (reviewer, decided_at),
+                now,
+                detail=SELF_APPROVAL_REFUSED,
+            )
+            summary.self_approval_refused += 1
+            summary.decided_ids.append(exception.exception_id.root)
+            _log.warning(
+                "govpolicy_exception_self_approval_refused exception_id=%s",
+                exception.exception_id.root,
+            )
+            return
         target: Literal["approved", "rejected"] = "approved" if state == "approved" else "rejected"
         decided = await self._decide(ctx, stored, target, (reviewer, decided_at), now)
         summary.decided_ids.append(exception.exception_id.root)
@@ -572,6 +622,8 @@ class ExceptionReconciler:
         status: Literal["approved", "rejected", "expired"],
         decision: tuple[str, datetime] | None,
         now: datetime,
+        *,
+        detail: str | None = None,
     ) -> StoredException:
         exception = stored.exception
         chain = governance_policy_chain_id(exception.customer_id.root)
@@ -597,7 +649,11 @@ class ExceptionReconciler:
         await self._audit.append(
             chain,
             build_after(
-                ctx, subject, result="succeeded", verified=True, detail=f"exception_{status}"
+                ctx,
+                subject,
+                result="succeeded",
+                verified=True,
+                detail=detail or f"exception_{status}",
             ),
         )
         await self._emit(changed.exception, status, ctx.correlation_id)

@@ -29,6 +29,8 @@ from .decide_helpers import (
     set_mode,
     world,
 )
+from .rules.rules_helpers import agent, agent_id
+from .rules.rules_helpers import make_scope as catalog_scope
 
 
 def _strip_id(payload: str, decision_id: str) -> str:
@@ -171,6 +173,49 @@ async def test_exception_in_a_domain_the_scope_cannot_see_does_not_apply() -> No
 
     assert response.response.effect == "deny"
     assert response.applied_exception_ids == ()
+
+
+async def test_loaded_exception_of_an_unseen_domain_is_not_applied_or_described() -> None:
+    """A wider caller loaded domain b's exceptions; a domain-a-only caller must not use them."""
+    engine = await world()
+    pid = await publish(engine, "data_sensitivity_access", domain=CONTROL)
+    await set_mode(engine, pid, "tool_call", "enforce")
+    exception_id = await approve_exception(
+        engine,
+        policy_id=pid,
+        rule_id="r-data-sensitivity-access",
+        subject=READER,
+        domain=DOMAIN_B,
+    )
+    fields = BREACH["data_sensitivity_access"][2]
+    pdp = decider(engine)
+    wider = await pdp.decide_detail(
+        scope_for([DOMAIN_A, DOMAIN_B]), request("tool_call", **fields), now=at(1)
+    )
+    narrow = await pdp.decide_detail(SCOPE_A, request("tool_call", **fields), now=at(2))
+
+    assert wider.applied_exception_ids == (exception_id,)
+    assert narrow.response.effect == "deny"
+    assert narrow.applied_exception_ids == ()
+    assert exception_id not in narrow.response.model_dump_json()
+
+
+async def test_model_allow_list_does_not_govern_an_agent_registered_in_another_domain() -> None:
+    engine = await world()
+    await engine.catalog.create_entity(catalog_scope("a", "b", "hidden"), agent("finance-bot", "b"))
+    finance_bot = agent_id("finance-bot")
+    point, _, fields = BREACH["model_allow_list"]
+    pid = await publish(engine, "model_allow_list")  # a domain-a policy
+    await set_mode(engine, pid, point, "enforce")
+    pdp = decider(engine)
+    both = scope_for([DOMAIN_A, DOMAIN_B])
+
+    in_b = await pdp.decide(both, request(point, **{**fields, "agent_id": finance_bot}), now=at(1))
+    in_a = await pdp.decide(both, request(point, **fields), now=at(1))
+
+    assert in_b.effect == "allow"
+    assert in_b.matches == []
+    assert in_a.effect == "deny"
 
 
 async def test_snapshot_widens_to_load_exceptions_of_a_newly_seen_domain() -> None:

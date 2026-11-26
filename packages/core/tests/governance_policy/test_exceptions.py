@@ -13,25 +13,35 @@ from typing import Any
 
 import pytest
 from neurosphere_contracts.actions.v1.actor import Actor
-from neurosphere_core.errors import ForbiddenError, InvalidSchemaError, StaleVersionError
+from neurosphere_contracts.admin.v1.system_setting import EnforcementSetting
+from neurosphere_core.errors import (
+    DependencyTransientError,
+    ForbiddenError,
+    InvalidSchemaError,
+    StaleVersionError,
+)
 from neurosphere_core.governance.policy import (
     ExceptionRequest,
     ExceptionRequestResult,
     GovernancePolicyNotFoundError,
     GovernancePolicyStaleError,
+    PolicyDecider,
+    PolicyDecision,
     ViolationFilters,
     exception_id_for,
     review_item_id_for,
     violation_canonical_id,
 )
 from neurosphere_core.governance.policy.events import EXCEPTION_DECIDED
-from neurosphere_core.governance.policy.models import PolicyViolation
+from neurosphere_core.governance.policy.models import PolicyDecisionRequest, PolicyViolation
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.scope import IdentityScope
 
 from .engine_helpers import (
     CUSTOMER,
+    CUSTOMERS_SOURCE,
     DOMAIN_A,
+    READER,
     REQUESTER_ID,
     REQUESTER_SCOPE,
     REVIEWER_ID,
@@ -41,6 +51,7 @@ from .engine_helpers import (
     build_engine,
     make_scope,
     policy_draft,
+    principal_id,
 )
 
 JUSTIFICATION = "Migration to the approved agent version is under way."
@@ -363,6 +374,150 @@ async def test_a_reviewer_who_cannot_be_named_leaves_the_exception_waiting() -> 
     assert stored.exception.status == "requested"
     still_open = await _current(engine, violation)
     assert still_open.status == "open"
+
+
+# --- separation of duties across the retry path -----------------------------------------------
+
+#: A second analyst in domain A (``action.propose``), distinct from REQUESTER_SCOPE.
+OTHER_REQUESTER_SCOPE = make_scope("e", [("analyst", [DOMAIN_A])], [DOMAIN_A])
+OTHER_REQUESTER_ID = principal_id("e")
+
+
+def _fail_open_item_once(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Make the next ``hitl.open_item`` call raise a transient error; later calls go through."""
+    real = engine.hitl.open_item
+    calls: list[int] = []
+
+    async def flaky(**kwargs: Any) -> Any:
+        calls.append(1)
+        if len(calls) == 1:
+            raise DependencyTransientError("hitl store unavailable")
+        return await real(**kwargs)
+
+    monkeypatch.setattr(engine.hitl, "open_item", flaky)
+    return calls
+
+
+async def _decision_for_reader(engine: Engine) -> PolicyDecision:
+    """What the decider answers for the violating read (the PII policy is bound ``audit``)."""
+    pdp = PolicyDecider(
+        engine.policies,
+        engine.bindings,
+        engine.exceptions,
+        catalog=engine.catalog,
+        settings=lambda: EnforcementSetting(decision_cache_ttl_seconds=0),
+    )
+    body = {
+        "schema_version": "1.2.0",
+        "decision_point": "tool_call",
+        "operation": "data_access",
+        "agent_id": READER,
+        "data_asset_ids": [CUSTOMERS_SOURCE],
+        "access": "read",
+    }
+    return await pdp.decide_detail(
+        REQUESTER_SCOPE, PolicyDecisionRequest.model_validate(body), now=engine.clock()
+    )
+
+
+async def test_another_principal_cannot_take_over_a_request_whose_review_never_opened(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = await build_engine()
+    violation = await _violation(engine)
+    calls = _fail_open_item_once(engine, monkeypatch)
+
+    # A requests: the exception is stored, the review item is not (transient HITL failure).
+    with pytest.raises(DependencyTransientError):
+        await _request(engine, violation)
+    assert len(calls) == 1
+    exception_id = exception_id_for(violation.violation_id.root, 1)
+    pending = await engine.exceptions.get(CUSTOMER, DOMAIN_A, exception_id)
+    assert pending is not None
+    assert pending.exception.requested_by.root == REQUESTER_ID
+
+    # B asks on the same violation: same ordinal, same exception id -> refused, no review opened.
+    with pytest.raises(GovernancePolicyStaleError) as info:
+        await _request(engine, violation, scope=OTHER_REQUESTER_SCOPE)
+    assert info.value.reason == "exception_exists"
+    assert len(calls) == 1
+    no_review = await engine.hitl.get(review_item_id_for(exception_id))
+    assert no_review is None
+
+    # A's own retry re-opens the missing review with A as maker, so A still cannot approve it.
+    retried = await _request(engine, violation)
+    assert retried.review_item.maker_principal_id == REQUESTER_ID
+    with pytest.raises(ForbiddenError):
+        await _decide(engine, retried.review_item.item_id, "approved", reviewer_id=REQUESTER_ID)
+
+    await engine.tick()
+    stored = await engine.exceptions.get(CUSTOMER, DOMAIN_A, exception_id)
+    assert stored is not None
+    assert stored.exception.status == "requested"
+    current = await _current(engine, violation)
+    assert current.status == "open"
+    decision = await _decision_for_reader(engine)
+    assert decision.applied_exception_ids == ()
+    assert decision.response.effect == "audit"
+
+
+@pytest.mark.parametrize("reviewer", ["requester", "third_party"])
+async def test_the_reconciler_never_honours_an_approval_not_separated_from_the_requester(
+    monkeypatch: pytest.MonkeyPatch, reviewer: str
+) -> None:
+    """Defence in depth: a review item whose maker is not the requester is never honoured."""
+    engine = await build_engine()
+    violation = await _violation(engine)
+    _fail_open_item_once(engine, monkeypatch)
+    with pytest.raises(DependencyTransientError):
+        await _request(engine, violation)
+    exception_id = exception_id_for(violation.violation_id.root, 1)
+    item_id = review_item_id_for(exception_id)
+    # The pre-fix takeover, reproduced directly: B becomes the maker of A's review item.
+    await engine.hitl.open_item(
+        kind="policy_exception",
+        customer_id=CUSTOMER,
+        domain_id=DOMAIN_A,
+        subject_ref=violation_canonical_id("commercial", CUSTOMER, violation.violation_id.root),
+        now=engine.clock(),
+        correlation_id="corr-takeover",
+        item_id=item_id,
+        maker_principal_id=OTHER_REQUESTER_ID,
+        maker=actor("e"),
+        opened_by=actor("e"),
+        scope_hash="sha256:" + "e" * 64,
+        channel="rest",
+    )
+    if reviewer == "requester":
+        await _decide(engine, item_id, "approved", reviewer_id=REQUESTER_ID, hex_char="b")
+    else:
+        await _decide(engine, item_id, "approved")
+
+    run = await engine.tick()
+
+    assert run.exceptions is not None
+    assert run.exceptions.self_approval_refused == 1
+    assert run.exceptions.approved == 0
+    stored = await engine.exceptions.get(CUSTOMER, DOMAIN_A, exception_id)
+    assert stored is not None
+    assert stored.exception.status == "rejected"
+    current = await _current(engine, violation)
+    assert current.status == "open"
+    assert [e.status for e in engine.sink.decided_events] == ["rejected"]
+    details = [
+        r.outcome.detail
+        for r in await engine.records()
+        if r.operation == "govpolicy.exception_decide" and r.outcome is not None
+    ]
+    assert "self_approval_refused" in details
+    # later ticks leave it closed, and the decider never honours it
+    await engine.tick()
+    still = await engine.exceptions.get(CUSTOMER, DOMAIN_A, exception_id)
+    assert still is not None
+    assert still.exception.status == "rejected"
+    decision = await _decision_for_reader(engine)
+    assert decision.applied_exception_ids == ()
+    assert decision.response.effect == "audit"
 
 
 def actor_of_pseudonym(pseudonym: str) -> Actor:
