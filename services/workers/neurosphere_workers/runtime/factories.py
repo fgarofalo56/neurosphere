@@ -209,6 +209,7 @@ from neurosphere_workers.ingestion.gateway_poll import (
 from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 from neurosphere_workers.lifecycle.assembly import LifecycleParts, assemble, build_targets
+from neurosphere_workers.policy_eval.assembly import build_policy_eval
 from neurosphere_workers.projections.catalog import CatalogProjection
 from neurosphere_workers.projections.catalog.quarantine_cosmos import CosmosCandidateQuarantine
 from neurosphere_workers.projections.catalog.scope import ScopeProvider
@@ -2181,6 +2182,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "billing_export": build_billing_export,
     "detections": build_detections,
     "azure_monitor_ai": build_azure_monitor_ai,
+    "policy_eval": build_policy_eval,
 }
 
 
