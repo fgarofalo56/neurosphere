@@ -108,9 +108,10 @@ async def test_a_changed_seed_publishes_the_next_version(
     first = builder.load_seed_file(_seed(tmp_path))
     await builder.seed_policies(plane, first, cloud="commercial", customer_id="contoso")
     changed = builder.load_seed_file(_seed(tmp_path, rules=[rule(), rule("eu", "residency")]))
-    assert await builder.seed_policies(
+    republished = await builder.seed_policies(
         plane, changed, cloud="commercial", customer_id="contoso"
-    ) == ["seed-owners"]
+    )
+    assert republished == ["seed-owners"]
     stored = await plane.policies.get("contoso", "seed-owners")
     assert stored is not None
     assert (stored.policy.policy_version, stored.policy.status) == (2, "published")
