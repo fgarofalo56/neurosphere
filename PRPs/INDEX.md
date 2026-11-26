@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-105-policy-engine-core](active/PRP-105-policy-engine-core.md) | P0 | 2/8 (25%) | todo 5, in-progress 1, merged 2 | opus / opus | required |
+| [PRP-105-policy-engine-core](active/PRP-105-policy-engine-core.md) | P0 | 2/8 (25%) | todo 4, in-progress 1, review 1, merged 2 | opus / opus | required |
 
 ## Backlog
 

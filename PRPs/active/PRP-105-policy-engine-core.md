@@ -280,8 +280,8 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 |---|---|---|---|
 | 1 | merged | worktree-agent-a3256cd8dd0c738f4 | b03fe4a4+4612ced3 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED (mutation tests killed 5/7, 2 survivors non-gaps); follow-ups #417; draft PR 416 |
 | 2 | merged | worktree-agent-abc05e501df34c26f | 5703e615 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED; follow-ups #417; draft PR 416 |
-| 3 | in-progress | (agent worktree) | dispatched 2026-11-25, opus; also carries review A fixes: policy list cursor from raw rows, resolve_missing 1000-row cap |
-| 4 | todo | | |
+| 3 | review | worktree-agent-a015d8b9f985af658 | db9fb6e9 merged to integration as 04ba198e 2026-11-25; gates re-run 519 passed, Snyk 0; review A fixes (list cursor, resolve_missing paging + resolve_truncated) included; awaits checkpoint review B with item 4 |
+| 4 | in-progress | (agent worktree) | dispatched 2026-11-25, opus |
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |
