@@ -429,3 +429,23 @@ def test_parse_mode_change_diff_refuses_every_other_grammar(
     with pytest.raises(InvalidSchemaError) as info:
         parse_mode_change_diff({"format": "json_patch", "operations": operations})
     assert info.value.reason in {"bad_mode_change_diff", "mode_unchanged"}
+
+
+@pytest.mark.parametrize(
+    ("current", "mode"),
+    [
+        (["audit"], "enforce"),
+        ("audit", {"mode": "enforce"}),
+        ({"a": 1}, ["enforce"]),
+        (1, "enforce"),
+    ],
+)
+def test_parse_mode_change_diff_refuses_non_string_modes(current: Any, mode: Any) -> None:
+    """An unhashable ``/mode`` value is the parser's 400, never a TypeError (500)."""
+    operations = [
+        {"op": "test", "path": "/mode", "value": current},
+        {"op": "replace", "path": "/mode", "value": mode},
+    ]
+    with pytest.raises(InvalidSchemaError) as info:
+        parse_mode_change_diff({"format": "json_patch", "operations": operations})
+    assert info.value.reason == "bad_mode_change_diff"

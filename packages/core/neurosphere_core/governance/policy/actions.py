@@ -290,7 +290,12 @@ def parse_mode_change_diff(diff: ProposedDiff | Mapping[str, Any]) -> ModeChange
     values = _values(_coerce(diff, BAD_MODE_CHANGE_DIFF), _MODE_KEYS, BAD_MODE_CHANGE_DIFF)
     current = values[("test", _MODE_PATH)]
     mode = values[("replace", _MODE_PATH)]
-    if current not in _MODES or mode not in _MODES:
+    if (
+        not isinstance(current, str)
+        or not isinstance(mode, str)
+        or current not in _MODES
+        or mode not in _MODES
+    ):
         raise _bad(BAD_MODE_CHANGE_DIFF, "modes must be off, audit or enforce")
     if current == mode:
         raise _bad("mode_unchanged", "the diff does not change the mode")

@@ -54,6 +54,14 @@ Scope
     a subject with no catalog entity (an unregistered agent, a model known only by name) is
     governed by every in-scope policy (ASSUMPTION, runbook).
 
+Known limits
+    A subject with no catalog entity in the caller's view is governed by every in-scope policy,
+    and a subject in a domain the scope cannot see reads exactly like that. So under a future
+    ``enforce`` binding, ``registration_required`` could deny an agent that IS registered, but
+    in a domain the caller cannot see. Today nothing binds ``enforce`` at a live point; the
+    enforcement PRPs (PRP-112 gateway, PRP-113 tool call and MCP) must account for it before
+    they do.
+
 Writes
     :meth:`PolicyDecider.decide` performs no store write and no unbounded read. The audit
     record ``govpolicy.decide`` (written only for ``deny`` and audit-mode would-deny, never per
@@ -998,7 +1006,9 @@ class PolicyDecider:
         kind = rule.kind.root
         try:
             if kind == "model_allow_list":
-                return await self._model_allow_list(policy, rule, request, subjects, resolver)
+                return await self._model_allow_list(
+                    policy, rule, request, subjects, resolver, control
+                )
             if kind == "data_sensitivity_access":
                 return await self._data_access(policy, rule, request, subjects, resolver, control)
             if kind == "residency":
@@ -1025,6 +1035,7 @@ class PolicyDecider:
         request: PolicyDecisionRequest,
         subjects: _Request,
         resolver: _Resolver,
+        control: str,
     ) -> _RuleResult | None:
         params = params_as(rule, ModelAllowListParams, "model_allow_list")
         model = request.model
@@ -1054,9 +1065,16 @@ class PolicyDecider:
         applies = AppliesTo.of(rule)
         actors = subjects.actors()
         if actors:
-            breaching = [a.canonical_id for a in actors if self._applies(applies, a)]
+            breaching = [
+                a.canonical_id
+                for a in actors
+                if self._governs(policy, a, control) and self._applies(applies, a)
+            ]
         elif deployment is not None:
-            breaching = [deployment.canonical_id] if self._applies(applies, deployment) else []
+            governed = self._governs(policy, deployment, control)
+            breaching = (
+                [deployment.canonical_id] if governed and self._applies(applies, deployment) else []
+            )
         else:
             model_id = telemetry_model_id(
                 policy.cloud.root, policy.customer_id.root, "model:" + name

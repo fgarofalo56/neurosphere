@@ -179,6 +179,31 @@ async def test_expired_exception_does_not_apply() -> None:
     assert after.applied_exception_ids == ()
 
 
+async def test_exception_expiring_inside_the_snapshot_ttl_stops_applying_at_expiry() -> None:
+    """The snapshot outlives the exception: the per-request expiry check must still drop it."""
+    engine = await world()
+    pid = await publish(engine, "data_sensitivity_access")
+    await set_mode(engine, pid, "tool_call", "enforce")
+    exception_id = await approve_exception(
+        engine,
+        policy_id=pid,
+        rule_id="r-data-sensitivity-access",
+        subject=READER,
+        expires_at="2026-10-17T12:00:30Z",
+    )
+    fields = BREACH["data_sensitivity_access"][2]
+    pdp = decider(engine, settings=Settings(ttl=60))
+    before = await pdp.decide_detail(SCOPE_A, request("tool_call", **fields), now=at(10))
+    after = await pdp.decide_detail(SCOPE_A, request("tool_call", **fields), now=at(31))
+
+    assert before.response.effect == "allow"
+    assert before.applied_exception_ids == (exception_id,)
+    # same snapshot (31 s < 60 s TTL), so only the per-request expiry check can refuse it
+    assert after.response.policy_set_digest == before.response.policy_set_digest
+    assert after.response.effect == "deny"
+    assert after.applied_exception_ids == ()
+
+
 async def test_exception_for_another_rule_or_subject_does_not_apply() -> None:
     engine = await world()
     pid = await publish(engine, "data_sensitivity_access")

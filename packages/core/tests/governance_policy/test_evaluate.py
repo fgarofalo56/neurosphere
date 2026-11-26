@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import get_args
+import dataclasses
+from typing import Any, get_args
 
 import pytest
 from neurosphere_contracts.notifications.v1.notification_subscription import (
@@ -20,7 +21,7 @@ from neurosphere_core.governance.policy.events import (
     VIOLATION_RESOLVED,
 )
 from neurosphere_core.governance.policy.rules import FindingEvidence, RuleFinding, RuleOutcome
-from neurosphere_core.governance.policy.store import store_unavailable
+from neurosphere_core.governance.policy.store import ResolveReport, store_unavailable
 from neurosphere_core.paging import PageRequest
 
 from .engine_helpers import (
@@ -106,11 +107,11 @@ async def _approve_reader(engine: Engine) -> None:
     await engine.catalog.update_entity(SCOPE, updated, body["etag"])
 
 
-def _finding() -> RuleFinding:
+def _finding(domain_id: str = DOMAIN_A) -> RuleFinding:
     return RuleFinding(
         subject_id=READER,
         subject_type="agent",
-        domain_id=DOMAIN_A,
+        domain_id=domain_id,
         evidence_class="sensitive_data_access",
         evidence=(
             FindingEvidence(kind="relation", ref=READ_EDGE),
@@ -239,6 +240,47 @@ async def test_a_truncated_rule_resolves_nothing_and_the_run_says_truncated() ->
     done = await engine.tick()
     assert done.state == "completed"
     assert len(done.resolved_violation_ids) == 1
+
+
+async def test_a_resolve_pass_that_hit_its_cap_makes_the_rule_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = await build_engine()
+    await engine.publish(policy_draft())
+    real = engine.violations.resolve_missing_report
+
+    async def capped(*args: Any, **kwargs: Any) -> ResolveReport:
+        report = await real(*args, **kwargs)
+        return dataclasses.replace(report, truncated=True)
+
+    monkeypatch.setattr(engine.violations, "resolve_missing_report", capped)
+
+    run = await engine.tick()
+
+    assert run.state == "truncated"
+    (status,) = run.status.rules
+    assert status.outcome == "truncated"
+    assert status.reason_code == "resolve_truncated"
+
+
+async def test_a_finding_in_a_domain_outside_the_scope_is_never_stored() -> None:
+    engine = await build_engine(real_pii_evaluator=False)
+    hidden = _finding(DOMAIN_HIDDEN)
+    engine.registry.register(
+        CannedEvaluator(
+            "data_sensitivity_access",
+            RuleOutcome(kind="data_sensitivity_access", findings=(hidden, _finding())),
+        )
+    )
+    await engine.publish(policy_draft())
+
+    run = await engine.tick()
+
+    assert len(run.opened_violation_ids) == 1
+    in_hidden = await _violations(engine, DOMAIN_HIDDEN)
+    assert in_hidden == []
+    domains = {v["domain_id"] for v in engine.violations.backend._docs.values()}
+    assert domains == {DOMAIN_A}
 
 
 async def test_the_real_evaluator_hitting_its_subject_budget_resolves_nothing() -> None:
