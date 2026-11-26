@@ -1,6 +1,9 @@
 ---
 name: PRP-105-policy-engine-core
-status: backlog
+status: active
+started: 2026-11-25
+execution: session
+max_lanes: 2
 priority: P0
 order: 105
 review: required
@@ -144,6 +147,7 @@ tier2_appends:
   - services/api/neurosphere_api/authz/routes.py
   - packages/core/neurosphere_core/auth/scope/permissions.py
   - packages/core/neurosphere_core/admin/models.py
+  - packages/core/tests/admin/test_config_store.py
   - services/workers/neurosphere_workers/runtime/roles.py
   - services/workers/neurosphere_workers/runtime/factories.py
   - services/api/tests/authz/test_route_inventory.py
@@ -177,7 +181,7 @@ Parallelization: items 1 and 2 [P] after PRP-99 merges (2 codes against item 1's
 
 ### Item 1 - Models, validation and stores  [P]  [serial-after: PRP-102]
 - Deliverable: `governance/policy/{models,validation,store,cosmos_store,memory_store,ids,capabilities}.py`: re-exports of the PRP-99 types; draft validation (closed kind list, per-kind parameter schema, rule ids unique, bounded counts: at most 50 rules, 200 list items per parameter); the four stores with ETag create and replace; `dedup_key` = `sha256:` of (policy id, rule id, subject canonical id, evidence class); canonical id helpers; `ENFORCEMENT_POINT_CAPABILITIES`; the `enforcement_binding` line in `ADMIN_KIND_MODELS` (core refuses an unregistered `admin_kind`, and this PRP is the first to store bindings).
-- Owned files: `packages/core/neurosphere_core/governance/__init__.py`, `governance/policy/{models,validation,store,cosmos_store,memory_store,ids,capabilities}.py`, `packages/core/tests/governance_policy/test_validation.py`, `test_stores.py`; Tier-2 line in `packages/core/neurosphere_core/admin/models.py`.
+- Owned files: `packages/core/neurosphere_core/governance/__init__.py`, `governance/policy/{models,validation,store,cosmos_store,memory_store,ids,capabilities}.py`, `packages/core/tests/governance_policy/test_validation.py`, `test_stores.py`; Tier-2 line in `packages/core/neurosphere_core/admin/models.py`; drop `enforcement_binding` from `PENDING_ADMIN_KINDS` in `packages/core/tests/admin/test_config_store.py` (PRP-99 hand-off: the PRP that registers a kind removes its entry; added at execution 2026-11-25).
 - Must NOT touch: contracts, `stores/containers.py`.
 - Depends on: PRP-99 merged; `[serial-after: PRP-102]` (same wave W21; PRP-102 declares `policy_definitions`, `policy_violations`, `policy_exceptions`).
 - Acceptance criteria: criterion 1; stale `If-Match` raises `stale_version`; a published version is immutable (replace refused `policy_published`); memory and Cosmos stores pass one shared contract test.
@@ -274,8 +278,8 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | in-progress | (agent worktree) | dispatched 2026-11-25, opus |
+| 2 | in-progress | (agent worktree) | dispatched 2026-11-25, opus |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
