@@ -37,3 +37,7 @@ aa7296602d18359fd446938e0f4b80e48793b361:connectors/reference/otel-generic/colle
 # PRP-139 item 1: built-in API Management Service Reader role definition id (public Azure constant), not a credential. The names were changed afterwards so the rule no longer fires on the tree.
 bc59a6a004303007cfc6061e6a5d534dd485b2ed:infra/demo/modules/connector-rbac.bicep:generic-api-key:41
 bc59a6a004303007cfc6061e6a5d534dd485b2ed:tests/unit/hosted_real_tenant/test_mode_params.py:generic-api-key:27
+# PRP-105 item 6: synthetic action idempotency keys (govpolicy-publish-0001, -again1, -retire-00001) in a publish-draft API test, not a credential. The tree now builds them at runtime.
+c2abc5be606063c3ed3969cdc9b9f8e653c5d39d:services/api/tests/governance_policy_api/test_publish_draft.py:generic-api-key:29
+c2abc5be606063c3ed3969cdc9b9f8e653c5d39d:services/api/tests/governance_policy_api/test_publish_draft.py:generic-api-key:140
+c2abc5be606063c3ed3969cdc9b9f8e653c5d39d:services/api/tests/governance_policy_api/test_publish_draft.py:generic-api-key:144
