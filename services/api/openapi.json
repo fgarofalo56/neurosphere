@@ -3275,6 +3275,62 @@
         "title": "BiasCheck",
         "type": "object"
       },
+      "BindingList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BindingView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BindingList",
+        "type": "object"
+      },
+      "BindingView": {
+        "description": "One PRP-99 ``EnforcementBinding`` with its ``admin_config`` ETag and version.",
+        "properties": {
+          "binding": {
+            "additionalProperties": true,
+            "title": "Binding",
+            "type": "object"
+          },
+          "capability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PointCapabilityView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "retired": {
+            "title": "Retired",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "binding",
+          "etag",
+          "version",
+          "retired"
+        ],
+        "title": "BindingView",
+        "type": "object"
+      },
       "BooleanField": {
         "enum": [
           "advisory",
@@ -7969,6 +8025,107 @@
         "title": "EvidenceSources",
         "type": "array"
       },
+      "ExceptionList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExceptionView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ExceptionList",
+        "type": "object"
+      },
+      "ExceptionRequestBody": {
+        "additionalProperties": false,
+        "description": "``POST .../exception-requests``: a reason code, bounded text and a time-boxed expiry.\n\nOnly the SHA-256 of ``justification_text`` is kept (in the audit record); the expiry must be\nin the future and at most ``NS_GOVPOLICY_EXCEPTION_MAX_DAYS`` days away.",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "justification_code": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Justification Code",
+            "type": "string"
+          },
+          "justification_text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Justification Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "justification_code",
+          "justification_text",
+          "expires_at"
+        ],
+        "title": "ExceptionRequestBody",
+        "type": "object"
+      },
+      "ExceptionRequestView": {
+        "description": "The requested exception and the HITL ``policy_exception`` review item it opened.",
+        "properties": {
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "exception": {
+            "additionalProperties": true,
+            "title": "Exception",
+            "type": "object"
+          },
+          "review_item_id": {
+            "title": "Review Item Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exception",
+          "etag",
+          "review_item_id"
+        ],
+        "title": "ExceptionRequestView",
+        "type": "object"
+      },
+      "ExceptionView": {
+        "description": "One PRP-99 ``PolicyException``.",
+        "properties": {
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "exception": {
+            "additionalProperties": true,
+            "title": "Exception",
+            "type": "object"
+          }
+        },
+        "required": [
+          "exception",
+          "etag"
+        ],
+        "title": "ExceptionView",
+        "type": "object"
+      },
       "ExecutionState": {
         "additionalProperties": false,
         "properties": {
@@ -9336,6 +9493,44 @@
           "generator_version"
         ],
         "title": "Generator",
+        "type": "object"
+      },
+      "GovernanceStatusView": {
+        "description": "``GET /status``: evaluator availability per rule kind and the latest run per domain.\n\n``runs_truncated`` is true when the caller can read more domains than one status read\ncovers. ``points`` is the fixed enforcement point capability table (detective evaluation\nblocks nothing).",
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PointCapabilityView"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "rule_kinds": {
+            "items": {
+              "$ref": "#/components/schemas/RuleKindStatusView"
+            },
+            "title": "Rule Kinds",
+            "type": "array"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunStatusView"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "runs_truncated": {
+            "default": false,
+            "title": "Runs Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rule_kinds",
+          "runs",
+          "points"
+        ],
+        "title": "GovernanceStatusView",
         "type": "object"
       },
       "Grant": {
@@ -13786,6 +13981,35 @@
         "title": "Point",
         "type": "object"
       },
+      "PointCapabilityView": {
+        "description": "What an enforcement point can block, and which PRP builds it.",
+        "properties": {
+          "can_block": {
+            "title": "Can Block",
+            "type": "boolean"
+          },
+          "owning_prp": {
+            "title": "Owning Prp",
+            "type": "string"
+          },
+          "point": {
+            "title": "Point",
+            "type": "string"
+          },
+          "what_it_blocks": {
+            "title": "What It Blocks",
+            "type": "string"
+          }
+        },
+        "required": [
+          "point",
+          "can_block",
+          "what_it_blocks",
+          "owning_prp"
+        ],
+        "title": "PointCapabilityView",
+        "type": "object"
+      },
       "Policy": {
         "additionalProperties": false,
         "description": "Governance policy applied to catalog entities (access, data handling, model usage, cost). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
@@ -13935,6 +14159,134 @@
         "title": "Policy",
         "type": "object"
       },
+      "PolicyCreateBody": {
+        "additionalProperties": false,
+        "description": "``POST .../policies``: a new policy (version 1) or the next draft of an existing one.",
+        "properties": {
+          "display_name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "document_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Url"
+          },
+          "mode": {
+            "default": "audit",
+            "enum": [
+              "off",
+              "audit",
+              "enforce"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "policy_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Rules",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "severity",
+          "rules",
+          "policy_id"
+        ],
+        "title": "PolicyCreateBody",
+        "type": "object"
+      },
+      "PolicyDraftBody": {
+        "additionalProperties": false,
+        "description": "``PUT .../draft``: the content of the open draft (the policy id comes from the path).\n\nEach rule is ``{rule_id, kind, severity?, applies_to, params}`` from the PRP-99 closed kind\nlist; the server validates every rule against its kind's parameter model (422\n``invalid_schema`` otherwise) and stamps ``content_sha256``.",
+        "properties": {
+          "display_name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "document_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Url"
+          },
+          "mode": {
+            "default": "audit",
+            "enum": [
+              "off",
+              "audit",
+              "enforce"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Rules",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "severity",
+          "rules"
+        ],
+        "title": "PolicyDraftBody",
+        "type": "object"
+      },
       "PolicyFragmentEntry": {
         "additionalProperties": false,
         "description": "Name and description only. The fragment XML is never read into the snapshot.",
@@ -13967,6 +14319,67 @@
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
         "title": "PolicyId",
         "type": "string"
+      },
+      "PolicyList": {
+        "description": "The latest version of each policy in the domain, ordered by policy id.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PolicyList",
+        "type": "object"
+      },
+      "PolicyStageBody": {
+        "additionalProperties": false,
+        "description": "``POST .../publish`` and ``.../retire``: the exact version the maker confirms.\n\nTarget, target version and diff (with ``test /policy_digest``) are built by the server.",
+        "properties": {
+          "channel": {
+            "default": "rest",
+            "enum": [
+              "button",
+              "chat",
+              "rest",
+              "mcp"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{16,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "idempotency_key"
+        ],
+        "title": "PolicyStageBody",
+        "type": "object"
       },
       "PolicyStateCounts": {
         "additionalProperties": false,
@@ -14006,6 +14419,38 @@
         "minimum": 1.0,
         "title": "PolicyVersion",
         "type": "integer"
+      },
+      "PolicyView": {
+        "description": "One policy version: the PRP-99 ``PolicyDefinition`` JSON, its ETag and digest.\n\n``publish_refusals`` is the publish dry run against this deployment's evaluators (empty for\na publishable draft, and for a version that is not a draft).",
+        "properties": {
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "policy": {
+            "additionalProperties": true,
+            "title": "Policy",
+            "type": "object"
+          },
+          "policy_digest": {
+            "title": "Policy Digest",
+            "type": "string"
+          },
+          "publish_refusals": {
+            "items": {
+              "$ref": "#/components/schemas/PublishRefusalView"
+            },
+            "title": "Publish Refusals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "policy",
+          "etag",
+          "policy_digest"
+        ],
+        "title": "PolicyView",
+        "type": "object"
       },
       "PollAttribution": {
         "additionalProperties": false,
@@ -15430,6 +15875,25 @@
           "intent_id"
         ],
         "title": "PublicationRecordBody",
+        "type": "object"
+      },
+      "PublishRefusalView": {
+        "description": "One reason the version cannot be published here (the publish dry run).",
+        "properties": {
+          "pointer": {
+            "title": "Pointer",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "pointer"
+        ],
+        "title": "PublishRefusalView",
         "type": "object"
       },
       "QualityResponse": {
@@ -17734,6 +18198,40 @@
         "title": "Rule",
         "type": "integer"
       },
+      "RuleKindStatusView": {
+        "description": "Whether this deployment can evaluate a rule kind; ``reason`` when it cannot.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "evaluator_unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "status"
+        ],
+        "title": "RuleKindStatusView",
+        "type": "object"
+      },
       "RunReference": {
         "additionalProperties": false,
         "description": "Pointer to a run held in the telemetry store. Runs and spans are referenced, never replicated into the graph; no prompt or response body appears here. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
@@ -17909,6 +18407,32 @@
           "started_at"
         ],
         "title": "RunReference",
+        "type": "object"
+      },
+      "RunStatusView": {
+        "description": "The latest evaluation run filed under one readable domain (``status`` null: none yet).",
+        "properties": {
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "domain_id"
+        ],
+        "title": "RunStatusView",
         "type": "object"
       },
       "RunView": {
@@ -21576,6 +22100,23 @@
         "title": "Version",
         "type": "string"
       },
+      "VersionList": {
+        "description": "Every version of one policy, oldest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "VersionList",
+        "type": "object"
+      },
       "ViewportEdge": {
         "additionalProperties": false,
         "properties": {
@@ -21816,6 +22357,53 @@
           "coverage"
         ],
         "title": "ViewportResponse",
+        "type": "object"
+      },
+      "ViolationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ViolationView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViolationList",
+        "type": "object"
+      },
+      "ViolationView": {
+        "description": "One PRP-99 ``PolicyViolation`` (ids, counts and evidence references; no content).",
+        "properties": {
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "violation": {
+            "additionalProperties": true,
+            "title": "Violation",
+            "type": "object"
+          }
+        },
+        "required": [
+          "violation",
+          "etag"
+        ],
+        "title": "ViolationView",
         "type": "object"
       },
       "WorkspaceBody": {
@@ -31253,6 +31841,971 @@
         "summary": "Sync Gateway",
         "tags": [
           "gateways"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/bindings": {
+      "get": {
+        "operationId": "list_bindings_api_v1_governance_policy_domains__domain__bindings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "policy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Policy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "point",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "gateway",
+                    "tool_call",
+                    "mcp_server",
+                    "mcp_client",
+                    "sdk",
+                    "budget",
+                    "registration"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Point"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BindingList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Bindings",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/exceptions": {
+      "get": {
+        "operationId": "list_exceptions_api_v1_governance_policy_domains__domain__exceptions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "requested",
+                    "approved",
+                    "rejected",
+                    "expired",
+                    "revoked"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "policy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Policy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "violation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Violation Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Exceptions",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/policies": {
+      "get": {
+        "operationId": "list_policies_api_v1_governance_policy_domains__domain__policies_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Policies",
+        "tags": [
+          "governance-policy"
+        ]
+      },
+      "post": {
+        "operationId": "create_policy_draft_api_v1_governance_policy_domains__domain__policies_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyCreateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Policy Draft",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/policies/{policy_id}": {
+      "get": {
+        "operationId": "get_policy_api_v1_governance_policy_domains__domain__policies__policy_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Policy",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/draft": {
+      "put": {
+        "operationId": "replace_policy_draft_api_v1_governance_policy_domains__domain__policies__policy_id__draft_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Policy Draft",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/publish": {
+      "post": {
+        "operationId": "draft_policy_publish_api_v1_governance_policy_domains__domain__policies__policy_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyStageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Policy Publish",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/retire": {
+      "post": {
+        "operationId": "draft_policy_retire_api_v1_governance_policy_domains__domain__policies__policy_id__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyStageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Policy Retire",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/versions": {
+      "get": {
+        "operationId": "list_policy_versions_api_v1_governance_policy_domains__domain__policies__policy_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Policy Versions",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/violations": {
+      "get": {
+        "operationId": "list_violations_api_v1_governance_policy_domains__domain__violations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "excepted",
+                    "resolved",
+                    "superseded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "policy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Policy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rule_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rule Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViolationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Violations",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/violations/{violation_id}": {
+      "get": {
+        "operationId": "get_violation_api_v1_governance_policy_domains__domain__violations__violation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "violation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Violation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViolationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Violation",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/domains/{domain}/violations/{violation_id}/exception-requests": {
+      "post": {
+        "operationId": "request_policy_exception_api_v1_governance_policy_domains__domain__violations__violation_id__exception_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "violation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Violation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExceptionRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionRequestView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Policy Exception",
+        "tags": [
+          "governance-policy"
+        ]
+      }
+    },
+    "/api/v1/governance/policy/status": {
+      "get": {
+        "operationId": "governance_policy_status_api_v1_governance_policy_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceStatusView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Governance Policy Status",
+        "tags": [
+          "governance-policy"
         ]
       }
     },

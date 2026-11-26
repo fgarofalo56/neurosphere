@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `ac6762a1a8295c6cc2ffb9e92583ecba3d42acdc`. Generated: 2026-11-25.
+> Source commit: `1a4e4f34b471007e6b1233a5838e6d647ac58058`. Generated: 2026-11-25.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 227 operations on 192 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 240 operations on 204 paths.
 
 ## Status and verification
 
@@ -191,6 +191,19 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | gateways | GET | `/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/inventory` | Get Inventory |
 | gateways | POST | `/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/mode` | Change Gateway Mode |
 | gateways | POST | `/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/sync` | Sync Gateway |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/bindings` | List Bindings |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/exceptions` | List Exceptions |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/policies` | List Policies |
+| governance-policy | POST | `/api/v1/governance/policy/domains/{domain}/policies` | Create Policy Draft |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}` | Get Policy |
+| governance-policy | PUT | `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/draft` | Replace Policy Draft |
+| governance-policy | POST | `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/publish` | Draft Policy Publish |
+| governance-policy | POST | `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/retire` | Draft Policy Retire |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/versions` | List Policy Versions |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/violations` | List Violations |
+| governance-policy | GET | `/api/v1/governance/policy/domains/{domain}/violations/{violation_id}` | Get Violation |
+| governance-policy | POST | `/api/v1/governance/policy/domains/{domain}/violations/{violation_id}/exception-requests` | Request Policy Exception |
+| governance-policy | GET | `/api/v1/governance/policy/status` | Governance Policy Status |
 | health | GET | `/healthz` | Healthz |
 | health | GET | `/readyz` | Readyz |
 | ingest | POST | `/api/v1/ingest/events` | Events |
@@ -1527,6 +1540,103 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Sync Gateway
 - Parameters: `domain` (path, required), `gateway_id` (path, required)
 - Responses: `200` `GatewayDetail`; `422` `HTTPValidationError`
+
+### Tag: governance-policy
+
+#### GET `/api/v1/governance/policy/domains/{domain}/bindings`
+
+- Operation id: `list_bindings_api_v1_governance_policy_domains__domain__bindings_get`
+- Summary: List Bindings
+- Parameters: `domain` (path, required), `policy_id` (query), `point` (query)
+- Responses: `200` `BindingList`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/domains/{domain}/exceptions`
+
+- Operation id: `list_exceptions_api_v1_governance_policy_domains__domain__exceptions_get`
+- Summary: List Exceptions
+- Parameters: `domain` (path, required), `status` (query), `policy_id` (query), `violation_id` (query), `cursor` (query), `limit` (query)
+- Responses: `200` `ExceptionList`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/domains/{domain}/policies`
+
+- Operation id: `list_policies_api_v1_governance_policy_domains__domain__policies_get`
+- Summary: List Policies
+- Parameters: `domain` (path, required), `cursor` (query), `limit` (query)
+- Responses: `200` `PolicyList`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/governance/policy/domains/{domain}/policies`
+
+- Operation id: `create_policy_draft_api_v1_governance_policy_domains__domain__policies_post`
+- Summary: Create Policy Draft
+- Parameters: `domain` (path, required)
+- Request body: application/json: `PolicyCreateBody` (required)
+- Responses: `201` `PolicyView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}`
+
+- Operation id: `get_policy_api_v1_governance_policy_domains__domain__policies__policy_id__get`
+- Summary: Get Policy
+- Parameters: `domain` (path, required), `policy_id` (path, required), `version` (query)
+- Responses: `200` `PolicyView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/draft`
+
+- Operation id: `replace_policy_draft_api_v1_governance_policy_domains__domain__policies__policy_id__draft_put`
+- Summary: Replace Policy Draft
+- Parameters: `domain` (path, required), `policy_id` (path, required), `If-Match` (header, required)
+- Request body: application/json: `PolicyDraftBody` (required)
+- Responses: `200` `PolicyView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/publish`
+
+- Operation id: `draft_policy_publish_api_v1_governance_policy_domains__domain__policies__policy_id__publish_post`
+- Summary: Draft Policy Publish
+- Parameters: `domain` (path, required), `policy_id` (path, required)
+- Request body: application/json: `PolicyStageBody` (required)
+- Responses: `201` `ActionView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/retire`
+
+- Operation id: `draft_policy_retire_api_v1_governance_policy_domains__domain__policies__policy_id__retire_post`
+- Summary: Draft Policy Retire
+- Parameters: `domain` (path, required), `policy_id` (path, required)
+- Request body: application/json: `PolicyStageBody` (required)
+- Responses: `201` `ActionView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/domains/{domain}/policies/{policy_id}/versions`
+
+- Operation id: `list_policy_versions_api_v1_governance_policy_domains__domain__policies__policy_id__versions_get`
+- Summary: List Policy Versions
+- Parameters: `domain` (path, required), `policy_id` (path, required)
+- Responses: `200` `VersionList`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/domains/{domain}/violations`
+
+- Operation id: `list_violations_api_v1_governance_policy_domains__domain__violations_get`
+- Summary: List Violations
+- Parameters: `domain` (path, required), `status` (query), `policy_id` (query), `rule_id` (query), `severity` (query), `cursor` (query), `limit` (query)
+- Responses: `200` `ViolationList`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/domains/{domain}/violations/{violation_id}`
+
+- Operation id: `get_violation_api_v1_governance_policy_domains__domain__violations__violation_id__get`
+- Summary: Get Violation
+- Parameters: `domain` (path, required), `violation_id` (path, required)
+- Responses: `200` `ViolationView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/governance/policy/domains/{domain}/violations/{violation_id}/exception-requests`
+
+- Operation id: `request_policy_exception_api_v1_governance_policy_domains__domain__violations__violation_id__exception_requests_post`
+- Summary: Request Policy Exception
+- Parameters: `domain` (path, required), `violation_id` (path, required)
+- Request body: application/json: `ExceptionRequestBody` (required)
+- Responses: `201` `ExceptionRequestView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/governance/policy/status`
+
+- Operation id: `governance_policy_status_api_v1_governance_policy_status_get`
+- Summary: Governance Policy Status
+- Responses: `200` `GovernanceStatusView`
 
 ### Tag: health
 

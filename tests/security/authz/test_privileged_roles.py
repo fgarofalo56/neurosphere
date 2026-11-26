@@ -90,7 +90,8 @@ def test_admin_and_auditor_are_disjoint_in_the_sensitive_directions() -> None:
     assert Permission.DATA_EXPORT not in admin
     assert Permission.AUDIT_READ not in admin and Permission.EVIDENCE_READ not in admin
     assert Permission.DATA_READ not in auditor and Permission.DATA_EXPORT not in auditor
-    assert not admin & auditor
+    # PRP-105 GD-21: governance policy state is the one thing both read (no data, no audit).
+    assert admin & auditor == {Permission.GOVPOLICY_READ}
 
 
 @pytest.mark.parametrize("role", [Role.ADMIN, Role.SECURITY_AUDITOR])
