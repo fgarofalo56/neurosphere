@@ -163,6 +163,7 @@ tier2_appends:
   - services/api/tests/runtime_data/data_helpers.py
   - services/workers/tests/worker_roles/test_roles.py
   - services/workers/tests/azure_monitor_ai_role/test_default_noop.py
+  - services/api/tests/me_api/test_me_domains.py
   - mkdocs.yml
 must_not_touch:
   - packages/contracts/**
@@ -286,7 +287,7 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 | 3 | merged | worktree-agent-a015d8b9f985af658 | db9fb6e9 merged as 04ba198e 2026-11-25; review A fixes included; review B CHANGES REQUIRED (blocking: exception self-approval via retry path) -> rework 0a8d713c merged as a3fde3b9 2026-11-26, Haiku confirm CONFIRMED; gates 952 passed, Snyk 0; contract gap #418 (justification text) |
 | 4 | merged | worktree-agent-a704f5021d19aa845 | 1914691a merged as 1f307158 2026-11-26; review B non-blocking fixes (model_allow_list domain governance, expiry/scope guard tests) in rework a3fde3b9; gates 952 passed, Snyk 0 |
 | 5 | review | worktree-agent-a530dffe955931ce6 | 33a78ec0 merged as 2cfea1a4 2026-11-26; orchestrator relaxed azure_monitor_ai_role/test_default_noop.py "role last" pin to membership; full services/workers/tests 1073 passed, ruff/format/pyright clean; awaits checkpoint review C |
-| 6 | review | worktree-agent-a0794058bd0d74f3c | c2abc5be merged as 26632098 2026-11-26; repo-wide ruff + pyright clean, 586 touched tests passed, Snyk 0; openapi.json + docs/reference regenerated; full services/api/tests running; awaits checkpoint review C (open question: 409 policy_exists across domains) |
+| 6 | review | worktree-agent-a0794058bd0d74f3c | c2abc5be merged as 26632098 2026-11-26; repo-wide ruff + pyright clean, 586 touched tests passed, Snyk 0; openapi.json + docs/reference regenerated; full services/api/tests 2943 passed + 1 pinned viewer-permission list (me_api/test_me_domains.py) updated by orchestrator for govpolicy.read, me_api 16 passed; awaits checkpoint review C (open question: 409 policy_exists across domains) |
 | 7 | in-progress | (agent worktree) | dispatched 2026-11-26, opus |
 | 8 | todo | | |
 
