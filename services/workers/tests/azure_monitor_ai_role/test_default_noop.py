@@ -35,8 +35,9 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
-def test_all_includes_the_role_last() -> None:
-    assert parse_roles("all")[-1] == "azure_monitor_ai"
+def test_all_includes_the_role() -> None:
+    # Membership, not position: later roles (PRP-105 policy_eval) append after this one.
+    assert "azure_monitor_ai" in parse_roles("all")
 
 
 async def test_unconfigured_role_idles_with_one_info_line(
