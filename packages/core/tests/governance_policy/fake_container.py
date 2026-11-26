@@ -9,8 +9,8 @@ packages shadow each other in one pytest session) plus the real-Cosmos refusal t
   (412 on mismatch, 404 on missing), ``upsert_item``;
 * a small SQL subset evaluated generically: ``SELECT [TOP n|@p] * FROM c [WHERE <conjuncts
   joined by AND>] [ORDER BY c.field [ASC|DESC]]`` with ``c.f = @p``, ``<``, ``<=``, ``>``,
-  ``>=`` and ``ARRAY_CONTAINS(@p, c.f)``. Anything else raises ``AssertionError``, as do missing
-  or unused parameters;
+  ``>=``, ``!=`` (cross-type, null included, never matches) and ``ARRAY_CONTAINS(@p, c.f)``.
+  Anything else raises ``AssertionError``, as do missing or unused parameters;
 * an ORDER BY over two or more properties raises a 400 ``CosmosHttpResponseError``, exactly as
   Cosmos does when no composite index is declared (none is).
 
@@ -38,7 +38,7 @@ _SELECT = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _MULTI_ORDER = re.compile(r"ORDER\s+BY\s+[^,]+,", re.IGNORECASE)
-_COMPARE = re.compile(r"^c\.(\w+)\s*(=|<=|>=|<|>)\s*(@\w+)$")
+_COMPARE = re.compile(r"^c\.(\w+)\s*(!=|=|<=|>=|<|>)\s*(@\w+)$")
 _CONTAINS = re.compile(r"^ARRAY_CONTAINS\((@\w+),\s*c\.(\w+)\)$")
 _OPS: dict[str, Any] = {
     "=": lambda a, b: a == b,
@@ -168,6 +168,11 @@ class FakeContainer:
         if (m := _COMPARE.match(clause)) is not None:
             field, op, name = m.groups()
             wanted = params[name]
+            if op == "!=":
+                # Cosmos: comparing across types (null included) is undefined -> no match.
+                return lambda doc: (
+                    field in doc and type(doc[field]) is type(wanted) and doc[field] != wanted
+                )
             compare = _OPS[op]
             return lambda doc: field in doc and compare(doc[field], wanted)
         if (m := _CONTAINS.match(clause)) is not None:

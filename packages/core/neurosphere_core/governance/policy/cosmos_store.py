@@ -82,6 +82,11 @@ _IN_CLAUSES: Final[Mapping[str, tuple[str, str]]] = {
     "domain_id": ("ARRAY_CONTAINS(@domain_id_any, c.domain_id)", "@domain_id_any"),
     "status": ("ARRAY_CONTAINS(@status_any, c.status)", "@status_any"),
 }
+#: One fixed clause per inequality field (``QUERY_NE_FIELDS``). A missing or null field is
+#: undefined under ``!=`` and filters the row out, which the in-memory backend mirrors.
+_NE_CLAUSES: Final[Mapping[str, tuple[str, str]]] = {
+    "last_run_id": ("c.last_run_id != @last_run_id_ne", "@last_run_id_ne"),
+}
 _SELECT: Final = "SELECT TOP @limit * FROM c WHERE c.customer_id = @customer_id"
 _AFTER_ASC: Final = "c.sort_key > @after"
 _AFTER_DESC: Final = "c.sort_key < @after"
@@ -104,6 +109,10 @@ def build_query(query: DocumentQuery) -> tuple[str, builtins.list[dict[str, Any]
         clause, param = _IN_CLAUSES[name]
         clauses.append(clause)
         params.append({"name": param, "value": list(values)})
+    for name, value in query.not_equals:
+        clause, param = _NE_CLAUSES[name]
+        clauses.append(clause)
+        params.append({"name": param, "value": value})
     if query.after is not None:
         clauses.append(_AFTER_DESC if query.descending else _AFTER_ASC)
         params.append({"name": "@after", "value": query.after})
@@ -248,8 +257,18 @@ class CosmosEvaluationStatusStore(DocumentEvaluationStatusStore):
 class CosmosViolationStore(DocumentViolationStore):
     """Violations on ``policy_violations``."""
 
-    def __init__(self, container: ContainerProxy) -> None:
-        super().__init__(CosmosDocumentBackend(container))
+    def __init__(
+        self,
+        container: ContainerProxy,
+        *,
+        resolve_batch: int = 1000,
+        resolve_max_batches: int = 50,
+    ) -> None:
+        super().__init__(
+            CosmosDocumentBackend(container),
+            resolve_batch=resolve_batch,
+            resolve_max_batches=resolve_max_batches,
+        )
 
     @classmethod
     def from_client(

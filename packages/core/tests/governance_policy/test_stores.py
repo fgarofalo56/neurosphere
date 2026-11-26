@@ -315,6 +315,27 @@ async def test_list_filters_by_domain_and_pages(rig: Rig) -> None:
     assert foreign is None
 
 
+async def test_a_stale_unsuperseded_version_does_not_end_the_listing_early(rig: Rig) -> None:
+    # Review A (PRP-105 item 3): the supersede replace after a new version can lose a race and
+    # leave the older version ``superseded=False``. The page cursor comes from the raw rows, so
+    # the de-dup dropping that stale row cannot make the listing stop before "bravo".
+    await _published(rig, "alpha")
+    await rig.policies.create_draft(draft("alpha", version=2, previous=1))
+    await rig.policies.create_draft(draft("bravo"))
+    for doc in rig.docs("definitions"):
+        if doc.get("policy_id") == "alpha" and doc.get("policy_version") == 1:
+            doc["superseded"] = False  # simulate the lost supersede write
+    seen: list[tuple[str, int]] = []
+    cursor: str | None = None
+    for _ in range(10):
+        page = await rig.policies.list(CUSTOMER, [DOMAIN], PageRequest(page_size=1, cursor=cursor))
+        seen.extend((s.policy.policy_id.root, s.policy.policy_version) for s in page.items)
+        cursor = page.next_cursor
+        if cursor is None:
+            break
+    assert seen == [("alpha", 2), ("bravo", 1)]
+
+
 async def test_a_bad_cursor_is_invalid_schema(rig: Rig) -> None:
     with pytest.raises(InvalidSchemaError) as info:
         await rig.policies.list(CUSTOMER, [DOMAIN], PageRequest(cursor="bm90LWEta2V5"))
@@ -486,6 +507,74 @@ async def test_resolve_missing_stays_inside_the_given_domains_and_rule(rig: Rig)
         CUSTOMER, [], run_id=run2, policy_id="support-governance", rule_id="pii-access", now=T0
     )
     assert no_domains == []
+
+
+def _small_batch_violations(kind: str, *, batch: int, max_batches: int) -> ViolationStore:
+    if kind == "memory":
+        return InMemoryViolationStore(resolve_batch=batch, resolve_max_batches=max_batches)
+    return CosmosViolationStore(
+        FakeContainer(PARTITION_KEY_PATHS),  # type: ignore[arg-type]
+        resolve_batch=batch,
+        resolve_max_batches=max_batches,
+    )
+
+
+async def _observe(store: ViolationStore, run_id: str, subjects: list[str]) -> None:
+    for subject in subjects:
+        await store.upsert_observed(
+            _key(subject), observation(run_id=run_id, subject=subject), now=T0
+        )
+
+
+_SUBJECTS = [f"commercial:acme:neurosphere:agent:bot-{i}" for i in range(5)]
+
+
+@pytest.mark.parametrize("kind", ["memory", "cosmos-fake"])
+async def test_rows_seen_this_run_do_not_use_up_the_resolve_batch(kind: str) -> None:
+    # Review A (PRP-105 item 3): the old pass read TOP n rows and skipped the ones this run had
+    # seen, so n seen rows hid every stale one behind them. Seen rows are now excluded by the
+    # query (``c.last_run_id != @run_id``) and the pass pages until the stale rows are read.
+    store = _small_batch_violations(kind, batch=2, max_batches=10)
+    run1, run2 = new_uuid(), new_uuid()
+    await _observe(store, run1, _SUBJECTS)
+    await _observe(store, run2, _SUBJECTS[:3])  # bot-0..2 seen again; bot-3, bot-4 are stale
+    report = await store.resolve_missing_report(
+        CUSTOMER,
+        [DOMAIN],
+        run_id=run2,
+        policy_id="support-governance",
+        rule_id="pii-access",
+        now=T0,
+    )
+    assert not report.truncated
+    assert sorted(r.violation.subject.canonical_id for r in report.resolved) == _SUBJECTS[3:]
+
+
+@pytest.mark.parametrize("kind", ["memory", "cosmos-fake"])
+async def test_a_resolve_pass_past_its_batch_cap_reports_truncated(kind: str) -> None:
+    store = _small_batch_violations(kind, batch=2, max_batches=2)
+    run1, run2 = new_uuid(), new_uuid()
+    await _observe(store, run1, _SUBJECTS)
+    report = await store.resolve_missing_report(
+        CUSTOMER,
+        [DOMAIN],
+        run_id=run2,
+        policy_id="support-governance",
+        rule_id="pii-access",
+        now=T0,
+    )
+    assert report.truncated
+    assert len(report.resolved) == 4  # two full batches; the fifth stays open for next run
+    again = await store.resolve_missing_report(
+        CUSTOMER,
+        [DOMAIN],
+        run_id=run2,
+        policy_id="support-governance",
+        rule_id="pii-access",
+        now=T0,
+    )
+    assert not again.truncated
+    assert len(again.resolved) == 1
 
 
 async def test_set_exception_marks_excepted_and_back(rig: Rig) -> None:
