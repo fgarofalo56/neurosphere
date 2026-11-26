@@ -279,7 +279,7 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | in-progress | (agent worktree) | dispatched 2026-11-25, opus |
-| 2 | in-progress | (agent worktree) | dispatched 2026-11-25, opus |
+| 2 | verifying | worktree-agent-abc05e501df34c26f | 5703e615; orchestrator re-ran ruff/format/pyright/pytest (33 passed) 2026-11-25; awaits item 1 merge + checkpoint review A |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
