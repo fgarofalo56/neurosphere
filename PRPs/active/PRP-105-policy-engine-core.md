@@ -148,6 +148,8 @@ tier2_appends:
   - packages/core/neurosphere_core/auth/scope/permissions.py
   - packages/core/neurosphere_core/admin/models.py
   - packages/core/tests/admin/test_config_store.py
+  - services/api/tests/runtime_routes/test_manifest_routes_serve.py
+  - docs/runbooks/system-settings.md
   - services/workers/neurosphere_workers/runtime/roles.py
   - services/workers/neurosphere_workers/runtime/factories.py
   - services/api/tests/authz/test_route_inventory.py
@@ -280,10 +282,10 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 |---|---|---|---|
 | 1 | merged | worktree-agent-a3256cd8dd0c738f4 | b03fe4a4+4612ced3 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED (mutation tests killed 5/7, 2 survivors non-gaps); follow-ups #417; draft PR 416 |
 | 2 | merged | worktree-agent-abc05e501df34c26f | 5703e615 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED; follow-ups #417; draft PR 416 |
-| 3 | review | worktree-agent-a015d8b9f985af658 | db9fb6e9 merged to integration as 04ba198e 2026-11-25; gates re-run 519 passed, Snyk 0; review A fixes (list cursor, resolve_missing paging + resolve_truncated) included; awaits checkpoint review B with item 4 |
-| 4 | review | worktree-agent-a704f5021d19aa845 | 1914691a merged to integration as 1f307158 2026-11-26; gates re-run 940 passed, Snyk 0; checkpoint review B (items 3+4) running |
-| 5 | todo | | |
-| 6 | todo | | |
+| 3 | merged | worktree-agent-a015d8b9f985af658 | db9fb6e9 merged as 04ba198e 2026-11-25; review A fixes included; review B CHANGES REQUIRED (blocking: exception self-approval via retry path) -> rework 0a8d713c merged as a3fde3b9 2026-11-26, Haiku confirm CONFIRMED; gates 952 passed, Snyk 0; contract gap #418 (justification text) |
+| 4 | merged | worktree-agent-a704f5021d19aa845 | 1914691a merged as 1f307158 2026-11-26; review B non-blocking fixes (model_allow_list domain governance, expiry/scope guard tests) in rework a3fde3b9; gates 952 passed, Snyk 0 |
+| 5 | in-progress | (agent worktree) | dispatched 2026-11-26, opus |
+| 6 | in-progress | (agent worktree) | dispatched 2026-11-26, opus; brief adds inventory lines: runtime_routes/test_manifest_routes_serve.py, docs/runbooks/system-settings.md row, openapi.json + docs/reference regen |
 | 7 | todo | | |
 | 8 | todo | | |
 
