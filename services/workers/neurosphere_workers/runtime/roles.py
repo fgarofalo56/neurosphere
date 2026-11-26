@@ -29,6 +29,7 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "billing_export",
     "detections",
     "azure_monitor_ai",
+    "policy_eval",
 )
 
 

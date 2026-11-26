@@ -1,6 +1,11 @@
 ---
 name: PRP-105-policy-engine-core
-status: backlog
+status: shipped
+started: 2026-11-25
+shipped: 2026-11-26
+pr: 416
+execution: session
+max_lanes: 2
 priority: P0
 order: 105
 review: required
@@ -32,16 +37,16 @@ Out of scope: the contracts (PRP-99 owns `policy/v1`); the container declaration
 - Owner direction 2026-11-16: "address it all, add it all"; the governance-core design (`temp/audit/governance-core-design.md` section 2.3, binding) fixes the model: closed rule kinds, a worker evaluator, violations with evidence, exceptions through HITL, enforcement modes `off`/`audit`/`enforce` with `audit` the default.
 
 ## Acceptance criteria
-- [ ] Given a draft whose rule `kind` is outside the closed list, or whose parameters fail the PRP-99 parameter schema, or which carries any free-text field that could be executed, When it is created, Then it is refused 422 `invalid_schema` and nothing is stored; no code path compiles, evals or templates rule text (static test greps the package for `eval`, `exec`, `compile(`, `jinja`, query-string building).
-- [ ] Given a published `data_sensitivity_access` policy "no agent without approval may read PII" and a synthetic agent with a `reads` edge to a `GroundingSource` whose `sensitivity_categories` contains `pii`, When the `policy_eval` role ticks, Then one violation exists with the policy id and version, the rule id, the subject id, evidence ids (the edge and the asset), `first_seen_at`, `last_seen_at`, and no content; a second tick updates `last_seen_at` and `occurrence_count` and does not create a second record.
-- [ ] Given that condition disappears and the next run finished without truncation for that rule, Then the violation is `resolved` with `resolved_at`; given the run was truncated (subject or time budget hit), Then nothing is resolved and the run status says `truncated`.
-- [ ] Given a violation, When a caller with `action.propose` in its domain requests an exception (justification code, bounded text, expiry at most `NS_GOVPOLICY_EXCEPTION_MAX_DAYS`), Then a HITL item of kind `policy_exception` is opened with the violation's canonical id as `subject_ref`; after a `catalog.curate` reviewer approves, the next tick marks the exception `active` until its expiry and `decide` honours it; a rejected or expired item leaves the violation open. The requester cannot review their own request.
-- [ ] Publish and retire are drafted as `governance_policy_publish` intents through the one action plane (`ActionApi.draft`, same as REST, chat and MCP); without a registered platform-control target the intent is advisory with "no supported write connector" and the policy stays a draft. No route, worker or seed outside `NS_ENV=local` writes a published state directly.
-- [ ] Every enforcement binding created at publish has mode `audit` (or `off` when the policy's `mode` is `off`); publishing with `mode: enforce` is refused `enforce_requires_mode_change`; no code path sets `enforce` except the `enforcement_mode_change` handler PRP-108 builds on `BindingStore.set_mode`.
-- [ ] `decide(scope, request)` returns `allow`, `deny` or `audit` with matched rule ids, policy versions, the binding mode per point, applied exception ids, reason codes and a cache lifetime; `deny` only when a matching rule's binding for that point is `enforce` and no active exception applies; a subject outside the caller's scope is never described in the response.
-- [ ] Every read route filters by the subject's domain against the caller's server-derived scope (`govpolicy.read`); customer-wide policies live in the customer-control domain and need the permission there; an out-of-scope id is 404, indistinguishable from missing. Every route is in the route inventories and boots under `verify_route_permissions`; ABAC deny cases pass for no role, viewer without the permission, wrong domain, wrong customer, wrong cloud and expired assignment.
-- [ ] Each published policy is projected to `<cloud>:<customer>:neurosphere:policy:<policy_id>` in the catalog (enforcement mapped `off`->`disabled`, `audit`->`advisory`, `enforce`->`enforced`) through the catalog repository with the worker's own derived scope; retire sets the entity `deprecated`.
-- [ ] A rule kind with no evaluator in this deployment (`budget`, `required_attestation`, `identity_entitlement`, or `content_rule` while no interaction-finding reader is bound) is reported `evaluator_unavailable` by `GET /status`, and publishing a policy containing it is refused in dry run (`rule_kind_unavailable`), so no policy appears active while doing nothing.
+- [x] Given a draft whose rule `kind` is outside the closed list, or whose parameters fail the PRP-99 parameter schema, or which carries any free-text field that could be executed, When it is created, Then it is refused 422 `invalid_schema` and nothing is stored; no code path compiles, evals or templates rule text (static test greps the package for `eval`, `exec`, `compile(`, `jinja`, query-string building).
+- [x] Given a published `data_sensitivity_access` policy "no agent without approval may read PII" and a synthetic agent with a `reads` edge to a `GroundingSource` whose `sensitivity_categories` contains `pii`, When the `policy_eval` role ticks, Then one violation exists with the policy id and version, the rule id, the subject id, evidence ids (the edge and the asset), `first_seen_at`, `last_seen_at`, and no content; a second tick updates `last_seen_at` and `occurrence_count` and does not create a second record.
+- [x] Given that condition disappears and the next run finished without truncation for that rule, Then the violation is `resolved` with `resolved_at`; given the run was truncated (subject or time budget hit), Then nothing is resolved and the run status says `truncated`.
+- [x] Given a violation, When a caller with `action.propose` in its domain requests an exception (justification code, bounded text, expiry at most `NS_GOVPOLICY_EXCEPTION_MAX_DAYS`), Then a HITL item of kind `policy_exception` is opened with the violation's canonical id as `subject_ref`; after a `catalog.curate` reviewer approves, the next tick marks the exception `active` until its expiry and `decide` honours it; a rejected or expired item leaves the violation open. The requester cannot review their own request.
+- [x] Publish and retire are drafted as `governance_policy_publish` intents through the one action plane (`ActionApi.draft`, same as REST, chat and MCP); without a registered platform-control target the intent is advisory with "no supported write connector" and the policy stays a draft. No route, worker or seed outside `NS_ENV=local` writes a published state directly.
+- [x] Every enforcement binding created at publish has mode `audit` (or `off` when the policy's `mode` is `off`); publishing with `mode: enforce` is refused `enforce_requires_mode_change`; no code path sets `enforce` except the `enforcement_mode_change` handler PRP-108 builds on `BindingStore.set_mode`.
+- [x] `decide(scope, request)` returns `allow`, `deny` or `audit` with matched rule ids, policy versions, the binding mode per point, applied exception ids, reason codes and a cache lifetime; `deny` only when a matching rule's binding for that point is `enforce` and no active exception applies; a subject outside the caller's scope is never described in the response.
+- [x] Every read route filters by the subject's domain against the caller's server-derived scope (`govpolicy.read`); customer-wide policies live in the customer-control domain and need the permission there; an out-of-scope id is 404, indistinguishable from missing. Every route is in the route inventories and boots under `verify_route_permissions`; ABAC deny cases pass for no role, viewer without the permission, wrong domain, wrong customer, wrong cloud and expired assignment.
+- [x] Each published policy is projected to `<cloud>:<customer>:neurosphere:policy:<policy_id>` in the catalog (enforcement mapped `off`->`disabled`, `audit`->`advisory`, `enforce`->`enforced`) through the catalog repository with the worker's own derived scope; retire sets the entity `deprecated`.
+- [x] A rule kind with no evaluator in this deployment (`budget`, `required_attestation`, `identity_entitlement`, or `content_rule` while no interaction-finding reader is bound) is reported `evaluator_unavailable` by `GET /status`, and publishing a policy containing it is refused in dry run (`rule_kind_unavailable`), so no policy appears active while doing nothing.
 - PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open, CI green; `openapi.json` regenerated.
 
 ## Clarifications (decided)
@@ -144,6 +149,9 @@ tier2_appends:
   - services/api/neurosphere_api/authz/routes.py
   - packages/core/neurosphere_core/auth/scope/permissions.py
   - packages/core/neurosphere_core/admin/models.py
+  - packages/core/tests/admin/test_config_store.py
+  - services/api/tests/runtime_routes/test_manifest_routes_serve.py
+  - docs/runbooks/system-settings.md
   - services/workers/neurosphere_workers/runtime/roles.py
   - services/workers/neurosphere_workers/runtime/factories.py
   - services/api/tests/authz/test_route_inventory.py
@@ -156,6 +164,8 @@ tier2_appends:
   - services/api/tests/runtime_gateway_builder/test_gateway_builder.py
   - services/api/tests/runtime_data/data_helpers.py
   - services/workers/tests/worker_roles/test_roles.py
+  - services/workers/tests/azure_monitor_ai_role/test_default_noop.py
+  - services/api/tests/me_api/test_me_domains.py
   - mkdocs.yml
 must_not_touch:
   - packages/contracts/**
@@ -177,7 +187,7 @@ Parallelization: items 1 and 2 [P] after PRP-99 merges (2 codes against item 1's
 
 ### Item 1 - Models, validation and stores  [P]  [serial-after: PRP-102]
 - Deliverable: `governance/policy/{models,validation,store,cosmos_store,memory_store,ids,capabilities}.py`: re-exports of the PRP-99 types; draft validation (closed kind list, per-kind parameter schema, rule ids unique, bounded counts: at most 50 rules, 200 list items per parameter); the four stores with ETag create and replace; `dedup_key` = `sha256:` of (policy id, rule id, subject canonical id, evidence class); canonical id helpers; `ENFORCEMENT_POINT_CAPABILITIES`; the `enforcement_binding` line in `ADMIN_KIND_MODELS` (core refuses an unregistered `admin_kind`, and this PRP is the first to store bindings).
-- Owned files: `packages/core/neurosphere_core/governance/__init__.py`, `governance/policy/{models,validation,store,cosmos_store,memory_store,ids,capabilities}.py`, `packages/core/tests/governance_policy/test_validation.py`, `test_stores.py`; Tier-2 line in `packages/core/neurosphere_core/admin/models.py`.
+- Owned files: `packages/core/neurosphere_core/governance/__init__.py`, `governance/policy/{models,validation,store,cosmos_store,memory_store,ids,capabilities}.py`, `packages/core/tests/governance_policy/test_validation.py`, `test_stores.py`; Tier-2 line in `packages/core/neurosphere_core/admin/models.py`; drop `enforcement_binding` from `PENDING_ADMIN_KINDS` in `packages/core/tests/admin/test_config_store.py` (PRP-99 hand-off: the PRP that registers a kind removes its entry; added at execution 2026-11-25).
 - Must NOT touch: contracts, `stores/containers.py`.
 - Depends on: PRP-99 merged; `[serial-after: PRP-102]` (same wave W21; PRP-102 declares `policy_definitions`, `policy_violations`, `policy_exceptions`).
 - Acceptance criteria: criterion 1; stale `If-Match` raises `stale_version`; a published version is immutable (replace refused `policy_published`); memory and Cosmos stores pass one shared contract test.
@@ -274,20 +284,45 @@ Policy UI (PRP-106); the platform-control target that executes publish and mode 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | merged | worktree-agent-a3256cd8dd0c738f4 | b03fe4a4+4612ced3 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED (mutation tests killed 5/7, 2 survivors non-gaps); follow-ups #417; draft PR 416 |
+| 2 | merged | worktree-agent-abc05e501df34c26f | 5703e615 merged to integration (no-ff) 2026-11-25; gates re-run 311 passed, Snyk 0; review A APPROVED; follow-ups #417; draft PR 416 |
+| 3 | merged | worktree-agent-a015d8b9f985af658 | db9fb6e9 merged as 04ba198e 2026-11-25; review A fixes included; review B CHANGES REQUIRED (blocking: exception self-approval via retry path) -> rework 0a8d713c merged as a3fde3b9 2026-11-26, Haiku confirm CONFIRMED; gates 952 passed, Snyk 0; contract gap #418 (justification text) |
+| 4 | merged | worktree-agent-a704f5021d19aa845 | 1914691a merged as 1f307158 2026-11-26; review B non-blocking fixes (model_allow_list domain governance, expiry/scope guard tests) in rework a3fde3b9; gates 952 passed, Snyk 0 |
+| 5 | merged | worktree-agent-a530dffe955931ce6 | 33a78ec0 merged as 2cfea1a4 2026-11-26; orchestrator relaxed azure_monitor_ai_role/test_default_noop.py "role last" pin to membership; full services/workers/tests 1073 passed, ruff/format/pyright clean, Snyk 0; review C APPROVED 2026-11-26 |
+| 6 | merged | worktree-agent-a0794058bd0d74f3c | c2abc5be merged as 26632098 2026-11-26; repo-wide ruff + pyright clean, 586 touched tests passed, Snyk 0; openapi.json + docs/reference regenerated; full services/api/tests 2943 passed + 1 pinned viewer-permission list (me_api/test_me_domains.py) updated by orchestrator for govpolicy.read, me_api 16 passed; review C APPROVED 2026-11-26 (409 policy_exists across domains ruled acceptable: manage-only, own customer, one bit about a caller-chosen slug); CodeQL assert-await in test_seed.py fixed by orchestrator; follow-ups #419 |
+| 7 | merged | worktree-agent-aa6637d12e6688f5d | 9c51f515 merged as 915836be 2026-11-26; no real authz defect (no xfail); 13 routes x 6 deny dimensions + out-of-scope 404 parity; 209 new+coverage tests passed; review C APPROVED (4/4 mutations killed) |
+| 8 | merged | orchestrator | runbook, mkdocs nav, changelog fragment 9925fb9c (docs tests 132 passed, strict mkdocs build OK); planning regenerated; gitleaks false positives fixed f7549b89; PR 416 ready, CI green at f7549b89 (33 pass, Pages skipped); local verify-gates full: lint PASS, typecheck PASS, tests/build NOT RUN (killed by low system memory, 2026-11-26) |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-26, PR #416 (integration branch `prp-105-policy-engine-core`). Item merges: item 1 b03fe4a4+4612ced3, item 2 5703e615, item 3 04ba198e, item 4 1f307158, review B rework a3fde3b9, item 5 2cfea1a4, item 6 26632098, item 7 915836be, item 8 9925fb9c; gitleaks fix f7549b89. CI green at f7549b89 (33 checks pass, Pages deploy skipped).
+- Acceptance evidence:
+  - AC1: `packages/core/tests/governance_policy/test_validation.py` (`test_unknown_rule_kind_is_refused`, `test_params_of_another_kind_are_refused`), `test_no_generated_code.py`, `tests/security/governance_policy/test_api_worker_no_generated_code.py`.
+  - AC2: `test_evaluate.py::test_a_published_pii_policy_opens_one_violation_with_ids_and_no_content`, `::test_a_second_tick_bumps_last_seen_and_count_without_a_second_record`; `services/workers/tests/policy_eval_worker/test_worker.py::test_tick_opens_one_violation_then_bumps_it`.
+  - AC3: `test_evaluate.py::test_a_complete_run_resolves_the_violation_once_the_condition_is_gone`, `::test_a_truncated_rule_resolves_nothing_and_the_run_says_truncated`, `::test_a_resolve_pass_that_hit_its_cap_makes_the_rule_truncated`.
+  - AC4: `test_exceptions.py::test_an_approved_exception_is_active_until_expiry_then_the_violation_reopens`, `::test_a_rejected_exception_leaves_the_violation_open`, `::test_the_requester_cannot_review_their_own_request`, `::test_another_principal_cannot_take_over_a_request_whose_review_never_opened`, `::test_a_retried_request_is_review_item_exists_not_a_second_review`; `test_decide.py::test_active_exception_turns_deny_into_allow_with_the_exception_id`.
+  - AC5: `services/api/tests/governance_policy_api/test_publish_draft.py::test_publish_drafts_an_advisory_intent_and_the_policy_stays_a_draft`; `tests/security/governance_policy/test_no_direct_publish.py` (static scan of every published/enforce write path).
+  - AC6: `test_lifecycle.py::test_publish_marks_published_and_binds_every_point_in_audit`, `::test_an_off_policy_gets_off_bindings`, `::test_publishing_with_mode_enforce_is_refused_and_changes_nothing`.
+  - AC7: `test_decide.py` (deny only under enforce, exceptions, expiry) and `test_decide_scope.py` (out-of-scope never described).
+  - AC8: `tests/security/authz/test_governance_policy.py` (`test_no_role_is_denied`, `test_role_without_the_permission_is_denied`, `test_wrong_domain_is_denied`, `test_another_customers_domain_is_denied`, `test_another_clouds_domain_is_denied`, `test_expired_assignment_is_denied`, out-of-scope 404 parity); route inventories and `verify_route_permissions` boot pass in `services/api/tests/authz`.
+  - AC9: `test_projection.py::test_a_published_policy_is_projected_as_an_advisory_catalog_policy`, `::test_retire_deprecates_and_a_missing_entity_is_created_deprecated`.
+  - AC10: `services/api/tests/governance_policy_api/test_builder.py::test_status_reports_evaluators_and_the_latest_run`; `test_lifecycle.py::test_content_rule_is_unavailable_while_no_finding_reader_is_bound`; `test_publish_draft.py::test_the_publish_dry_run_refuses_before_drafting`.
+  - PRP exit: repo-wide ruff and pyright clean; full `services/api/tests` (2943 passed + 1 pinned list updated), full `services/workers/tests` (1073 passed), `tests/security/authz` + `tests/security/governance_policy` (1682 passed), core governance/admin/HITL/auth (952 passed), `tests/docs` (132 passed), `validate_planning.py` PASS; `openapi.json` regenerated; PR open, CI green.
 - Deviations:
-- Descoped items:
+  - The binding design doc `temp/audit/governance-core-design.md` no longer exists; the PRP text and PRP-99 contracts were the authority.
+  - Rule cap is 32 per policy (PRP-99 contract), not 50.
+  - Store methods take `customer_id` (and `updated_by` for binding writes); added `mark_published`, `mark_retired`, `list_published`, `set_exception`, `resolve_missing_report` and an `EvaluationStatusStore`.
+  - Exception justification text is validated but only its SHA-256 is kept (no contract field; #418).
+  - Both publish refusals (`rule_kind_unavailable`, `enforce_requires_mode_change`) are 422 `invalid_schema` with `reason`.
+  - `decide`: applied exception ids come back through `decide_detail` (no contract field); with no snapshot the answer is degraded `audit`, never `deny`. Known limit: a subject with no catalog entity is governed by every in-scope policy (runbook; PRP-112 to 114 must account for it under `enforce`).
+  - Creating a policy id already used in a domain the caller cannot see answers 409 `policy_exists` (review C ruled acceptable).
+  - The local seed records a deterministic uuid5 `published_intent_id` with no stored intent (#419).
+  - Review A findings (policy list cursor, `resolve_missing` 1000-row cap) were fixed inside item 3; review B's blocker (exception self-approval through the retry path) was fixed in one rework round, confirmed.
+  - Ownership additions (mechanical inventory lines): `packages/core/tests/admin/test_config_store.py`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py` (listed, no edit needed), `docs/runbooks/system-settings.md`, `services/workers/tests/azure_monitor_ai_role/test_default_noop.py`, `services/api/tests/me_api/test_me_domains.py`, `.gitleaksignore` (three fingerprints of false positives in commit c2abc5be).
+- Descoped items: none.
 - OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files or calling raw APIs):
+  - Local `verify-gates -Mode full`: lint and typecheck PASS; tests and build NOT RUN (stopped by low system memory). CI ran the full suite and frontend build green.
+  - Emulator check (compose stack, seed, `policy_eval` role) not run in this session.
+  - `policy_eval` is not in the hosted Bicep `NS_WORKER_ROLES` (infra out of scope), so it does not run hosted.
+- Env vars for the operator: API `NS_GOVPOLICY_ENABLED` (true), `NS_GOVPOLICY_BACKEND` (`cosmos`; `memory` only under `NS_ENV=local`), `NS_GOVPOLICY_EXCEPTION_MAX_DAYS` (90), `NS_GOVPOLICY_LOCAL_SEED_FILE` (local only); worker `NS_POLICY_EVAL_INTERVAL_SECONDS` (300), `NS_POLICY_EVAL_SUBJECT_BUDGET` (5000), `NS_POLICY_EVAL_TIME_BUDGET_SECONDS` (120), plus `policy_eval` in `NS_WORKER_ROLES`.
+- Follow-up issues: #417 (review A leftovers), #418 (justification text contract field), #419 (review C leftovers).
+- Product check (can an operator use it without editing files or calling raw APIs): No, not yet. A steward can author drafts and read violations, exceptions and status only through the REST API (no UI until PRP-106), and outside `NS_ENV=local` no policy can be published until PRP-108's platform-control target executes the publish intent, so a hosted deployment shows no violations. Locally, the seed file publishes policies and the worker produces violations.

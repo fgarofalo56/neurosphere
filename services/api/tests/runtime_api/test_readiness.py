@@ -84,6 +84,7 @@ def test_fully_configured_app_is_ready(monkeypatch: pytest.MonkeyPatch) -> None:
         "composition.analytics_adapter.disabled": "ok",
         "composition.agent_identity.disabled": "ok",
         "composition.interaction_capture.disabled": "ok",
+        "composition.governance_policy.disabled": "ok",
     }
     assert composed.registry.ready
 
@@ -198,6 +199,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "sources_status",
         "agent_identity",
         "interactions",
+        "governance",
         "admin",
         "analytics",
     ]
@@ -238,6 +240,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "sources_status",
         "agent_identity",
         "interactions",
+        "governance",
         "admin",
         "analytics",
     ]

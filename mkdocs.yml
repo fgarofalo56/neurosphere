@@ -153,6 +153,7 @@ nav:
       - runbooks/security.md
       - runbooks/content-classification.md
       - runbooks/interaction-audit.md
+      - runbooks/governance-policy.md
       - runbooks/new-user-test.md
   - Walkthroughs:
       - walkthroughs/admin.md
