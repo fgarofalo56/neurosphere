@@ -36,6 +36,7 @@ from neurosphere_contracts.admin.v1.price_sheet_upload import PriceSheetUpload
 from neurosphere_contracts.admin.v1.producer_record import ProducerRecord
 from neurosphere_contracts.admin.v1.review_policy_document import ReviewPolicyDocument
 from neurosphere_contracts.admin.v1.system_setting import SystemSetting
+from neurosphere_contracts.policy.v1.enforcement_binding import EnforcementBinding
 from pydantic import BaseModel, ValidationError
 
 from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
@@ -66,6 +67,7 @@ AdminKindName = Literal[
     "price_sheet",
     "review_policy",
     "system_setting",
+    "enforcement_binding",
 ]
 CloudName = Literal["commercial", "government"]
 AdminBody = (
@@ -76,6 +78,7 @@ AdminBody = (
     | PriceSheetUpload
     | ReviewPolicyDocument
     | SystemSetting
+    | EnforcementBinding
 )
 
 #: kind -> the generated model its body must validate against (mirrors the schema's allOf).
@@ -88,6 +91,7 @@ ADMIN_KIND_MODELS: Final[Mapping[str, type[BaseModel]]] = MappingProxyType(
         "price_sheet": PriceSheetUpload,
         "review_policy": ReviewPolicyDocument,
         "system_setting": SystemSetting,
+        "enforcement_binding": EnforcementBinding,
     }
 )
 ADMIN_KINDS: Final[frozenset[str]] = frozenset(get_args(AdminKindName))
