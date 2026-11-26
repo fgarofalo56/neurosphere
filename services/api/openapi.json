@@ -3815,6 +3815,381 @@
         "title": "CapabilityMatrixView",
         "type": "object"
       },
+      "CaptureCountersView": {
+        "additionalProperties": false,
+        "description": "Deployment-wide capture counters (integers keyed by reason codes only).",
+        "properties": {
+          "audit_write_failed": {
+            "title": "Audit Write Failed",
+            "type": "integer"
+          },
+          "capture_failed": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Capture Failed",
+            "type": "object"
+          },
+          "capture_failed_total": {
+            "title": "Capture Failed Total",
+            "type": "integer"
+          },
+          "capture_shed": {
+            "title": "Capture Shed",
+            "type": "integer"
+          },
+          "capture_skipped_item_cap": {
+            "title": "Capture Skipped Item Cap",
+            "type": "integer"
+          },
+          "capture_skipped_no_policy": {
+            "title": "Capture Skipped No Policy",
+            "type": "integer"
+          },
+          "captured": {
+            "title": "Captured",
+            "type": "integer"
+          },
+          "cleanup_failed": {
+            "title": "Cleanup Failed",
+            "type": "integer"
+          },
+          "failure_record_failed": {
+            "title": "Failure Record Failed",
+            "type": "integer"
+          },
+          "in_flight": {
+            "title": "In Flight",
+            "type": "integer"
+          },
+          "shed_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Shed Reasons",
+            "type": "object"
+          },
+          "skipped_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Skipped Reasons",
+            "type": "object"
+          }
+        },
+        "required": [
+          "captured",
+          "capture_skipped_no_policy",
+          "capture_skipped_item_cap",
+          "skipped_reasons",
+          "capture_failed",
+          "capture_failed_total",
+          "capture_shed",
+          "shed_reasons",
+          "audit_write_failed",
+          "failure_record_failed",
+          "cleanup_failed",
+          "in_flight"
+        ],
+        "title": "CaptureCountersView",
+        "type": "object"
+      },
+      "CapturePolicyPage": {
+        "additionalProperties": false,
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CapturePolicyView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "truncated",
+          "configured",
+          "reason"
+        ],
+        "title": "CapturePolicyPage",
+        "type": "object"
+      },
+      "CapturePolicyView": {
+        "additionalProperties": false,
+        "description": "One capture policy, metadata only (no content exists on a policy).",
+        "properties": {
+          "approved_audit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Audit Id"
+          },
+          "approved_intent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Intent Id"
+          },
+          "customer_dictionary_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Customer Dictionary Ids",
+            "type": "array"
+          },
+          "detector_set_version": {
+            "title": "Detector Set Version",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "kept_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kept Categories",
+            "type": "array"
+          },
+          "max_part_chars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Part Chars"
+          },
+          "parts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Parts",
+            "type": "array"
+          },
+          "policy_id": {
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "previous_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Version"
+          },
+          "redaction_mode": {
+            "title": "Redaction Mode",
+            "type": "string"
+          },
+          "retention_class": {
+            "title": "Retention Class",
+            "type": "string"
+          },
+          "retention_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Days"
+          },
+          "sampling": {
+            "$ref": "#/components/schemas/CaptureSamplingView"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "proposed",
+              "active",
+              "suspended",
+              "retired"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "policy_id",
+          "display_name",
+          "version",
+          "previous_version",
+          "domain_id",
+          "source_ids",
+          "parts",
+          "detector_set_version",
+          "customer_dictionary_ids",
+          "redaction_mode",
+          "kept_categories",
+          "sampling",
+          "max_part_chars",
+          "retention_class",
+          "retention_days",
+          "state",
+          "approved_intent_id",
+          "approved_audit_id",
+          "effective_from"
+        ],
+        "title": "CapturePolicyView",
+        "type": "object"
+      },
+      "CaptureSamplingView": {
+        "additionalProperties": false,
+        "properties": {
+          "max_per_minute": {
+            "title": "Max Per Minute",
+            "type": "integer"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "rate",
+          "max_per_minute"
+        ],
+        "title": "CaptureSamplingView",
+        "type": "object"
+      },
+      "CaptureStatusView": {
+        "additionalProperties": false,
+        "description": "Whether capture is on and, when off, the reason code.\n\n``counters`` are deployment-wide, so they are present only for a customer-wide caller and\nonly once the capture edge has been built; a domain-scoped view gets ``null``.",
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "counters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaptureCountersView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counters_scope": {
+            "const": "customer",
+            "title": "Counters Scope",
+            "type": "string"
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Id"
+          },
+          "off_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Off Reason"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/PolicyStateCounts"
+          },
+          "policies_truncated": {
+            "title": "Policies Truncated",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "off"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "off_reason",
+          "configured",
+          "domain_id",
+          "policies",
+          "policies_truncated",
+          "counters",
+          "counters_scope"
+        ],
+        "title": "CaptureStatusView",
+        "type": "object"
+      },
       "CatalogDomainSearchRequest": {
         "additionalProperties": false,
         "description": "``POST /api/v1/catalog/domains/{domain}/search``: the server sets the domain filter.",
@@ -13592,6 +13967,40 @@
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
         "title": "PolicyId",
         "type": "string"
+      },
+      "PolicyStateCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "proposed": {
+            "title": "Proposed",
+            "type": "integer"
+          },
+          "retired": {
+            "title": "Retired",
+            "type": "integer"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "proposed",
+          "active",
+          "suspended",
+          "retired"
+        ],
+        "title": "PolicyStateCounts",
+        "type": "object"
       },
       "PolicyVersion": {
         "minimum": 1.0,
@@ -23976,6 +24385,171 @@
         "tags": [
           "admin-identity",
           "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/interactions/capture-policies": {
+      "get": {
+        "description": "Capture policies (metadata only): scope, sources, parts, redaction mode, kept categories, sampling, retention, state, version and the approval audit id. With `domain_id`, `config.manage` in that domain; without it, customer-level `config.manage`. Read-only: changes are `capture_policy_change` actions.",
+        "operationId": "list_capture_policies_api_v1_admin_interactions_capture_policies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Domain id; omit for every domain (needs customer-level config.manage).",
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Domain id; omit for every domain (needs customer-level config.manage).",
+              "title": "Domain Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapturePolicyPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Capture Policies",
+        "tags": [
+          "admin-capture"
+        ]
+      }
+    },
+    "/api/v1/admin/interactions/capture-policies/{policy_id}": {
+      "get": {
+        "description": "One capture policy (metadata only). `config.manage` on the policy's domain or customer-level; a policy the caller may not read is 404 like an unknown one.",
+        "operationId": "get_capture_policy_api_v1_admin_interactions_capture_policies__policy_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapturePolicyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Capture Policy",
+        "tags": [
+          "admin-capture"
+        ]
+      }
+    },
+    "/api/v1/admin/interactions/capture-status": {
+      "get": {
+        "description": "Whether interaction capture is on, the off reason code when it is off, policy counts per state and, for customer-level callers, the deployment-wide counters (captured, skipped, failed by reason, shed). Reason `capture_not_configured` when capture was not composed.",
+        "operationId": "capture_status_api_v1_admin_interactions_capture_status_get",
+        "parameters": [
+          {
+            "description": "Domain id; omit for every domain (needs customer-level config.manage).",
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Domain id; omit for every domain (needs customer-level config.manage).",
+              "title": "Domain Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureStatusView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Capture Status",
+        "tags": [
+          "admin-capture"
         ]
       }
     },

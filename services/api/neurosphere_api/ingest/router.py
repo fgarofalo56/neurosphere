@@ -24,6 +24,7 @@ from neurosphere_api.ingest.publisher import Publisher
 from neurosphere_api.ingest.reasons import ReasonCode
 from neurosphere_api.ingest.service import IngestResult, IngestService
 from neurosphere_api.ingest.settings import IngestSettings
+from neurosphere_api.middleware.correlation import correlation_id_of
 from neurosphere_api.routers import RouterRegistry
 
 ROUTE_PREFIX = "/api/v1/ingest"
@@ -97,7 +98,13 @@ def build_router() -> APIRouter:
 
     @router.post("/otlp/traces", status_code=202, response_model=IngestResult)
     async def traces(request: Request) -> IngestResult:
-        return await otlp(request, IngestService.ingest_otlp_traces)
+        correlation_id = correlation_id_of(request.scope)
+        return await otlp(
+            request,
+            lambda svc, producer, raw: svc.ingest_otlp_traces(
+                producer, raw, correlation_id=correlation_id
+            ),
+        )
 
     @router.post("/otlp/metrics", status_code=202, response_model=IngestResult)
     async def metrics(request: Request) -> IngestResult:
@@ -111,7 +118,12 @@ def build_router() -> APIRouter:
             service,
             media_types=("application/cloudevents+json", "application/cloudevents-batch+json"),
         )
-        return await service.ingest_events(producer, raw, request.headers["content-type"])
+        return await service.ingest_events(
+            producer,
+            raw,
+            request.headers["content-type"],
+            correlation_id=correlation_id_of(request.scope),
+        )
 
     return router
 

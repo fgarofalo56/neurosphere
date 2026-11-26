@@ -2,6 +2,7 @@ import { handle as adminCore } from "./admin-core.ts";
 import { handle as adminSources } from "./admin-sources.ts";
 import { handle as agentMatch } from "./agent-match.ts";
 import { handle as audit } from "./audit.ts";
+import { handle as capture } from "./capture.ts";
 import { handle as catalog } from "./catalog.ts";
 import { handle as catalogAccess } from "./catalog-access.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
@@ -41,6 +42,8 @@ export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   // Before adminCore: it answers `/admin/system/**`, and this module owns `/settings/{key}`.
   adminSources,
   sourceStatus,
+  // PRP-103 item 5: `/admin/interactions/capture-*` only; before adminCore.
+  capture,
   adminCore,
   // PRP-77: answers only the map-incident fixture domain family; passes everything else.
   mapTopology,

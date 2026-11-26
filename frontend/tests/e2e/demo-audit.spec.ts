@@ -57,6 +57,8 @@ const POPULATED_DIRECT_URL: Readonly<Record<string, string>> = {
 const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
   // PRP-53: the admin console needs the deployment-admin scope (audit search: audit.read).
   "/admin/audit",
+  // PRP-103: interaction capture policies and status need config.manage.
+  "/admin/capture",
   "/admin/domains",
   "/admin/identity",
   "/admin/identity/principal",

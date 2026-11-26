@@ -14,6 +14,7 @@ import {
   ADMIN_PRODUCERS_ROUTE,
   ADMIN_REVIEW_POLICY_ROUTE,
 } from "../sources/apiPaths";
+import { ADMIN_CAPTURE_ROUTE } from "../capture/paths";
 
 export interface AdminArea {
   readonly id: string;
@@ -105,6 +106,14 @@ export const ADMIN_AREAS: readonly AdminArea[] = [
     label: "Review policy",
     to: `/${ADMIN_REVIEW_POLICY_ROUTE}`,
     description: "Approval rules, SLAs and escalation for human review.",
+    roles: ["Admin"],
+  },
+  // PRP-103 item 5: read-only interaction capture policies and status.
+  {
+    id: "capture",
+    label: "Interaction capture",
+    to: `/${ADMIN_CAPTURE_ROUTE}`,
+    description: "Capture policies, capture status, off reasons and counters (read-only).",
     roles: ["Admin"],
   },
 ];

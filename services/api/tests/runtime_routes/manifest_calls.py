@@ -289,6 +289,14 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         ),
     ),
     "/admin/review-policy": (*_SHELL, ApiCall("/api/v1/admin/platform/review-policy")),
+    # PRP-103 item 5: read-only capture status and policies (customer-level config.manage). A
+    # fresh stack has capture off and no policy, so no row requires data. The policy detail is
+    # read when the user opens it, not on render.
+    "/admin/capture": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/interactions/capture-status"),
+        ApiCall("/api/v1/admin/interactions/capture-policies", q(limit=200)),
+    ),
     "/audit": (
         *_SHELL,
         ApiCall("/api/v1/audit/domains"),

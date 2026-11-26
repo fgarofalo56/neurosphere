@@ -113,6 +113,16 @@ const ENTRIES: readonly Entry[] = [
   // PRP-57: admin console part 2. OPEN until PRP-38's job covers these pages; the operator may
   // not hold the deployment-admin scope, and each data page then shows its forbidden state.
   {
+    route: "/admin/capture",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/interactions/",
+        why: "capture policies and status need config.manage (customer control for all domains), which the operator may not hold",
+      },
+    ],
+  },
+  {
     route: "/admin/sources/producers",
     expected: [
       {

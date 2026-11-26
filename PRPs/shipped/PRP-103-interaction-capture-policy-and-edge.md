@@ -1,6 +1,9 @@
 ---
 name: PRP-103-interaction-capture-policy-and-edge
-status: backlog
+status: shipped
+shipped: 2026-11-25
+pr: 413
+ac_not_met: [AC2]
 priority: P0
 order: 103
 review: required
@@ -14,7 +17,7 @@ depends_on: [PRP-99-governance-contracts-a, PRP-101-sensitive-information-detect
 wave: W22
 branch: prp-103-capture-policy-and-edge
 allow_parallel: true
-issues: []
+issues: [411, 414, 415]
 ---
 
 # PRP-103: Interaction capture policy and the ingest-edge capture path
@@ -32,15 +35,15 @@ Out of scope: who may read content, the explorer, export and replay (PRP-104); e
 - `docs/security/threat-model.md:190` states "`payload/guard.py` drops bodies by default before persist or publish"; the threat model must gain rows for the new path.
 
 ## Acceptance criteria
-- [ ] Given no active capture policy (or the `interaction_capture` stored setting absent or disabled, or `bodies_retained` false, or no `interaction_content` retention rule), When any ingest route is called, Then the published messages, the 202 body and every counter are identical to today, and the existing `services/api/tests/ingest` suite passes unchanged.
-- [ ] Given an approved, active policy for source S and domain D, When a span from S with `domain_id` D carries body attributes, Then exactly one interaction is stored (redacted, encrypted), the published event carries `payload_ref` with `redaction_state: redacted` and the policy version, and the published message passes `find_body_fields` with no paths; a span from S with another or a null domain, or from another source, is not captured.
-- [ ] Credentials in captured text are stored only as the PRP-99 placeholder `[[ns-redacted:<detected_category>]]`; decrypting the stored blob in the test finds no generated secret, no hash or prefix of it; payment cards are redacted unless the policy keeps them (GD-4).
-- [ ] Given an injected failure in detection, redaction, key wrap or storage, Then nothing is written, the event carries `payload_ref` with `redaction_state: redaction_failed` and an index-only record, the telemetry item is still accepted, and `capture_failed` increments with a reason code.
-- [ ] Each captured interaction appends one `interaction.capture` audit record (and each drop one `interaction.capture_dropped`) on the domain chain with the triggering `correlation_id`, ids and counts only; if that audit write fails, the content is not kept (blob removed or never written) and the drop is counted.
-- [ ] Given the capture in-flight queue reaches `shed_capture_at_queue_percent` of its capacity, or the policy's `sampling.max_per_minute` is exceeded, Then content is shed (no `payload_ref`), `capture_shed` increments and telemetry is still published; ingest latency with capture off is unchanged.
-- [ ] With capture ON, a negative test per guard proves body-free output: the event-bus message, the worker pipeline (accepts the event, still quarantines a message that carries a body with `BODY_FIELD_PRESENT`), the quarantine record, the archive record, audit records (sealed), SIEM events and all log records contain no canary from the captured content.
-- [ ] `capture_policy_change` apply and read-back functions validate the diff, refuse a policy without an approving audit id, write the new version with ETag, and return the stored state for verify; there is no API route that creates or changes a capture policy.
-- [ ] `GET /api/v1/admin/interactions/capture-policies` and `GET /api/v1/admin/interactions/capture-status` need `config.manage` in the domain (customer-control for all domains), are in every route inventory, return metadata and counters only, and the admin page shows each policy, its scope, parts, modes, sampling, approval audit id, status and the reason capture is off when it is off.
+- [x] Given no active capture policy (or the `interaction_capture` stored setting absent or disabled, or `bodies_retained` false, or no `interaction_content` retention rule), When any ingest route is called, Then the published messages, the 202 body and every counter are identical to today, and the existing `services/api/tests/ingest` suite passes unchanged. Evidence: `services/api/tests/interaction_capture_edge/test_capture_off_identical.py` (four off modes, every route, bytes + 202 + counters, extraction made to raise), `tests/security/capture_guards/test_off_is_identical.py`; `services/api/tests/ingest` unchanged and passing.
+- [ ] Given an approved, active policy for source S and domain D, When a span from S with `domain_id` D carries body attributes, Then exactly one interaction is stored (redacted, encrypted), the published event carries `payload_ref` with `redaction_state: redacted` and the policy version, and the published message passes `find_body_fields` with no paths; a span from S with another or a null domain, or from another source, is not captured. (Met for CloudEvents telemetry; not met for OTLP spans: see "Acceptance criteria not met".)
+- [x] Credentials in captured text are stored only as the PRP-99 placeholder `[[ns-redacted:<detected_category>]]`; decrypting the stored blob in the test finds no generated secret, no hash or prefix of it; payment cards are redacted unless the policy keeps them (GD-4). Evidence: `packages/core/tests/interaction_capture_policy/test_pipeline.py` (decrypt, hash/prefix probes, straddling-cap card and IBAN), `tests/security/capture_guards/test_six_guards.py::test_edge_messages_are_body_free` (sha256, base64, 12-char prefix).
+- [x] Given an injected failure in detection, redaction, key wrap or storage, Then nothing is written, the event carries `payload_ref` with `redaction_state: redaction_failed` and an index-only record, the telemetry item is still accepted, and `capture_failed` increments with a reason code. Evidence: `test_pipeline.py` failure cases per layer; `services/api/tests/interaction_capture_edge/test_edge_capture.py`.
+- [x] Each captured interaction appends one `interaction.capture` audit record (and each drop one `interaction.capture_dropped`) on the domain chain with the triggering `correlation_id`, ids and counts only; if that audit write fails, the content is not kept (blob removed or never written) and the drop is counted. Evidence: `test_pipeline.py` audit-failure and cancellation cases; `test_edge_followups.py` (request `x-correlation-id` reaches the draft); `capture_guards/test_six_guards.py` (sealed through the real chain, `assert_metadata_only`).
+- [x] Given the capture in-flight queue reaches `shed_capture_at_queue_percent` of its capacity, or the policy's `sampling.max_per_minute` is exceeded, Then content is shed (no `payload_ref`), `capture_shed` increments and telemetry is still published; ingest latency with capture off is unchanged. Evidence: `test_pipeline.py` shed by queue and by rate; `test_edge_capture.py` shed at the edge. Latency off: shown structurally (no pipeline attached when inactive, one attribute check; extraction never called when off, `test_capture_off_identical.py`); no timing benchmark, load profiles with capture are PRP-84.
+- [x] With capture ON, a negative test per guard proves body-free output: the event-bus message, the worker pipeline (accepts the event, still quarantines a message that carries a body with `BODY_FIELD_PRESENT`), the quarantine record, the archive record, audit records (sealed), SIEM events and all log records contain no canary from the captured content. Evidence: `tests/security/capture_guards/` (20+ tests, ON and OFF), reviewer mutation runs caught three injected leaks.
+- [x] `capture_policy_change` apply and read-back functions validate the diff, refuse a policy without an approving audit id, write the new version with ETag, and return the stored state for verify; there is no API route that creates or changes a capture policy. Evidence: `packages/core/tests/interaction_capture_policy/test_apply_and_read_back.py`; `tests/security/authz/test_capture_admin.py::test_no_write_method_exists`.
+- [x] `GET /api/v1/admin/interactions/capture-policies` and `GET /api/v1/admin/interactions/capture-status` need `config.manage` in the domain (customer-control for all domains), are in every route inventory, return metadata and counters only, and the admin page shows each policy, its scope, parts, modes, sampling, approval audit id, status and the reason capture is off when it is off. Evidence: `services/api/neurosphere_api/admin/capture/`, `test_admin_routes.py`, `tests/security/authz/test_capture_admin.py`, route inventories, `frontend/src/features/admin/capture/`, `frontend/tests/e2e/admin-capture/capture.spec.ts`. Domain-scoped admins need a domain picker on the page (#415).
 - PRP exit: touched suites, `tests/security/capture_guards`, `tests/security/authz`, ruff, pyright, frontend lint/typecheck/test/e2e, `validate_planning.py` pass; PR open with CI green; `openapi.json` regenerated.
 
 ## Clarifications (decided)
@@ -269,20 +272,33 @@ None here. Capture end to end on the hosted app (synthetic domain only, enabled 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | serial-after PRP-107 |
-| 8 | todo | | |
+| 1 | merged | prp-103-item-1 @ cc935da9 -> 5f6d36f5 | Review BLOCK (Cosmos multi-property ORDER BY needs composite index) fixed in rework: single ORDER BY + SQL-recording fake, env-only local seed, domain prefix before deny, `policy_limit_exceeded` off reason (>500 policies). Re-verified: 163 passed, ruff/pyright clean, Snyk 0. Plan approved by owner 2026-11-25 (s-80ece6, adopted from orphaned s-42e704): waves 1+2, 3, 4, 5+6 (+7), 8 |
+| 2 | merged | prp-103-item-2 @ 79f330df -> 3653f60e | Review BLOCK (cap before redaction kept part of a spaced card/IBAN in clear) fixed in rework: redact whole part then cap, guarded tail on cut parts, cancellation shield, RecursionError, scrubbed envelope error, caplog + payload_ref schema tests; one CaptureRateLimiter. Re-verified on integration: 1210 passed, ruff/pyright clean, Snyk 0. Follow-ups: cleanup_failed reconciler; redact_listed undefined in contract (treated as redact_all_detections, fail-safe). |
+| 3 | merged | prp-103-item-3 @ 812fb60a -> 7b8647f7 | Review APPROVE; follow-ups done (whole capture job in edge_error handler, rejected-span alignment test, docstring). Owner 2026-11-25 approved a scoped `ingest/router.py` change (was must_not_touch; PRP-100 shipped): pass `correlation_id_of(request.scope)` to traces + events. Owner accepted deviation: OTLP spans carry no `domain_id` at the edge (domain resolved later in workers), so only CloudEvents telemetry is captured today (fail-closed, GD-46) - follow-up for PRP-111. 207 passed on integration, Snyk 0. Also de-flaked item 2 straddle tests (74f344ce). |
+| 4 | merged | prp-103-item-4 @ 21c17aa3 + 5a581616 | Review APPROVE (250 passed, Snyk 0). Orchestrator follow-ups: 15 s timeout on the startup policy read, `optional.interaction_capture` row in docs/runbooks/system-settings.md (checklist test). Deviation: `interaction_capture` is still in core PENDING_SETTING_KEYS, so every real deployment (local included) reads `setting_off` until PRP-108/109 adds the key; matcher snapshot read once at startup (restart to pick up a policy, Clarification 8). Builder sits before admin (pinned order). App state: interaction_capture, interaction_capture_stats, interaction_capture_policy_store, interaction_capture_off_reason. Env: NS_INTERACTION_CAPTURE_QUEUE_CAPACITY. |
+| 5 | merged | prp-103-item-5 @ e0c546bc -> 308b1b2a | Three GET routes (`config.manage`; list/status without `domain_id` need customer control; cross-domain detail is the same 404 as unknown), page `/admin/capture`, openapi additive. Orchestrator fixed route inventories outside ownership (route-manifest.json, manifest count 59, mock-api registry test, demo-audit forbidden set, real-stack routes entry) and regenerated docs/reference. Review APPROVE, 22 passed, Snyk 0 (backend + page). Follow-ups: domain picker for domain-scoped admins, domain filter pushed into the store query, detail-404 timing. |
+| 6 | merged | prp-103-item-6 @ 8a58bc86 -> 84caecf7 | All 8 guards hold with capture ON and OFF; OFF byte-identical to no pipeline on every route. Review APPROVE with mutation runs (edge drop no-op, worker quarantine drop no-op, raw-item DEBUG log: all caught); follow-ups done (archive with a body, audit refusal negative, b64/prefix leak forms, global log capture + non-vacuity, counters compared). 80 passed with edge suite. |
+| 7 | merged | prp-103-item-7 @ 5ce9e54d -> 6f865640 | Owner 2026-11-25: done before PRP-107 ships (conflict risk accepted; diff confined to `_lifecycle_targets` + adjacent helper + one import). Review APPROVE, 83 passed, Snyk 0. Worker reads `NS_INTERACTION_CONTENT_CONTAINER` / `NS_INTERACTION_CONTENT_STORAGE_ACCOUNT` (no stored-settings source in the worker); must match the API's stored setting (runbook) - follow-up: single source / parity check, non-local path tests. |
+| 8 | merged | integration branch | Threat model rows, runbook section, changelog fragment (fa2ca62b, a73a1896); local gates green (ruff, format, repo-wide pyright, PRP pytest list 2456 passed + openapi drift on final tree, frontend lint/typecheck/vitest 1456); PR #413; follow-ups #414, #415. Owner 2026-11-25: #411 items 1-2 not done here; must land before PRP-108/109 enable capture |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-25, PR #413. Merges into the integration branch: 5f6d36f5 (item 1), 3653f60e (item 2), 7b8647f7 (item 3), 9d6d3b02 + 5a581616 (item 4), 308b1b2a (item 5), 84caecf7 (item 6), 6f865640 (item 7); docs fa2ca62b, a73a1896.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+  - OTLP spans are never captured: the edge has no `domain_id` for spans (the domain is resolved later in the workers), so every span is `domain_missing` under GD-46. Only CloudEvents telemetry is captured. Owner accepted 2026-11-25; criterion 2's span example is met only with a domain-stamping mapping (tested by monkeypatch). Follow-up for PRP-111.
+  - `ingest/router.py` (listed must_not_touch, PRP-100's file, since shipped) gained one scoped change: the traces and events handlers pass `correlation_id_of(request.scope)`. Owner approved 2026-11-25.
+  - Item 7 ran before PRP-107 shipped (owner 2026-11-25), confined to `_lifecycle_targets`, one helper and one import.
+  - The `interaction_capture` stored setting is still in core's pending setting keys, so every deployment, local included, reads `setting_off` until PRP-108/109 makes the key loadable. Consistent with "NOT building: a settings toggle that turns capture on".
+  - `redaction_mode` `redact_listed` is undefined in the contract; both modes behave as `redact_all_detections` minus kept categories (fail-safe).
+  - `extract_body_parts` returns `ExtractedBody` (convertible to `ContentEnvelope`), because CloudEvents items may lack a `trace_id`.
+  - New off reason `policy_limit_exceeded` (more than 500 policies per customer fails closed).
+  - Status counters are deployment-wide, so only customer-wide callers see them; a domain-scoped status has `counters: null`.
+  - Out-of-ownership inventory and doc lines: route-manifest.json, test_manifest_routes_serve count, mock-api registry test, demo-audit forbidden set, real-stack routes entry, docs/reference regen, docs/runbooks/system-settings.md component row.
+- Descoped items: none.
+- OPEN gates: capture end to end on the hosted app (PRP-109, evidenced by PRP-136 with `NS_LIVE_APPROVED=1`); live Key Vault wrap and unwrap (PRP-136); Cosmos emulator run of the capture policy store `list()` (covered by a SQL-recording fake only).
+- Env vars for the operator: API `NS_INTERACTION_CAPTURE_QUEUE_CAPACITY` (default 64), `NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQUEST` (default 100); worker `NS_INTERACTION_CONTENT_CONTAINER`, `NS_INTERACTION_CONTENT_STORAGE_ACCOUNT` (must match the `interaction_capture` stored setting).
+- Follow-up issues: #414 (OTLP span capture needs a trusted domain at the edge); #415 (content-location parity, cleanup reconciler, matcher refresh, `redact_listed`, admin page domain scope, test gaps); #411 items 1-2 before PRP-108/109.
+- CI: PR #413 checks were pending at close-out; this PRP is not merged until they are green.
+
+### Acceptance criteria not met
+- AC2 (capture of a span from source S with `domain_id` D). Measured: met for CloudEvents telemetry (`test_edge_capture.py`); OTLP spans are never captured because the edge has no `domain_id` for spans, so every span is `domain_missing` (fail-closed, GD-46). Target: spans from S with domain D are captured. Operator decision: owner accepted CloudEvents-only capture on 2026-11-25. Follow-up: #414.
+- Product check (can an operator use it without editing files): an operator can see capture status, the off reason and any policies on Admin, Interaction capture (`/admin/capture`) and in readiness; capture itself cannot be turned on in any deployment until PRP-108 (approval executor) and PRP-109 (stored-setting key, hosted enablement) ship. Capture stays OFF by default, so `docs/PRD.md` "prompt/response bodies disabled by default" stays true.
