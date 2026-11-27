@@ -1,6 +1,6 @@
 """Fixed NS-08 role set, the documented role-to-permission map and scope permission checks.
 
-Five roles exist and the set is closed (PRP-06 C6). Their names are the contract literals in
+Six roles exist and the set is closed (PRP-06 C6). Their names are the contract literals in
 ``RoleAssignment.role``. Each role is bound to explicit domains in the policy store; a role never
 applies tenant-wide and there is no wildcard, superuser or bypass permission anywhere (C7).
 
@@ -15,6 +15,8 @@ admin              data.read, config.manage, policy.manage, revocation.manage, g
                    grant.write, lifecycle.manage, govpolicy.read, govpolicy.manage
 security_auditor   audit.read, audit.export, evidence.read, govpolicy.read  (no data.read:
                    auditors read evidence, not data)
+interaction_       interaction.read, interaction.export  (only these two; privileged,
+investigator       time-bound, at most 7 days per assignment; no other role holds either)
 =================  ====================================================================
 
 "Pro" is an Analyst capability tier (C6), not a role: it confers nothing from the Admin row.
@@ -36,6 +38,11 @@ policies, violations, exceptions and enforcement bindings: every role but the in
 investigator reads them; Domain Steward and Admin draft and record. Publishing is an action
 intent, approved under ``action.approve`` (GD-20), never this permission alone. They are
 unrelated to ``policy.manage``, the identity principal-policy permission.
+
+``interaction.read`` / ``interaction.export`` (PRP-104, owner decisions GD-2 and GD-16) govern
+reading and exporting captured interaction content. Only the privileged, time-bound
+``interaction_investigator`` role holds them. Admin assigns the role (``policy.manage``) but never
+holds either permission; an assignment longer than 7 days is refused by the identity admin service.
 
 Customer-wide (deployment-scoped) authority (#114): there is still no customer-wide role and no
 wildcard. A change that applies to the whole customer requires the permission on ONE reserved
@@ -105,6 +112,8 @@ class Permission(StrEnum):
     AUDIT_EXPORT = "audit.export"
     GOVPOLICY_READ = "govpolicy.read"
     GOVPOLICY_MANAGE = "govpolicy.manage"
+    INTERACTION_READ = "interaction.read"
+    INTERACTION_EXPORT = "interaction.export"
 
 
 _VIEWER = frozenset({Permission.DATA_READ, Permission.GRANT_READ, Permission.GOVPOLICY_READ})
@@ -137,6 +146,7 @@ _AUDITOR = frozenset(
         Permission.GOVPOLICY_READ,
     }
 )
+_INVESTIGATOR = frozenset({Permission.INTERACTION_READ, Permission.INTERACTION_EXPORT})
 
 ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType(
     {
@@ -145,7 +155,7 @@ ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType
         Role.DOMAIN_STEWARD: _STEWARD,
         Role.ADMIN: _ADMIN,
         Role.SECURITY_AUDITOR: _AUDITOR,
-        Role.INTERACTION_INVESTIGATOR: frozenset(),
+        Role.INTERACTION_INVESTIGATOR: _INVESTIGATOR,
     }
 )
 

@@ -1,4 +1,4 @@
-"""Fixed five roles, documented permission sets, no bypass, privileged roles scoped and timed."""
+"""Fixed six roles, documented permission sets, no bypass, privileged roles scoped and timed."""
 
 from __future__ import annotations
 
@@ -76,9 +76,10 @@ EXPECTED = {
         P.EVIDENCE_READ,
         P.GOVPOLICY_READ,  # PRP-105 GD-21: auditors read governance policy state
     },
-    # PRP-99 item 5: inert until PRP-104 assigns interaction.read and interaction.export.
-    Role.INTERACTION_INVESTIGATOR: set(),
+    # PRP-104 GD-2: exactly the two content permissions, held by no other role.
+    Role.INTERACTION_INVESTIGATOR: {P.INTERACTION_READ, P.INTERACTION_EXPORT},
 }
+CONTENT = {P.INTERACTION_READ, P.INTERACTION_EXPORT}
 # Held by Admin and Domain Steward alike (PRP-33 item 5), so not an admin-only permission.
 SHARED_ADMIN_STEWARD = {P.GRANT_WRITE, P.GOVPOLICY_MANAGE}
 
@@ -285,3 +286,18 @@ def test_govpolicy_permissions_follow_gd21() -> None:
     # Unrelated to the identity principal-policy permission, and never a grant permission.
     assert P.POLICY_MANAGE.value == "policy.manage"
     assert not {P.GOVPOLICY_READ, P.GOVPOLICY_MANAGE} & set(GRANT_PERMISSIONS.values())
+
+
+def test_interaction_content_permissions_belong_to_the_investigator_only() -> None:
+    """PRP-104 GD-2: the investigator holds exactly interaction.read/export; nobody else does."""
+    assert (P.INTERACTION_READ.value, P.INTERACTION_EXPORT.value) == (
+        "interaction.read",
+        "interaction.export",
+    )
+    assert role_permissions(Role.INTERACTION_INVESTIGATOR) == CONTENT
+    holders = {r for r, perms in ROLE_PERMISSIONS.items() if perms & CONTENT}
+    assert holders == {Role.INTERACTION_INVESTIGATOR}
+    assert not CONTENT & role_permissions(Role.ADMIN)
+    assert Role.INTERACTION_INVESTIGATOR in PRIVILEGED_ROLES
+    # Never a grant permission: a resource-scoped grant can never open captured content.
+    assert not CONTENT & set(GRANT_PERMISSIONS.values())

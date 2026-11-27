@@ -16,10 +16,13 @@ recorded through the installed denial recorder, and nothing is written):
    owns the resource) must be one where the actor holds ``policy.manage``; else 403
    ``target_out_of_scope``. A grant resource whose domain cannot be resolved for the actor is
    refused the same way.
-7. Privileged changes (assigning or removing ``admin`` / ``security_auditor``) and any change
-   naming the customer-control domain need ``permits_customer_wide(actor, policy.manage)``;
-   else 403 ``customer_scope_required``.
-8. The pure change function (PRP-65) validates (privileged without expiry -> 422, past expiry ->
+7. Privileged changes (assigning or removing ``admin`` / ``security_auditor`` /
+   ``interaction_investigator``, the core ``PRIVILEGED_ROLES``) and any change naming the
+   customer-control domain need ``permits_customer_wide(actor, policy.manage)``; else 403
+   ``customer_scope_required``.
+8. An ``interaction_investigator`` assignment expiring more than 7 days from now is 422
+   ``invalid_schema`` reason ``role_assignment_too_long`` (GD-16, PRP-104).
+9. The pure change function (PRP-65) validates (privileged without expiry -> 422, past expiry ->
    422, cross-customer -> 403) and the write runs under the audit protocol: a ``before`` record
    on EVERY named domain's chain, the write (principal document plus ``PolicyHead`` bump in one
    batch), then an ``after`` record on every chain. A failed before-record aborts the write; a
@@ -33,7 +36,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Final
 
 from fastapi import Request
@@ -51,6 +54,7 @@ from neurosphere_core.audit import (
     make_subject,
 )
 from neurosphere_core.auth.revocation import is_canonical_principal_id
+from neurosphere_core.auth.scope import PRIVILEGED_ROLES as CORE_PRIVILEGED_ROLES
 from neurosphere_core.auth.scope import (
     Permission,
     PrincipalPolicy,
@@ -94,8 +98,10 @@ __all__ = [
     "PolicyWriteResult",
 ]
 
-PRIVILEGED_ROLES: Final = frozenset({Role.ADMIN.value, Role.SECURITY_AUDITOR.value})
+PRIVILEGED_ROLES: Final = frozenset(role.value for role in CORE_PRIVILEGED_ROLES)
 _PERM: Final = Permission.POLICY_MANAGE
+#: GD-16 (PRP-104 clarification 8): an investigator assignment lasts at most 7 days.
+MAX_INVESTIGATOR_ASSIGNMENT: Final = timedelta(days=7)
 
 OP_ROLE_ASSIGN: Final = "policy.role_assign"
 OP_ROLE_REMOVE: Final = "policy.role_remove"
@@ -266,6 +272,24 @@ class IdentityAdminService:
                 "customer_scope_required",
                 domain_id=control,
                 message="this change needs customer-level policy.manage",
+            )
+
+    def _check_investigator_window(self, change: RoleAssignmentChange) -> None:
+        """GD-16: an ``interaction_investigator`` assignment ends at most 7 days from now.
+
+        Refused like the other expiry rules (422 ``invalid_schema``); a missing expiry is left to
+        the privileged-role rule in :func:`apply_role_change`.
+        """
+        if change.role is None or change.role.root != Role.INTERACTION_INVESTIGATOR.value:
+            return
+        if change.expires_at is None:
+            return
+        expires_at = datetime.fromisoformat(change.expires_at.root.replace("Z", "+00:00"))
+        if expires_at - self._now > MAX_INVESTIGATOR_ASSIGNMENT:
+            raise InvalidSchemaError(
+                "an interaction investigator assignment may last at most 7 days",
+                errors=[ValidationIssue("/expires_at", "expires_at must be within 7 days of now")],
+                reason="role_assignment_too_long",
             )
 
     # ------------------------------------------------------------------ reads
@@ -487,6 +511,7 @@ class IdentityAdminService:
             roles.add(old.role.value)
         await self._check_domains(domains, privileged=bool(roles & PRIVILEGED_ROLES))
         await self._check_registered(d.root for d in change.domain_ids or ())
+        self._check_investigator_window(change)
         updated = apply_role_change(
             current, change, customer_id=self._actor.customer_id, now=self._now
         )
