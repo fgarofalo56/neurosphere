@@ -77,6 +77,7 @@ from neurosphere_core.governance.policy.rules import (
 from neurosphere_core.hitl import HitlService
 from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
+from neurosphere_core.notifications.violations import ViolationNotificationSink
 from neurosphere_core.search.fixture import FixtureSearchIndex
 from neurosphere_core.stores import ensure_local_containers
 
@@ -117,13 +118,26 @@ def _utc_now() -> datetime:
 
 
 def violation_event_sink(cfg: RuntimeConfig, lifetime: ClientLifetime) -> ViolationEventSink:
-    """Where violation and exception events go: a no-op sink in this PRP.
+    """Where violation and exception events go.
 
-    BINDING POINT owned by PRP-107 item 6, which returns its notification publisher here (ids
-    only, event classes ``policy_violation_opened``, ``policy_violation_resolved`` and
-    ``policy_exception_decided``). Nobody else binds it.
+    BINDING POINT owned by PRP-107 item 6: the notification sink (ids only, event classes
+    ``policy_violation_opened``, ``policy_violation_resolved`` and ``policy_exception_decided``)
+    when the notifications store is configured, else the no-op sink. Nobody else binds it.
     """
-    return NoopViolationEventSink()
+    # Lazy: the wiring module references RuntimeConfig, so a module-level import would close
+    # an import cycle through runtime.factories (CodeQL py/unsafe-cyclic-import).
+    from neurosphere_workers.notifications.wiring import (
+        build_publisher,
+        notifications_store_configured,
+    )
+
+    if not notifications_store_configured(cfg):
+        return NoopViolationEventSink()
+    client = create_cosmos_client(cfg.settings, lifetime=lifetime, account=cfg.store.cosmos_account)
+    publisher = build_publisher(cfg, client)
+    return (
+        ViolationNotificationSink(publisher) if publisher is not None else NoopViolationEventSink()
+    )
 
 
 def interaction_finding_reader(

@@ -59,7 +59,6 @@ from neurosphere_connector_foundry_actions import create_swap_connector
 from neurosphere_core.actions import ActionAuditor, ActionService
 from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
 from neurosphere_core.actions.cosmos_store import CosmosExecutionControl, CosmosIntentStore
-from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.actions.targets import ACTION_CONNECTORS, APIM_GATEWAY_CONNECTOR
 from neurosphere_core.admin import CosmosAdminConfigRepository
 from neurosphere_core.admin.runtime import judge_init_args, load_stored_settings
@@ -240,6 +239,7 @@ from neurosphere_workers.runtime.archive_reader import (
 from neurosphere_workers.runtime.checkpoint import CheckpointStore, CosmosRuntimeCheckpointStore
 from neurosphere_workers.runtime.identity import PolicyStack, build_identity, build_policy_stack
 from neurosphere_workers.runtime.price_refresh import PriceTableRefresher
+from neurosphere_workers.runtime.rechecker import build_permission_rechecker
 from neurosphere_workers.runtime.roles import RoleConfigError
 from neurosphere_workers.runtime.search_wiring import wrap_catalog_for_search
 from neurosphere_workers.runtime.settings import (
@@ -658,6 +658,11 @@ def _audit(cfg: RuntimeConfig, cosmos: CosmosClient) -> AuditRepository:
 async def _hitl_service(
     cfg: RuntimeConfig, cosmos: CosmosClient, audit: AuditRepository
 ) -> HitlService:
+    # Imported here, not at module level: the notifications modules reference RuntimeConfig,
+    # and a module-level import would make an import cycle with this module (CodeQL
+    # py/unsafe-cyclic-import).
+    from neurosphere_workers.notifications.wiring import build_outbox_notifier
+
     return HitlService(
         CosmosHitlStore.from_client(cosmos, database=cfg.store.database),
         DecisionLog(audit, CosmosDecisionStore.from_client(cosmos, database=cfg.store.database)),
@@ -665,7 +670,16 @@ async def _hitl_service(
         # PRP-44: the stored review policy over the built-in defaults (applied at startup).
         await load_review_policies(cfg, cosmos),
         _NoReviewerAuthorizer(),
+        # PRP-107: queue assignment/escalation events in the notification outbox.
+        notifiers=tuple(n for n in (build_outbox_notifier(cfg, cosmos),) if n is not None),
     )
+
+
+async def build_notifications(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    """The ``notifications`` role (PRP-107); its builder is imported lazily, as above."""
+    from neurosphere_workers.notifications.builder import build_notifications as _build
+
+    return await _build(cfg, lifetime)
 
 
 def warn_if_actions_idle(registry: WriteTargetRegistry) -> bool:
@@ -698,11 +712,7 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
     auditor = AuditRepositoryActionAuditor(audit)
     store = CosmosIntentStore.from_client(cosmos, database=cfg.store.database)
     control = CosmosExecutionControl.from_client(cosmos, database=cfg.store.database)
-    rechecker = PolicyPermissionRechecker(
-        cloud=cfg.settings.cloud_profile.cloud,
-        policy_repository=stack.policy,
-        revocation_checker=stack.revocation,
-    )
+    rechecker = build_permission_rechecker(cfg.settings, stack)
     service = ActionService(store, auditor=auditor, rechecker=rechecker, execution_control=control)
     # Write connectors come ONLY from NS_FOUNDRY_*/NS_APIM_* (see register_write_targets). With
     # neither configured the registry is empty and every intent fails closed with
@@ -2183,6 +2193,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "detections": build_detections,
     "azure_monitor_ai": build_azure_monitor_ai,
     "policy_eval": build_policy_eval,
+    "notifications": build_notifications,
 }
 
 

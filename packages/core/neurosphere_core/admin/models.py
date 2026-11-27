@@ -36,6 +36,10 @@ from neurosphere_contracts.admin.v1.price_sheet_upload import PriceSheetUpload
 from neurosphere_contracts.admin.v1.producer_record import ProducerRecord
 from neurosphere_contracts.admin.v1.review_policy_document import ReviewPolicyDocument
 from neurosphere_contracts.admin.v1.system_setting import SystemSetting
+from neurosphere_contracts.notifications.v1.notification_channel import NotificationChannel
+from neurosphere_contracts.notifications.v1.notification_subscription import (
+    NotificationSubscription,
+)
 from neurosphere_contracts.policy.v1.enforcement_binding import EnforcementBinding
 from pydantic import BaseModel, ValidationError
 
@@ -68,6 +72,8 @@ AdminKindName = Literal[
     "review_policy",
     "system_setting",
     "enforcement_binding",
+    "notification_channel",
+    "notification_subscription",
 ]
 CloudName = Literal["commercial", "government"]
 AdminBody = (
@@ -79,6 +85,8 @@ AdminBody = (
     | ReviewPolicyDocument
     | SystemSetting
     | EnforcementBinding
+    | NotificationChannel
+    | NotificationSubscription
 )
 
 #: kind -> the generated model its body must validate against (mirrors the schema's allOf).
@@ -92,11 +100,21 @@ ADMIN_KIND_MODELS: Final[Mapping[str, type[BaseModel]]] = MappingProxyType(
         "review_policy": ReviewPolicyDocument,
         "system_setting": SystemSetting,
         "enforcement_binding": EnforcementBinding,
+        "notification_channel": NotificationChannel,
+        "notification_subscription": NotificationSubscription,
     }
 )
 ADMIN_KINDS: Final[frozenset[str]] = frozenset(get_args(AdminKindName))
 
-_SETTING_MEMBERS: Final = ("copilot", "judge", "search", "scan", "mcp_server", "write_target")
+_SETTING_MEMBERS: Final = (
+    "copilot",
+    "judge",
+    "search",
+    "scan",
+    "mcp_server",
+    "write_target",
+    "notifications",
+)
 _SECRET_LIKE: Final = re.compile(
     r"(secret|passw|pwd|token|key|sas|signature|credential|connection)"
 )

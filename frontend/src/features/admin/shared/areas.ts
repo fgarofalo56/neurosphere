@@ -15,6 +15,7 @@ import {
   ADMIN_REVIEW_POLICY_ROUTE,
 } from "../sources/apiPaths";
 import { ADMIN_CAPTURE_ROUTE } from "../capture/paths";
+import { ADMIN_NOTIFICATIONS_ROUTE } from "../notifications/paths";
 
 export interface AdminArea {
   readonly id: string;
@@ -114,6 +115,14 @@ export const ADMIN_AREAS: readonly AdminArea[] = [
     label: "Interaction capture",
     to: `/${ADMIN_CAPTURE_ROUTE}`,
     description: "Capture policies, capture status, off reasons and counters (read-only).",
+    roles: ["Admin"],
+  },
+  // PRP-107 item 7: notification channels, subscriptions and deliveries.
+  {
+    id: "notifications",
+    label: "Notifications",
+    to: `/${ADMIN_NOTIFICATIONS_ROUTE}`,
+    description: "Channels, subscriptions and delivery status for governance alerts.",
     roles: ["Admin"],
   },
 ];

@@ -4,6 +4,8 @@ import { AdminAuditPage } from "./audit/AdminAuditPage";
 import { CapturePage } from "./capture/CapturePage";
 import { ADMIN_CAPTURE_ROUTE } from "./capture/paths";
 import { DomainsPage } from "./domains/DomainsPage";
+import { NotificationsPage } from "./notifications/NotificationsPage";
+import { ADMIN_NOTIFICATIONS_ROUTE } from "./notifications/paths";
 import { PrincipalDetailPage } from "./identity/PrincipalDetailPage";
 import { PrincipalsPage } from "./identity/PrincipalsPage";
 import {
@@ -25,6 +27,8 @@ export const adminCoreRoutes: RouteObject[] = [
   { path: ADMIN_AUDIT_ROUTE, element: <AdminAuditPage /> },
   // PRP-103 item 5: read-only interaction capture.
   { path: ADMIN_CAPTURE_ROUTE, element: <CapturePage /> },
+  // PRP-107 item 7: notification channels, subscriptions and deliveries.
+  { path: ADMIN_NOTIFICATIONS_ROUTE, element: <NotificationsPage /> },
 ];
 
 /**

@@ -222,8 +222,8 @@ def stack(compose_stack: None) -> Iterator[Stack]:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    # 59: PRP-103 item 5 added /admin/capture.
-    assert len(manifest) == 59
+    # 60: PRP-103 item 5 added /admin/capture (59); PRP-107 item 7 added /admin/notifications.
+    assert len(manifest) == 60
     assert sorted(calls.MANIFEST_CALLS) == sorted(manifest)
 
 

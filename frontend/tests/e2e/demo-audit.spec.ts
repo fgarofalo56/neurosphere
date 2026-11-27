@@ -65,6 +65,8 @@ const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
   "/admin/system",
   // PRP-57: sources, pricing, features and review policy need config.manage / deployment admin.
   "/admin/features",
+  // PRP-107: notification channels need customer-level config.manage.
+  "/admin/notifications",
   "/admin/pricing",
   "/admin/review-policy",
   "/admin/sources/connectors",

@@ -396,12 +396,14 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         interactions,
         lifecycle,
         mcp,
+        notifications,
         planes,
         sources_status,
     )
 
     return (
         authz.BUILDER,
+        notifications.BUILDER,  # before data: HitlService takes its notifiers at construction
         data.BUILDER,
         planes.BUILDER,
         copilot.BUILDER,

@@ -154,6 +154,7 @@ nav:
       - runbooks/content-classification.md
       - runbooks/interaction-audit.md
       - runbooks/governance-policy.md
+      - runbooks/notifications.md
       - runbooks/new-user-test.md
   - Walkthroughs:
       - walkthroughs/admin.md
@@ -190,6 +191,8 @@ nav:
   - Connectors:
       - connectors/coverage.md
       - connectors/verification/otel-genai-tool-service.md
+      - connectors/verification/notifications-teams.md
+      - connectors/verification/notifications-email.md
   - Architecture and gates:
       - ARCHITECTURE.md
       - RESEARCH-AND-GATES.md

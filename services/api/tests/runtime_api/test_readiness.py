@@ -85,6 +85,7 @@ def test_fully_configured_app_is_ready(monkeypatch: pytest.MonkeyPatch) -> None:
         "composition.agent_identity.disabled": "ok",
         "composition.interaction_capture.disabled": "ok",
         "composition.governance_policy.disabled": "ok",
+        "composition.notifications.disabled": "ok",
     }
     assert composed.registry.ready
 
@@ -185,6 +186,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
     assert sorted(claimed) == sorted(ComponentRegistry().components)
     assert [spec.name for spec in default_builders()] == [
         "authz",
+        "notifications",
         "data",
         "planes",
         "copilot",
@@ -226,6 +228,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
     names = [spec.name for spec in builders_with_stubs()]
     assert names == [
         "authz",
+        "notifications",
         "stub-data",
         "stub-planes",
         "copilot",
