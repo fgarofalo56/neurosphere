@@ -189,6 +189,37 @@ async def test_get_and_status_listing(store: Any) -> None:
     assert await store.list_deliveries("other") == []
 
 
+async def test_channel_counts_error_code_and_channel_filter(store: Any) -> None:
+    rig = await _rig(store)
+    await rig.add_channel("chan-b", DOMAIN_A)
+    await rig.add_subscription("sub-b", "chan-b", DOMAIN_A)
+    rig.grants.grant(OWNER, CUSTOMER, DOMAIN_A, "data.read")
+    await rig.publisher.publish(make_event(dedup_key="one"))
+    rows = await rig.publisher.publish(make_event(dedup_key="two"))
+    assert len(rows) == 2  # one row per subscribed channel
+    for status in ("pending", "delivered"):
+        expected = 2 if status == "pending" else 0
+        count = await store.count_deliveries(CUSTOMER, channel_id="chan-a", status=status)
+        assert count == expected
+    assert await store.count_deliveries("other", channel_id="chan-a", status="pending") == 0
+    assert await store.last_error_code(CUSTOMER, "chan-a") is None
+    entries = await store.due(now=rig.clock(), limit=10)
+    target = next(e for e in entries if e.delivery.channel_id.root == "chan-a")
+    claimed = await rig.outbox.claim(target)
+    assert claimed is not None
+    failed = await rig.outbox.mark_attempt_failed(
+        claimed, reason="http_410", retryable=False, policy=RetryPolicy()
+    )
+    assert failed is not None and failed.delivery.status == "failed"
+    assert await store.last_error_code(CUSTOMER, "chan-a") == "http_410"
+    assert await store.last_error_code(CUSTOMER, "chan-b") is None
+    assert await store.count_deliveries(CUSTOMER, channel_id="chan-a", status="failed") == 1
+    only_a = await store.list_deliveries(CUSTOMER, channel_id="chan-a", newest_first=True)
+    assert {e.delivery.channel_id.root for e in only_a} == {"chan-a"}
+    assert len(only_a) == 2
+    assert only_a[0].delivery.created_at.root >= only_a[1].delivery.created_at.root
+
+
 async def test_cosmos_store_rows_carry_ttl_and_no_extra_fields() -> None:
     container = FakeContainer((PARTITION_KEY_PATH,))
     rig = await _rig(CosmosOutboxStore(container, row_ttl_seconds=3600))  # type: ignore[arg-type]

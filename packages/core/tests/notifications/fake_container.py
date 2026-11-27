@@ -31,7 +31,7 @@ from azure.cosmos.exceptions import (
 )
 
 _SELECT = re.compile(
-    r"^SELECT\s+(?:TOP\s+(?P<top>@\w+|\d+)\s+)?(?P<proj>\*|c\.\w+)\s+FROM\s+c"
+    r"^SELECT\s+(?:TOP\s+(?P<top>@\w+|\d+)\s+)?(?P<proj>\*|c\.\w+|VALUE\s+COUNT\(1\))\s+FROM\s+c"
     r"(?:\s+WHERE\s+(?P<where>.+?))?"
     r"(?:\s+ORDER\s+BY\s+c\.(?P<order>\w+)(?:\s+(?P<dir>ASC|DESC))?)?$",
     re.IGNORECASE | re.DOTALL,
@@ -162,6 +162,8 @@ class FakeContainer:
             limit = int(params[top]) if top.startswith("@") else int(top)
             rows = rows[:limit]
         proj = match["proj"]
+        if proj == "VALUE COUNT(1)":
+            return [len(rows)]  # type: ignore[list-item]
         if proj != "*":
             field = proj.split(".", 1)[1]
             rows = [{field: r[field]} for r in rows]

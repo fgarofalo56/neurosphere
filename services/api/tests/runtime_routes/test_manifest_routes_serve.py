@@ -30,6 +30,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 from neurosphere_api.runtime import CompositionOverrides
 from neurosphere_api.runtime.builders import default_builders
 from neurosphere_api.sandbox.repository import SandboxRepository
+from neurosphere_core.admin import InMemoryAdminConfigRepository
 from neurosphere_core.auth.scope import (
     InMemoryPolicyRepository,
     PolicyHead,
@@ -39,6 +40,7 @@ from neurosphere_core.auth.scope import (
     principal_document_id,
 )
 from neurosphere_core.gateway import InMemoryGatewayStore
+from neurosphere_core.notifications import InMemoryOutboxStore
 from runtime_api.runtime_helpers import (  # pyright: ignore[reportMissingImports]
     ALICE,
     CUSTOMER,
@@ -127,6 +129,9 @@ def _composed(
         "gateway_store": InMemoryGatewayStore(),
         "gateway_arm_factory": _no_arm,
         "sandbox_repository": SandboxRepository(_EmptySandboxStore()),
+        # PRP-107 item 7: the notifications plane (admin config and outbox) over in-memory stores.
+        "admin_config_repository": InMemoryAdminConfigRepository(cloud="commercial"),
+        "notification_outbox_store": InMemoryOutboxStore(),
     }
     overrides: CompositionOverrides = dataclasses.replace(
         base,
@@ -153,7 +158,7 @@ def _unconfigured(response: Any) -> str | None:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    assert len(manifest) == 59
+    assert len(manifest) == 60
     assert sorted(MANIFEST_CALLS) == sorted(manifest)
     assert all(DOMAINS_CALL in calls for calls in MANIFEST_CALLS.values())
 

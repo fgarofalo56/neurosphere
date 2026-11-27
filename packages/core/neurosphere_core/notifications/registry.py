@@ -45,6 +45,11 @@ class ChannelRegistry:
     def __init__(self, repository: AdminConfigRepository) -> None:
         self._repo = repository
 
+    @property
+    def repository(self) -> AdminConfigRepository:
+        """The ``admin_config`` store, for the admin routes that write the documents."""
+        return self._repo
+
     async def channel(self, customer_id: str, channel_id: str) -> NotificationChannel | None:
         doc = await self._repo.get(customer_id, CHANNEL_KIND, channel_id)
         if doc is None or doc.status != "active":

@@ -129,8 +129,22 @@ class OutboxStore(Protocol):
         ...
 
     async def list_deliveries(
-        self, customer_id: str, *, status: str | None = None, limit: int = 100
+        self,
+        customer_id: str,
+        *,
+        status: str | None = None,
+        channel_id: str | None = None,
+        limit: int = 100,
+        newest_first: bool = False,
     ) -> list[OutboxEntry]: ...
+
+    async def count_deliveries(self, customer_id: str, *, channel_id: str, status: str) -> int:
+        """Rows of one channel in one status (a single-partition count, no rows read)."""
+        ...
+
+    async def last_error_code(self, customer_id: str, channel_id: str) -> str | None:
+        """Reason code of the latest ``failed`` (else ``dead_lettered``) row of the channel."""
+        ...
 
     async def replace(self, entry: OutboxEntry, delivery: NotificationDelivery) -> OutboxEntry:
         """ETag compare-and-swap; a changed or missing row is ``stale_version`` (etag_mismatch)."""
@@ -197,16 +211,54 @@ class InMemoryOutboxStore:
         return rows[:limit]
 
     async def list_deliveries(
-        self, customer_id: str, *, status: str | None = None, limit: int = 100
+        self,
+        customer_id: str,
+        *,
+        status: str | None = None,
+        channel_id: str | None = None,
+        limit: int = 100,
+        newest_first: bool = False,
     ) -> list[OutboxEntry]:
         self._guard()
         rows = [
             e
             for (customer, _), e in self._rows.items()
-            if customer == customer_id and (status is None or e.delivery.status == status)
+            if customer == customer_id
+            and (status is None or e.delivery.status == status)
+            and (channel_id is None or e.delivery.channel_id.root == channel_id)
         ]
-        rows.sort(key=lambda e: (e.delivery.created_at.root, e.delivery.notification_id.root))
+        rows.sort(
+            key=lambda e: (e.delivery.created_at.root, e.delivery.notification_id.root),
+            reverse=newest_first,
+        )
         return rows[:limit]
+
+    async def count_deliveries(self, customer_id: str, *, channel_id: str, status: str) -> int:
+        self._guard()
+        return sum(
+            1
+            for (customer, _), e in self._rows.items()
+            if customer == customer_id
+            and e.delivery.channel_id.root == channel_id
+            and e.delivery.status == status
+        )
+
+    async def last_error_code(self, customer_id: str, channel_id: str) -> str | None:
+        self._guard()
+        for status in ("failed", "dead_lettered"):
+            rows = [
+                e.delivery
+                for (customer, _), e in self._rows.items()
+                if customer == customer_id
+                and e.delivery.channel_id.root == channel_id
+                and e.delivery.status == status
+                and e.delivery.last_error_code is not None
+            ]
+            if rows:
+                rows.sort(key=lambda d: (d.created_at.root, d.notification_id.root))
+                code = rows[-1].last_error_code
+                return code.root if code is not None else None
+        return None
 
     async def replace(self, entry: OutboxEntry, delivery: NotificationDelivery) -> OutboxEntry:
         self._guard()
