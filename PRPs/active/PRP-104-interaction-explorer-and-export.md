@@ -1,6 +1,9 @@
 ---
 name: PRP-104-interaction-explorer-and-export
-status: backlog
+status: active
+started: 2026-11-27
+execution: session
+max_lanes: 2
 priority: P0
 order: 104
 review: required
@@ -107,6 +110,7 @@ owns:
   - services/api/neurosphere_api/replay/dependencies.py
   - services/api/neurosphere_api/replay/reader.py
   - services/api/neurosphere_api/runtime/builders/interaction_explorer.py
+  - services/api/neurosphere_api/runtime/builders/interactions.py  # item 2 only: one additive public store factory (approved 2026-11-27)
   - packages/core/neurosphere_core/governance/policy/readers/**
   - packages/core/tests/governance_policy_readers/**
   - services/workers/neurosphere_workers/policy_eval/assembly.py
@@ -150,7 +154,6 @@ must_not_touch:
   - services/api/neurosphere_api/copilot/**
   - services/api/neurosphere_api/mcp/**
   - services/api/neurosphere_api/runtime/builders/data.py
-  - services/api/neurosphere_api/runtime/builders/interactions.py
   - services/api/neurosphere_api/ingest/**
   - frontend/src/app/Shell.tsx
   - frontend/tests/mock-api/server.ts
@@ -158,7 +161,7 @@ must_not_touch:
 
 ## Implementation blueprint
 
-Parallelization: item 1 first; items 2 and 5 [P] after 1 (separate files); item 3 after 2; item 4 after 3; item 6 after 2-4; item 7 after 3-5; item 8 after 2; item 9 last.
+Approved plan (2026-11-27, session s-902135): 1 -> 2 -> {3, 8} -> {4, 5} -> {6, 7} -> 9, at most 2 lanes; item 5 waits for item 3 so it calls the real `InteractionContentReader` (no stub). Original blueprint: item 1 first; items 2 and 5 [P] after 1 (separate files); item 3 after 2; item 4 after 3; item 6 after 2-4; item 7 after 3-5; item 8 after 2; item 9 last.
 
 ### Item 1 - Role and permissions
 - Deliverable: `Permission.INTERACTION_READ`, `INTERACTION_EXPORT`, granted to the existing `Role.INTERACTION_INVESTIGATOR` (PRP-99 added the member, empty and already in `PRIVILEGED_ROLES`) and to no other role; docstring table updated; `admin/identity/service.py:97` privileged set and the 7-day cap (row 8); `types.ts` role list; role and privileged-role tests extended.
@@ -171,8 +174,8 @@ Parallelization: item 1 first; items 2 and 5 [P] after 1 (separate files); item 
 
 ### Item 2 - Metadata explorer API  [P]
 - Deliverable: `interactions/{router,service,models}.py` list and detail routes over `InteractionStore.query_index` and `get_metadata`, scope-filtered, page-bounded, `audited_read(Permission.DATA_READ, "interaction.search")`; builder `runtime/builders/interaction_explorer.py` (reuses PRP-103's store construction through its exported factory; reports `interaction_explorer` optional) and its `default_builders` line.
-- Owned files: `services/api/neurosphere_api/interactions/{__init__,router,service,models}.py`, the builder, `services/api/tests/interaction_explorer_api/test_search.py`.
-- Must NOT touch: `runtime/builders/interactions.py`.
+- Owned files: `services/api/neurosphere_api/interactions/{__init__,router,service,models}.py`, the builder, `services/api/tests/interaction_explorer_api/test_search.py`; in `runtime/builders/interactions.py` one additive public store factory only (plan delta 2026-11-27: PRP-103 exported no factory).
+- Must NOT touch: any existing function or behaviour of `runtime/builders/interactions.py`.
 - Depends on: item 1.
 - Acceptance criteria: criterion 2; responses validate against `InteractionRecord` minus nothing (no content field exists); pinned builder-order tests updated.
 - Tests: `services/api/tests/interaction_explorer_api/test_search.py`; re-run `services/api/tests/runtime_api`, `runtime_data`, `runtime_gateway_builder`.

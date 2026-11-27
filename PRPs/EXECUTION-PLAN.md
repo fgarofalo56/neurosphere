@@ -86,7 +86,7 @@ Gate before the next wave: The hosted profile renders with everything on (offlin
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-104: Interaction explorer, audited content reads and export](backlog/PRP-104-interaction-explorer-and-export.md) | opus | required | none | - | - | `prp-104-interaction-explorer` |
+| 1 | [PRP-104: Interaction explorer, audited content reads and export](active/PRP-104-interaction-explorer-and-export.md) | opus | required | none | - | - | `prp-104-interaction-explorer` |
 | 2 | [PRP-108: Agent approval gate and platform-control actions (the fix goes through approval)](backlog/PRP-108-agent-approval-gate-and-platform-control-actions.md) | opus | required | none | - | - | `prp-108-platform-control` |
 | 3 | [PRP-106: Governance policy, violations and exceptions UI](backlog/PRP-106-policy-violations-and-exceptions-ui.md) | sonnet | required | none | PRP-108 | - | `prp-106-policy-ui` |
 
@@ -548,7 +548,7 @@ Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-82-hosted-e
 ### PRP-104 (W23)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-104-interaction-explorer-and-export.md
+/prp:prp-execute PRPs/active/PRP-104-interaction-explorer-and-export.md
 
 Context for this run: wave W23 of PRPs/EXECUTION-PLAN.md, branch prp-104-interaction-explorer cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
