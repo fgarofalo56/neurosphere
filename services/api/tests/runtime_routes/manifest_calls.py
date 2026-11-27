@@ -297,6 +297,15 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         ApiCall("/api/v1/admin/interactions/capture-status"),
         ApiCall("/api/v1/admin/interactions/capture-policies", q(limit=200)),
     ),
+    # PRP-107 item 7: notification channels, subscriptions and the delivery list (customer-level
+    # config.manage). A fresh stack has no channel, subscription or delivery, so no row needs data.
+    "/admin/notifications": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/notifications/channel-kinds"),
+        ApiCall("/api/v1/admin/notifications/channels"),
+        ApiCall("/api/v1/admin/notifications/subscriptions"),
+        ApiCall("/api/v1/admin/notifications/deliveries", q(limit=100)),
+    ),
     "/audit": (
         *_SHELL,
         ApiCall("/api/v1/audit/domains"),

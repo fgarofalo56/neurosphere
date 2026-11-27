@@ -122,6 +122,17 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
+  // PRP-107 item 7: channels, subscriptions and deliveries need customer-level config.manage.
+  {
+    route: "/admin/notifications",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/notifications/",
+        why: "notification channels, subscriptions and deliveries need config.manage (customer control for all domains), which the operator may not hold",
+      },
+    ],
+  },
   {
     route: "/admin/sources/producers",
     expected: [

@@ -550,6 +550,36 @@ def test_agent_identity_routes_declare_their_permissions() -> None:
     assert found == {(path, "PUT"): ("catalog.curate",), (path, "GET"): ("data.read",)}
 
 
+def test_notification_admin_routes_declare_customer_level_config_manage() -> None:
+    """PRP-107 item 7: every notification admin route needs deployment-scoped config.manage."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/notifications"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    perm = ("config.manage",)
+    expected = {
+        (f"{base}/channel-kinds", "GET"),
+        (f"{base}/channels", "GET"),
+        (f"{base}/channels", "POST"),
+        (f"{base}/channels/{{channel_id}}", "GET"),
+        (f"{base}/channels/{{channel_id}}", "PUT"),
+        (f"{base}/channels/{{channel_id}}", "DELETE"),
+        (f"{base}/channels/{{channel_id}}/test", "POST"),
+        (f"{base}/subscriptions", "GET"),
+        (f"{base}/subscriptions", "POST"),
+        (f"{base}/subscriptions/{{subscription_id}}", "GET"),
+        (f"{base}/subscriptions/{{subscription_id}}", "PUT"),
+        (f"{base}/subscriptions/{{subscription_id}}", "DELETE"),
+        (f"{base}/deliveries", "GET"),
+    }
+    assert set(found) == expected
+    assert set(found.values()) == {perm}
+
+
 def test_capture_admin_routes_are_read_only_config_manage() -> None:
     """PRP-103 item 5: the three capture admin routes are GET-only and need config.manage."""
     app = create_app(Settings(env="local"))

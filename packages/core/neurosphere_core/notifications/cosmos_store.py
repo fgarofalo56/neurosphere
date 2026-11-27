@@ -66,12 +66,14 @@ _DEDUP_SQL: Final = (
     "SELECT TOP 1 * FROM c WHERE c.customer_id = @customer_id AND c.dedup_key = @dedup_key"
     " AND c.created_at >= @since ORDER BY c.created_at ASC"
 )
-_LIST_SQL: Final = (
-    "SELECT TOP @limit * FROM c WHERE c.customer_id = @customer_id ORDER BY c.created_at ASC"
+_COUNT_SQL: Final = (
+    "SELECT VALUE COUNT(1) FROM c WHERE c.customer_id = @customer_id"
+    " AND c.channel_id = @channel_id AND c.status = @status"
 )
-_LIST_STATUS_SQL: Final = (
-    "SELECT TOP @limit * FROM c WHERE c.customer_id = @customer_id AND c.status = @status"
-    " ORDER BY c.created_at ASC"
+_LAST_ERROR_SQL: Final = (
+    "SELECT TOP 1 c.last_error_code FROM c WHERE c.customer_id = @customer_id"
+    " AND c.channel_id = @channel_id AND c.status = @status AND IS_DEFINED(c.last_error_code)"
+    " ORDER BY c.created_at DESC"
 )
 _STORAGE_FIELDS: Final = frozenset({"id", "ttl"})
 
@@ -209,18 +211,58 @@ class CosmosOutboxStore:
         return found[:limit]
 
     async def list_deliveries(
-        self, customer_id: str, *, status: str | None = None, limit: int = 100
+        self,
+        customer_id: str,
+        *,
+        status: str | None = None,
+        channel_id: str | None = None,
+        limit: int = 100,
+        newest_first: bool = False,
     ) -> list[OutboxEntry]:
         params: list[dict[str, Any]] = [
             {"name": "@limit", "value": max(1, min(limit, _MAX_LIST))},
             {"name": "@customer_id", "value": customer_id},
         ]
+        where = "c.customer_id = @customer_id"
         if status is not None:
             params.append({"name": "@status", "value": status})
-        rows = await self._query(
-            _LIST_SQL if status is None else _LIST_STATUS_SQL, params, partition=customer_id
-        )
+            where += " AND c.status = @status"
+        if channel_id is not None:
+            params.append({"name": "@channel_id", "value": channel_id})
+            where += " AND c.channel_id = @channel_id"
+        order = "DESC" if newest_first else "ASC"
+        # Only constant fragments are joined (no caller text); values travel as parameters.
+        sql = f"SELECT TOP @limit * FROM c WHERE {where} ORDER BY c.created_at {order}"  # noqa: S608
+        rows = await self._query(sql, params, partition=customer_id)
         return [_entry(r) for r in rows]
+
+    async def count_deliveries(self, customer_id: str, *, channel_id: str, status: str) -> int:
+        rows = await self._query(
+            _COUNT_SQL,
+            [
+                {"name": "@customer_id", "value": customer_id},
+                {"name": "@channel_id", "value": channel_id},
+                {"name": "@status", "value": status},
+            ],
+            partition=customer_id,
+        )
+        return int(rows[0]) if rows else 0
+
+    async def last_error_code(self, customer_id: str, channel_id: str) -> str | None:
+        for status in ("failed", "dead_lettered"):
+            rows = await self._query(
+                _LAST_ERROR_SQL,
+                [
+                    {"name": "@customer_id", "value": customer_id},
+                    {"name": "@channel_id", "value": channel_id},
+                    {"name": "@status", "value": status},
+                ],
+                partition=customer_id,
+            )
+            if rows:
+                value = rows[0].get("last_error_code")
+                return value if isinstance(value, str) else None
+        return None
 
     async def replace(self, entry: OutboxEntry, delivery: NotificationDelivery) -> OutboxEntry:
         try:
@@ -240,7 +282,7 @@ class CosmosOutboxStore:
 
     async def _query(
         self, sql: str, params: list[dict[str, Any]], *, partition: str | None
-    ) -> list[dict[str, Any]]:
+    ) -> list[Any]:
         try:
             if partition is None:
                 return [r async for r in self._container.query_items(sql, parameters=params)]

@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `1a4e4f34b471007e6b1233a5838e6d647ac58058`. Generated: 2026-11-25.
+> Source commit: `80678eb2da75b4ed14bf606421107898e53f4173`. Generated: 2026-11-26.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 240 operations on 204 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 253 operations on 211 paths.
 
 ## Status and verification
 
@@ -65,6 +65,19 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Put Role Assignment |
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Delete Role Assignment |
 | admin-identity | GET | `/api/v1/admin/identity/role-mapping` | Get Role Mapping |
+| admin-notifications | GET | `/api/v1/admin/notifications/channel-kinds` | Channel Kinds |
+| admin-notifications | GET | `/api/v1/admin/notifications/channels` | List Channels |
+| admin-notifications | POST | `/api/v1/admin/notifications/channels` | Create Channel |
+| admin-notifications | GET | `/api/v1/admin/notifications/channels/{channel_id}` | Get Channel |
+| admin-notifications | PUT | `/api/v1/admin/notifications/channels/{channel_id}` | Replace Channel |
+| admin-notifications | DELETE | `/api/v1/admin/notifications/channels/{channel_id}` | Delete Channel |
+| admin-notifications | POST | `/api/v1/admin/notifications/channels/{channel_id}/test` | Test Channel |
+| admin-notifications | GET | `/api/v1/admin/notifications/deliveries` | List Deliveries |
+| admin-notifications | GET | `/api/v1/admin/notifications/subscriptions` | List Subscriptions |
+| admin-notifications | POST | `/api/v1/admin/notifications/subscriptions` | Create Subscription |
+| admin-notifications | GET | `/api/v1/admin/notifications/subscriptions/{subscription_id}` | Get Subscription |
+| admin-notifications | PUT | `/api/v1/admin/notifications/subscriptions/{subscription_id}` | Replace Subscription |
+| admin-notifications | DELETE | `/api/v1/admin/notifications/subscriptions/{subscription_id}` | Delete Subscription |
 | admin-platform-budgets | GET | `/api/v1/admin/platform/budgets` | List Budgets |
 | admin-platform-budgets | POST | `/api/v1/admin/platform/budgets` | Create Budget |
 | admin-platform-budgets | GET | `/api/v1/admin/platform/budgets/{budget_id}` | Get Budget |
@@ -511,6 +524,98 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Get Role Mapping
 - Description: The effective Entra claim to role mapping of this deployment, read only: the bound tenant, audience and cloud, and each entry's id, claim kind (`roles` or `groups`), claim value, role, domain mode (`all` or `explicit`) and customer control flag. `active` is false and `entries` empty when no mapping is configured. The mapping is deployment configuration (`NS_AUTH_ROLE_MAPPINGS`) and cannot be changed through the API. Needs `policy.manage` on the whole deployment (the customer control domain).
 - Responses: `200` `RoleMappingView`
+
+### Tag: admin-notifications
+
+#### GET `/api/v1/admin/notifications/channel-kinds`
+
+- Operation id: `channel_kinds_api_v1_admin_notifications_channel_kinds_get`
+- Summary: Channel Kinds
+- Responses: `200` `KindList`
+
+#### GET `/api/v1/admin/notifications/channels`
+
+- Operation id: `list_channels_api_v1_admin_notifications_channels_get`
+- Summary: List Channels
+- Responses: `200` `ChannelList`
+
+#### POST `/api/v1/admin/notifications/channels`
+
+- Operation id: `create_channel_api_v1_admin_notifications_channels_post`
+- Summary: Create Channel
+- Request body: application/json: `object` (required)
+- Responses: `201` `ChannelView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/notifications/channels/{channel_id}`
+
+- Operation id: `get_channel_api_v1_admin_notifications_channels__channel_id__get`
+- Summary: Get Channel
+- Parameters: `channel_id` (path, required)
+- Responses: `200` `ChannelView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/notifications/channels/{channel_id}`
+
+- Operation id: `replace_channel_api_v1_admin_notifications_channels__channel_id__put`
+- Summary: Replace Channel
+- Parameters: `channel_id` (path, required), `If-Match` (header)
+- Request body: application/json: `object` (required)
+- Responses: `200` `ChannelView`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/notifications/channels/{channel_id}`
+
+- Operation id: `delete_channel_api_v1_admin_notifications_channels__channel_id__delete`
+- Summary: Delete Channel
+- Parameters: `channel_id` (path, required), `If-Match` (header)
+- Responses: `204` no body; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/notifications/channels/{channel_id}/test`
+
+- Operation id: `test_channel_api_v1_admin_notifications_channels__channel_id__test_post`
+- Summary: Test Channel
+- Parameters: `channel_id` (path, required)
+- Responses: `200` `ChannelTestResult`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/notifications/deliveries`
+
+- Operation id: `list_deliveries_api_v1_admin_notifications_deliveries_get`
+- Summary: List Deliveries
+- Parameters: `status` (query), `channel_id` (query), `limit` (query)
+- Responses: `200` `DeliveryList`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/notifications/subscriptions`
+
+- Operation id: `list_subscriptions_api_v1_admin_notifications_subscriptions_get`
+- Summary: List Subscriptions
+- Responses: `200` `SubscriptionList`
+
+#### POST `/api/v1/admin/notifications/subscriptions`
+
+- Operation id: `create_subscription_api_v1_admin_notifications_subscriptions_post`
+- Summary: Create Subscription
+- Request body: application/json: `object` (required)
+- Responses: `201` `SubscriptionView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/notifications/subscriptions/{subscription_id}`
+
+- Operation id: `get_subscription_api_v1_admin_notifications_subscriptions__subscription_id__get`
+- Summary: Get Subscription
+- Parameters: `subscription_id` (path, required)
+- Responses: `200` `SubscriptionView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/notifications/subscriptions/{subscription_id}`
+
+- Operation id: `replace_subscription_api_v1_admin_notifications_subscriptions__subscription_id__put`
+- Summary: Replace Subscription
+- Parameters: `subscription_id` (path, required), `If-Match` (header)
+- Request body: application/json: `object` (required)
+- Responses: `200` `SubscriptionView`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/notifications/subscriptions/{subscription_id}`
+
+- Operation id: `delete_subscription_api_v1_admin_notifications_subscriptions__subscription_id__delete`
+- Summary: Delete Subscription
+- Parameters: `subscription_id` (path, required), `If-Match` (header)
+- Responses: `204` no body; `422` `HTTPValidationError`
 
 ### Tag: admin-platform-budgets
 
