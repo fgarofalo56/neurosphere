@@ -2,6 +2,7 @@
 
 import pytest
 from neurosphere_core.auth.scope import (
+    PRIVILEGED_ROLES,
     ROLE_PERMISSIONS,
     Permission,
     PolicyGrant,
@@ -94,7 +95,7 @@ def test_admin_and_auditor_are_disjoint_in_the_sensitive_directions() -> None:
     assert admin & auditor == {Permission.GOVPOLICY_READ}
 
 
-@pytest.mark.parametrize("role", [Role.ADMIN, Role.SECURITY_AUDITOR])
+@pytest.mark.parametrize("role", [Role.ADMIN, Role.SECURITY_AUDITOR, Role.INTERACTION_INVESTIGATOR])
 def test_privileged_assignments_must_be_time_bound(role: Role) -> None:
     dom = domain_id("contoso", "finance")
     with pytest.raises(ValidationError):
@@ -131,6 +132,16 @@ def test_a_grant_naming_a_domain_does_not_open_the_domain() -> None:
     response = dep.client.get(f"/d/domains/{ops}/items", headers=dep.bearer(ADMIN_C_FIN))
     assert response.status_code == 403
     assert response.json()["reason"] == "target_out_of_scope"
+
+
+def test_interaction_content_permissions_stay_on_the_investigator() -> None:
+    """PRP-104 GD-2: only the privileged investigator reads or exports captured content."""
+    content = {Permission.INTERACTION_READ, Permission.INTERACTION_EXPORT}
+    assert ROLE_PERMISSIONS[Role.INTERACTION_INVESTIGATOR] == content
+    assert Role.INTERACTION_INVESTIGATOR in PRIVILEGED_ROLES
+    for role, permissions in ROLE_PERMISSIONS.items():
+        if role is not Role.INTERACTION_INVESTIGATOR:
+            assert not content & permissions, f"{role} holds an interaction content permission"
 
 
 def test_prp65_permissions_stay_on_their_one_privileged_role() -> None:

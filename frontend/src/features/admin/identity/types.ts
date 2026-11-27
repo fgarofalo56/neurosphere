@@ -1,11 +1,23 @@
 /** The PRP-39 shapes the identity pages read (neurosphere_contracts.admin.v1). */
-export type RoleName = "viewer" | "analyst" | "domain_steward" | "admin" | "security_auditor";
+/**
+ * admin, security_auditor and interaction_investigator are privileged: the API refuses an
+ * assignment without expires_at, and an interaction_investigator assignment longer than 7 days
+ * (role_assignment_too_long, PRP-104 GD-16).
+ */
+export type RoleName =
+  | "viewer"
+  | "analyst"
+  | "domain_steward"
+  | "admin"
+  | "security_auditor"
+  | "interaction_investigator";
 export const ROLE_NAMES: readonly RoleName[] = [
   "viewer",
   "analyst",
   "domain_steward",
   "admin",
   "security_auditor",
+  "interaction_investigator",
 ];
 
 export type GrantPermission = "read" | "export" | "propose_action" | "approve" | "execute";
