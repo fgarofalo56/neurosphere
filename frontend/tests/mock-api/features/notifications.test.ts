@@ -140,34 +140,38 @@ describe("notifications mock", () => {
     const email = await call("POST", `${A}/channels`, {
       body: newChannel({ channel_id: "mail", kind: "email" }),
     });
-    expect([email.status, email.body["code"]]).toEqual([409, "channel_kind_not_built"]);
+    expect([email.status, email.body["code"], email.body["reason"]]).toEqual([
+      409,
+      "capability_unavailable",
+      "channel_kind_not_built",
+    ]);
     const blocked = await call("POST", `${A}/channels`, {
       body: newChannel({ channel_id: "b1", allowed_host: NOTIFICATION_BLOCKED_HOST }),
     });
-    expect([blocked.status, blocked.body["code"]]).toEqual([422, "host_not_allowed"]);
+    expect([blocked.status, blocked.body["reason"]]).toEqual([422, "host_not_allowed"]);
     const cross = await call("POST", `${A}/channels`, {
       body: newChannel({ channel_id: "b2", allowed_host: NOTIFICATION_CROSS_CLOUD_HOST }),
     });
-    expect([cross.status, cross.body["code"]]).toEqual([422, "cloud_boundary"]);
+    expect([cross.status, cross.body["reason"]]).toEqual([422, "cloud_boundary"]);
     const raw = await call("POST", `${A}/channels`, {
       body: newChannel({
         channel_id: "b3",
         endpoint_credential: { kind: "key_vault_secret", secret_uri: "not-a-reference" },
       }),
     });
-    expect([raw.status, raw.body["code"]]).toEqual([422, "invalid_credential_reference"]);
+    expect([raw.status, raw.body["reason"]]).toEqual([422, "invalid_credential_reference"]);
   });
 
-  it("requires If-Match: 428 without, 412 on a mismatch, 200 and a new ETag when right", async () => {
+  it("requires If-Match: 422 precondition_required without, 409 stale_version on a mismatch, 200 and a new ETag when right", async () => {
     const path = `${A}/channels/${NOTIFICATION_CHANNEL_ID}`;
     const body = newChannel({ channel_id: NOTIFICATION_CHANNEL_ID, enabled: false });
-    expect((await call("PUT", path, { body })).status).toBe(428);
-    expect((await call("PUT", path, { body, ifMatch: '"channel-9"' })).status).toBe(412);
+    expect((await call("PUT", path, { body })).status).toBe(422);
+    expect((await call("PUT", path, { body, ifMatch: '"channel-9"' })).status).toBe(409);
     const ok = await call("PUT", path, { body, ifMatch: '"channel-1"' });
     expect(ok.status).toBe(200);
     expect(ok.body["version"]).toBe(2);
     expect(ok.headers["etag"]).toBe('"channel-2"');
-    expect((await call("DELETE", path)).status).toBe(428);
+    expect((await call("DELETE", path)).status).toBe(422);
     expect((await call("DELETE", path, { ifMatch: '"channel-2"' })).status).toBe(204);
     expect((await call("GET", path)).status).toBe(404);
   });
@@ -191,9 +195,9 @@ describe("notifications mock", () => {
     const unknown = await call("POST", `${A}/subscriptions`, {
       body: { ...sub, subscription_id: "third", channel_id: "nope" },
     });
-    expect([unknown.status, unknown.body["code"]]).toEqual([422, "unknown_channel"]);
+    expect([unknown.status, unknown.body["reason"]]).toEqual([422, "unknown_channel"]);
     const path = `${A}/subscriptions/${NOTIFICATION_SUBSCRIPTION_ID}`;
-    expect((await call("PUT", path, { body: sub })).status).toBe(428);
+    expect((await call("PUT", path, { body: sub })).status).toBe(422);
     expect((await call("PUT", path, { body: sub, ifMatch: '"subscription-1"' })).status).toBe(200);
     expect((await call("DELETE", path, { ifMatch: '"subscription-2"' })).status).toBe(204);
   });

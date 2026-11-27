@@ -145,7 +145,13 @@ function json(
   ctx.res.end(body === undefined ? "" : JSON.stringify(body));
 }
 
-function problem(ctx: FeatureMockContext, status: number, code: string, detail: string): void {
+function problem(
+  ctx: FeatureMockContext,
+  status: number,
+  code: string,
+  detail: string,
+  reason: string = code,
+): void {
   json(
     ctx,
     status,
@@ -157,7 +163,7 @@ function problem(ctx: FeatureMockContext, status: number, code: string, detail: 
       detail,
       instance: ctx.url.pathname,
       code,
-      reason: code,
+      reason,
       retryable: false,
       correlation_id: ctx.correlationId,
     },
@@ -239,14 +245,20 @@ function channelRefusal(body: Doc): { status: number; code: string } | undefined
   return undefined;
 }
 
+/** A refusal as the real API sends it: the taxonomy code, with the specific reason beside it. */
+function refuse(ctx: FeatureMockContext, refusal: { status: number; code: string }): void {
+  const taxonomy = refusal.status === 409 ? "capability_unavailable" : "invalid_schema";
+  problem(ctx, refusal.status, taxonomy, refusal.code, refusal.code);
+}
+
 function ifMatchFailure(ctx: FeatureMockContext, current: string): boolean {
   const header = ctx.req.headers["if-match"];
   if (header === undefined) {
-    problem(ctx, 428, "precondition_required", "If-Match is required");
+    problem(ctx, 422, "invalid_schema", "If-Match is required", "precondition_required");
     return true;
   }
   if (header !== current) {
-    problem(ctx, 412, "stale_version", "etag_mismatch");
+    problem(ctx, 409, "stale_version", "etag_mismatch");
     return true;
   }
   return false;
@@ -269,7 +281,7 @@ async function crud(ctx: FeatureMockContext, c: Collection, parts: string[]): Pr
     const body = await readJson(ctx);
     const refusal = c.refuse(body);
     if (refusal !== undefined) {
-      return problem(ctx, refusal.status, refusal.code, refusal.code);
+      return refuse(ctx, refusal);
     }
     const id = String(body[c.idField] ?? "");
     if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(id)) {
@@ -298,7 +310,7 @@ async function crud(ctx: FeatureMockContext, c: Collection, parts: string[]): Pr
   }
   const body = await readJson(ctx);
   const refusal = c.refuse(body);
-  if (refusal !== undefined) return problem(ctx, refusal.status, refusal.code, refusal.code);
+  if (refusal !== undefined) return refuse(ctx, refusal);
   const next = { doc: { ...body, [c.idField]: found.doc[c.idField] }, version: found.version + 1 };
   c.set(c.items.map((s) => (s === found ? next : s)));
   return json(ctx, 200, c.view(next), { etag: etagOf(c.prefix, next.version) });

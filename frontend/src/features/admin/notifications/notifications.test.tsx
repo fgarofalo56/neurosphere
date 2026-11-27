@@ -238,9 +238,7 @@ describe("Channels tab", () => {
 
   it("shows the API refusal reason when create is refused", async () => {
     const { impl } = api((req) =>
-      req.method === "POST"
-        ? problem(422, "host_not_allowed", "host not on the allow-list")
-        : undefined,
+      req.method === "POST" ? problem(422, "invalid_schema", "host_not_allowed") : undefined,
     );
     renderAdmin(<NotificationsPage />, impl);
     await screen.findByTestId("channel-row");

@@ -38,19 +38,24 @@ export function diffRows(
   return rows;
 }
 
-/** Problem text for a failed write: a stale version (409 or 412) or the API's own reason code. */
+/**
+ * Problem text for a failed write: a stale version (409 `stale_version`) or the API's specific
+ * reason. The API keeps the closed taxonomy in `code` (`capability_unavailable`,
+ * `invalid_schema`) and puts the specific refusal (`channel_kind_not_built`, `host_not_allowed`,
+ * `precondition_required`, ...) in `reason`, so the reason is what the operator needs to see.
+ */
 export function errorText(error: ApiError): string {
+  const code = error.problem?.code;
+  const reason = error.problem?.reason ?? code;
   if (error.status === 409 || error.status === 412) {
-    const code = error.problem?.code;
     if (code !== undefined && code !== "stale_version" && error.status === 409) {
-      return `Refused: ${code}`;
+      return `Refused: ${reason}`;
     }
     return S.stale;
   }
   if (error.status === 428) return S.stale;
-  const code = error.problem?.code;
-  if (error.status === 422 && code !== undefined) {
-    return `Refused: ${code}${error.problem?.detail === undefined ? "" : ` (${error.problem.detail})`}`;
+  if (error.status === 422 && reason !== undefined) {
+    return `Refused: ${reason}${error.problem?.detail === undefined ? "" : ` (${error.problem.detail})`}`;
   }
   return changeErrorText(error);
 }
