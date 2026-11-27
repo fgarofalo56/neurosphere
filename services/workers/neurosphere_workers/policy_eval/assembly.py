@@ -33,6 +33,7 @@ Binding points (each has ONE owner; nobody else edits them):
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -50,6 +51,7 @@ from neurosphere_core.catalog.graph.access import AccessEngine
 from neurosphere_core.catalog.protocol import CatalogRepository
 from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
 from neurosphere_core.clients import ClientLifetime, create_cosmos_client
+from neurosphere_core.clients.factories import ENV_COSMOS_KEY
 from neurosphere_core.governance.policy import (
     BindingStore,
     CosmosBindingStore,
@@ -67,6 +69,10 @@ from neurosphere_core.governance.policy import (
     ViolationEventSink,
     ViolationStore,
 )
+from neurosphere_core.governance.policy.readers import (
+    InteractionFindingReaderAdapter,
+    index_only_source,
+)
 from neurosphere_core.governance.policy.rules import (
     InteractionFindingReader,
     RuleBuildContext,
@@ -77,6 +83,7 @@ from neurosphere_core.governance.policy.rules import (
 from neurosphere_core.hitl import HitlService
 from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
+from neurosphere_core.interactions import CosmosInteractionIndex
 from neurosphere_core.notifications.violations import ViolationNotificationSink
 from neurosphere_core.search.fixture import FixtureSearchIndex
 from neurosphere_core.stores import ensure_local_containers
@@ -143,15 +150,28 @@ def violation_event_sink(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Violat
 def interaction_finding_reader(
     cfg: RuntimeConfig, lifetime: ClientLifetime
 ) -> InteractionFindingReader | None:
-    """The interaction-finding reader for ``content_rule``: unbound (``None``) in this PRP.
+    """The interaction-finding reader for ``content_rule`` (bound by PRP-104 item 8).
 
-    BINDING POINT owned by PRP-104 item 8, which returns its ``DetectionFinding`` metadata reader
-    here (counts and category names, never an interaction body). While it returns ``None`` the
-    registry reports ``content_rule`` as ``evaluator_unavailable`` (``finding_reader_unbound``).
-    Nobody else binds it. The API builder has the matching function in
-    ``runtime/builders/governance.py``.
+    BINDING POINT owned by PRP-104 item 8: an index-only
+    :class:`InteractionFindingReaderAdapter` (counts, category names and interaction ids from
+    the Cosmos ``interaction_index`` container in the role's database; never an interaction
+    body, no key wrapper, no blob client) when interaction storage is configured for the
+    worker: ``NS_INTERACTION_CONTENT_CONTAINER`` is set (the same signal the lifecycle
+    interaction target uses) and Cosmos is reachable by configuration (the emulator key under
+    ``NS_ENV=local``, else ``cosmos_account``). Otherwise ``None`` and the registry reports
+    ``content_rule`` as ``evaluator_unavailable`` (``finding_reader_unbound``). Nobody else
+    binds it. The API builder has the matching function in ``runtime/builders/governance.py``.
     """
-    return None
+    if not os.environ.get("NS_INTERACTION_CONTENT_CONTAINER", "").strip():
+        return None
+    if cfg.settings.env == "local":
+        if not os.environ.get(ENV_COSMOS_KEY):
+            return None
+    elif not cfg.store.cosmos_account:
+        return None
+    client = create_cosmos_client(cfg.settings, lifetime=lifetime, account=cfg.store.cosmos_account)
+    index = CosmosInteractionIndex.from_client(client, database=cfg.store.database)
+    return InteractionFindingReaderAdapter(index_only_source(index))
 
 
 # --------------------------------------------------------------------------------------------
