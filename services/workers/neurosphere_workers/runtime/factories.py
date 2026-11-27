@@ -209,6 +209,7 @@ from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 from neurosphere_workers.lifecycle.assembly import LifecycleParts, assemble, build_targets
 from neurosphere_workers.notifications.builder import build_notifications
+from neurosphere_workers.notifications.wiring import build_outbox_notifier
 from neurosphere_workers.policy_eval.assembly import build_policy_eval
 from neurosphere_workers.projections.catalog import CatalogProjection
 from neurosphere_workers.projections.catalog.quarantine_cosmos import CosmosCandidateQuarantine
@@ -666,6 +667,8 @@ async def _hitl_service(
         # PRP-44: the stored review policy over the built-in defaults (applied at startup).
         await load_review_policies(cfg, cosmos),
         _NoReviewerAuthorizer(),
+        # PRP-107: queue assignment/escalation events in the notification outbox.
+        notifiers=tuple(n for n in (build_outbox_notifier(cfg, cosmos),) if n is not None),
     )
 
 
