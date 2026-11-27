@@ -14,6 +14,7 @@ import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
 import { handle as compliance } from "./compliance.ts";
 import { handle as mapTopology } from "./map-topology.ts";
+import { handle as notifications } from "./notifications.ts";
 import { handle as roleMapping } from "./role-mapping.ts";
 import { handle as sourceStatus } from "./sourceStatus.ts";
 
@@ -44,6 +45,8 @@ export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   sourceStatus,
   // PRP-103 item 5: `/admin/interactions/capture-*` only; before adminCore.
   capture,
+  // PRP-107 item 7: `/admin/notifications/**` only; before adminCore.
+  notifications,
   adminCore,
   // PRP-77: answers only the map-incident fixture domain family; passes everything else.
   mapTopology,

@@ -13,6 +13,7 @@
     "/admin/gateways",
     "/admin/identity",
     "/admin/identity/principal",
+    "/admin/notifications",
     "/admin/pricing",
     "/admin/review-policy",
     "/admin/sources/connectors",
