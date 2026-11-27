@@ -1,6 +1,6 @@
 ---
 name: PRP-107-notification-channels-and-subscriptions
-status: active
+status: shipped
 priority: P0
 order: 107
 review: required
@@ -16,6 +16,8 @@ branch: prp-107-notification-channels
 allow_parallel: true
 issues: [421, 422]
 started: 2026-11-26
+shipped: 2026-11-27
+pr: 420
 execution: session
 max_lanes: 4
 ---
@@ -35,18 +37,32 @@ Out of scope: the contracts (PRP-99 owns `notifications/v1`); the container decl
 - Principal policy documents hold only pseudonymous principal ids and role assignments, no address (`packages/core/neurosphere_core/auth/scope/policy.py:67-105`), so "who is the recipient" cannot be answered by an address lookup. Scope has to decide who may be told, and the channel carries the address.
 
 ## Acceptance criteria
-- [ ] Given a webhook channel pointing at a local receiver and a subscription for event class `hitl_item_assigned` (PRP-99 `NotificationEventClass`) on a domain, When a review item is assigned in that domain, Then the receiver gets one POST within the configured retry window with a JSON body, an `X-NeuroSphere-Signature` HMAC header that verifies with the channel's secret, a stable `notification_id`, and the outbox row ends `delivered` with the HTTP status (no body stored). This is a test against a real local HTTP receiver, not a mock of the sender.
-- [ ] Given the receiver answers 500 then 200, Then the row retries with bounded exponential backoff and ends `delivered` once; given it keeps failing, Then the row ends `failed` after the attempt cap with a reason code, a counter is raised and one audit record names the channel id, never the URL query or secret.
-- [ ] Given the same logical event published twice (same dedup key), Then exactly one POST is sent.
-- [ ] Recipient scope: Given a subscription whose domain scope does not include the event's domain, or whose owner no longer holds `data.read` on it when delivery runs (recheck through `PolicyPermissionRechecker`), Then nothing is sent and the row is `suppressed` with reason `scope`; an event about an entity the audience cannot see leaks neither its id nor its title (test with two domains and a channel scoped to one).
-- [ ] Body rules: the message is built from a closed field set (event class, ids, entity title, domain id, severity, link, timestamp); a test publishes an event whose source record contains a credential-shaped string and a prompt-like field and asserts neither reaches the sent body, the outbox row, the audit record or any log line.
-- [ ] Egress: Given a channel host not on its allowed-host list, a hostname that resolves to a blocked address, a redirect, a body larger than the cap, or a response slower than the timeout, Then the send is refused or aborted with a reason code and nothing is followed. Loopback is accepted only when `NS_ENV=local` and the channel is explicitly marked local sink (used by the tests).
-- [ ] Teams and email senders exist only for what item 1 verified: a channel kind whose verification file says the API or transport is not available stays `not_built` in the admin page with the reason, and the create route refuses it; no code asserts a payload shape that item 1 did not record.
-- [ ] HITL wiring: `HitlService` is built with the outbox notifier in the API and the worker, so assignment (`hitl/service.py:262`) and timer events (`:479`) publish; the audit-only stubs remain available and unchanged for tests.
-- [ ] Secrets: channels store only a `CredentialReference` (Key Vault URI or managed identity), resolved at send time through the existing reader; no route, document, log, audit record or OpenAPI example contains a secret value (secret-name CodeQL rule respected).
-- [ ] Admin: customer-level `config.manage` can create, update, disable, test-send and list channels and subscriptions; every other caller gets 403 and a denial record; the page shows per-channel delivery status counts and the last error reason.
-- [ ] Government: a Government deployment accepts only channels whose allowed hosts are in the same cloud boundary list configured for it; a cross-boundary host is refused at create.
+- [x] Given a webhook channel pointing at a local receiver and a subscription for event class `hitl_item_assigned` (PRP-99 `NotificationEventClass`) on a domain, When a review item is assigned in that domain, Then the receiver gets one POST within the configured retry window with a JSON body, an `X-NeuroSphere-Signature` HMAC header that verifies with the channel's secret, a stable `notification_id`, and the outbox row ends `delivered` with the HTTP status (no body stored). This is a test against a real local HTTP receiver, not a mock of the sender.
+- [x] Given the receiver answers 500 then 200, Then the row retries with bounded exponential backoff and ends `delivered` once; given it keeps failing, Then the row ends `failed` after the attempt cap with a reason code, a counter is raised and one audit record names the channel id, never the URL query or secret.
+- [x] Given the same logical event published twice (same dedup key), Then exactly one POST is sent.
+- [x] Recipient scope: Given a subscription whose domain scope does not include the event's domain, or whose owner no longer holds `data.read` on it when delivery runs (recheck through `PolicyPermissionRechecker`), Then nothing is sent and the row is `suppressed` with reason `scope`; an event about an entity the audience cannot see leaks neither its id nor its title (test with two domains and a channel scoped to one).
+- [x] Body rules: the message is built from a closed field set (event class, ids, entity title, domain id, severity, link, timestamp); a test publishes an event whose source record contains a credential-shaped string and a prompt-like field and asserts neither reaches the sent body, the outbox row, the audit record or any log line.
+- [x] Egress: Given a channel host not on its allowed-host list, a hostname that resolves to a blocked address, a redirect, a body larger than the cap, or a response slower than the timeout, Then the send is refused or aborted with a reason code and nothing is followed. Loopback is accepted only when `NS_ENV=local` and the channel is explicitly marked local sink (used by the tests).
+- [x] Teams and email senders exist only for what item 1 verified: a channel kind whose verification file says the API or transport is not available stays `not_built` in the admin page with the reason, and the create route refuses it; no code asserts a payload shape that item 1 did not record.
+- [x] HITL wiring: `HitlService` is built with the outbox notifier in the API and the worker, so assignment (`hitl/service.py:262`) and timer events (`:479`) publish; the audit-only stubs remain available and unchanged for tests.
+- [x] Secrets: channels store only a `CredentialReference` (Key Vault URI or managed identity), resolved at send time through the existing reader; no route, document, log, audit record or OpenAPI example contains a secret value (secret-name CodeQL rule respected).
+- [x] Admin: customer-level `config.manage` can create, update, disable, test-send and list channels and subscriptions; every other caller gets 403 and a denial record; the page shows per-channel delivery status counts and the last error reason.
+- [x] Government: a Government deployment accepts only channels whose allowed hosts are in the same cloud boundary list configured for it; a cross-boundary host is refused at create.
 - PRP exit: touched suites, `tests/security/authz`, `tests/security/egress`, ruff, pyright, frontend lint and typecheck, `validate_planning.py` pass; PR open with CI green; `services/api/openapi.json` regenerated.
+
+### Acceptance evidence (2026-11-27)
+1. HITL assignment to outbox: `services/api/tests/notifications_api/test_hitl_wiring.py:152`; outbox to a real local receiver, signed POST verified with the key, stable `notification_id`: `tests/integration/notifications_delivery/test_webhook_delivery.py:126` and `services/workers/tests/notifications_worker/test_delivery_worker.py:296` (row ends `delivered`, status as `last_error_code=http_200`; the contract row has no status field). The chain is proven in two linked tests, not one test from assignment to POST.
+2. `test_delivery_worker.py:296` (500 then 200, backoff respected) and `:332` (cap, reason, counter, one audit record without URL or key).
+3. `test_delivery_worker.py:373`.
+4. `test_delivery_worker.py:389`, `:405`; `test_hitl_wiring.py:185`; core `packages/core/tests/notifications/test_resolver.py`.
+5. `packages/core/tests/notifications/test_message_body.py:40`, `:54`, `:80`; `test_delivery_worker.py:503`.
+6. `tests/security/egress/test_notification_egress.py` (159 passed with the unit cases, merged 39f40c31).
+7. `docs/connectors/verification/notifications-*.md`; `services/api/tests/notifications_api/test_admin_routes.py:172`; `GET /channel-kinds` on the page.
+8. `test_hitl_wiring.py:152`, `:166`, `:210`, `:291`; worker `runtime/factories.py` `_hitl_service`; `packages/core/tests/hitl/test_notifier_stubs.py` unchanged and passing.
+9. Channel documents hold `KeyVaultSecretReference` only; `test_admin_routes.py` (no URL or key in responses or caplog); CodeQL analyze (python) green on PR 420.
+10. `test_admin_routes.py:390`, `:423`; `tests/security/authz/test_notifications_admin.py` (13 routes); page `frontend/src/features/admin/notifications/` with e2e `frontend/tests/e2e/admin-notifications.spec.ts`.
+11. `test_admin_routes.py:242`; `tests/security/egress/test_notification_egress.py` (Government cases).
+Exit: CI 33 success, 1 skipped on 231ab315 (check-runs API); `python scripts/validate_planning.py` PASS; openapi regenerated in 63c799fe. `verify-gates.ps1 -Mode full` was not run locally (about 1 h); the full suite ran in CI instead.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -254,9 +270,9 @@ One real delivery per channel kind (a Teams tenant, a real webhook receiver, the
 Execution deltas (2026-11-26): integration tests live in `tests/integration/notifications_delivery/` (not `notifications/`) to avoid the same-named test package clash with `packages/core/tests/notifications/`.
 
 ## Completion note (filled at ship)
-- Date, PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
+- Date, PR: 2026-11-27, PR #420 (branch `prp-107-notification-channels`). Item merges: 1 dec784f8, 2 6750c3f4, 3 39f40c31, 4 bd35abc2, 7b e65834c7, 5 2286c2a0, 6 d2f39e0d, 7a 5a6a0e2b; follow-ups a980ee0d (isort), 31d2590c (lazy imports, CodeQL cycles), 9bb1e7d5 (page shows `reason`), 9d1a58f1 (runbook, changelog), 231ab315 (gitleaks fixture).
+- Deviations: Teams shipped `degraded` (Workflows webhook, Commercial and GCC only; Office 365 connector webhooks retired May 2026) and email `not_built` (paid ACS resource needed; ACS SMTP not in Government), per item 1. Item 7 split into 7b (page, first) and 7a (routes). The core `NotificationPublisher` moved from item 6 to item 2. Errors keep the closed taxonomy in `code` with the specific refusal in `reason`; missing `If-Match` is 422 `precondition_required`, stale is 409 `stale_version`. Delivered rows record the HTTP status as `last_error_code=http_<status>` (no status field in the contract). Subscription owner is the envelope `updated_by`; `audience_roles` act as a scope check. Delivery audit subject is the channel with the notification id in `target_version` (audit guard rejects GUIDs). Worker tests in `services/workers/tests/notifications_worker/`, integration tests in `tests/integration/notifications_delivery/`. Non-owned edits: new `services/workers/neurosphere_workers/runtime/rechecker.py` (shared rechecker, `build_actions` uses it), `packages/core/tests/admin/test_config_store.py` PENDING sets, inventory lines (a11y route samples, demo-audit, real-stack routes, manifest calls), `docs/runbooks/system-settings.md` row, `docs/runbooks/governance-policy.md` row, `.gitleaksignore` entry.
+- Descoped items: none. Email delivery is `not_built` by verdict, not descoped work.
+- OPEN gates: live delivery per channel kind (customer webhook, Teams Workflows tenant, email once built) needs an operator environment and `NS_LIVE_APPROVED=1`; handed to PRP-136. `verify-gates.ps1 -Mode full` not run locally (CI full suite green).
+- Env vars for the operator: `NS_WORKER_ROLES` must list `notifications` for delivery; the `notifications` system setting (`egress_allowed_hosts`, retry, dedup) must be stored; Key Vault secrets for each channel endpoint and signing key; workload identity needs read on them. See `docs/runbooks/notifications.md`.
+- Follow-up issues: #421 (attempt cap on lease reclaim; per-row store errors in the worker), #422 (refuse subscriptions whose domain or audience roles can never match). Frontend: the page could show a friendlier text per reason code (not filed).
