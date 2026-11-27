@@ -1,6 +1,6 @@
 ---
 name: PRP-107-notification-channels-and-subscriptions
-status: backlog
+status: active
 priority: P0
 order: 107
 review: required
@@ -15,6 +15,9 @@ wave: W22
 branch: prp-107-notification-channels
 allow_parallel: true
 issues: []
+started: 2026-11-26
+execution: session
+max_lanes: 4
 ---
 
 # PRP-107: Notification channels and subscriptions (a notification that reaches a person)
@@ -239,14 +242,16 @@ One real delivery per channel kind (a Teams tenant, a real webhook receiver, the
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 Verify-first Teams and email | todo | | |
-| 2 Core model, outbox, resolver | todo | | |
-| 3 Egress guard | todo | | opus implementer |
+| 1 Verify-first Teams and email | in-progress | orchestrator (Learn MCP) | sonnet; 2026-11-26 |
+| 2 Core model, outbox, resolver | in-progress | worktree | sonnet; also owns `packages/core/tests/admin/test_config_store.py` PENDING sets and the core `NotificationPublisher` (moved from item 6); 2026-11-26 |
+| 3 Egress guard | in-progress | worktree | opus; 2026-11-26 |
 | 4 Senders | todo | | |
 | 5 Delivery worker role | todo | | |
 | 6 HITL wiring, publisher, violation-event binding | todo | | |
 | 7 Admin API and page | todo | | |
 | 8 Integration and close-out | todo | | |
+
+Execution deltas (2026-11-26): integration tests live in `tests/integration/notifications_delivery/` (not `notifications/`) to avoid the same-named test package clash with `packages/core/tests/notifications/`.
 
 ## Completion note (filled at ship)
 - Date, PR:
