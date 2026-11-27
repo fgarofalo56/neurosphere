@@ -105,9 +105,11 @@ def test_builder_is_registered_before_edge_and_after_mcp() -> None:
     assert names.index("mcp") < names.index("gateway") < names.index("edge")
     # PRP-103: capture attaches to the edge's ingest service and reads the lifecycle policy.
     assert names.index("edge") < names.index("lifecycle") < names.index("interactions")
-    # PRP-105: governance runs after interactions; admin stays second-to-last and analytics
-    # last (their own pinned tests).
-    assert names.index("interactions") == names.index("governance") - 1
+    # PRP-105: governance runs after interactions; PRP-104's explorer sits between them (it
+    # reuses the interactions store factory); admin stays second-to-last and analytics last
+    # (their own pinned tests).
+    assert names.index("interactions") == names.index("interaction_explorer") - 1
+    assert names.index("interaction_explorer") == names.index("governance") - 1
     assert names.index("governance") == names.index("admin") - 1
 
 

@@ -72,6 +72,7 @@ OPTIONAL_COMPONENTS: Final = (
     "sources_status",
     "agent_identity",
     "interaction_capture",
+    "interaction_explorer",
     "governance_policy",
     "notifications",
 )

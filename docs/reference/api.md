@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `80678eb2da75b4ed14bf606421107898e53f4173`. Generated: 2026-11-26.
+> Source commit: `2182afd356a72f808bfd5b5d60ad4c7a181c6705`. Generated: 2026-11-27.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 253 operations on 211 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 255 operations on 213 paths.
 
 ## Status and verification
 
@@ -225,6 +225,8 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | ingest | POST | `/v1/ingest/events` | Events |
 | ingest | POST | `/v1/ingest/otlp/metrics` | Metrics |
 | ingest | POST | `/v1/ingest/otlp/traces` | Traces |
+| interactions | GET | `/api/v1/domains/{domain_id}/interactions` | Search Interactions |
+| interactions | GET | `/api/v1/domains/{domain_id}/interactions/{interaction_id}` | Get Interaction |
 | lifecycle | GET | `/api/v1/lifecycle/holds` | List Holds |
 | lifecycle | POST | `/api/v1/lifecycle/holds` | Place Hold |
 | lifecycle | DELETE | `/api/v1/lifecycle/holds/{hold_id}` | Release Hold |
@@ -1800,6 +1802,22 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Operation id: `traces_v1_ingest_otlp_traces_post`
 - Summary: Traces
 - Responses: `202` `IngestResult`
+
+### Tag: interactions
+
+#### GET `/api/v1/domains/{domain_id}/interactions`
+
+- Operation id: `search_interactions_api_v1_domains__domain_id__interactions_get`
+- Summary: Search Interactions
+- Parameters: `domain_id` (path, required), `agent_id` (query), `principal_id` (query), `tool_id` (query), `data_asset_id` (query), `detected_category` (query), `from` (query), `to` (query), `page_size` (query), `continuation` (query)
+- Responses: `200` `InteractionPage`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interactions/{interaction_id}`
+
+- Operation id: `get_interaction_api_v1_domains__domain_id__interactions__interaction_id__get`
+- Summary: Get Interaction
+- Parameters: `domain_id` (path, required), `interaction_id` (path, required)
+- Responses: `200` `InteractionRecord`; `422` `HTTPValidationError`
 
 ### Tag: lifecycle
 
