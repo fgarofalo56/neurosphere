@@ -22,7 +22,7 @@ draft. A violation is evidence of a rule match, not a legal or compliance verdic
 | API routes and the optional component `governance_policy` | `neurosphere_api.governance.policy`, `runtime/builders/governance.py` | Built; on by default |
 | Executing publish, retire and enforcement mode changes | PRP-108 platform-control target | Planned; intents are advisory until then |
 | Policy UI | PRP-106 | Planned |
-| Violation notifications | PRP-107 binds `violation_event_sink` | Planned; the sink is a no-op today |
+| Violation notifications | PRP-107 binds `violation_event_sink` | Built; queued to the notification outbox when the Cosmos store is configured, see `docs/runbooks/notifications.md` |
 | `content_rule` interaction finding reader | PRP-104 binds `interaction_finding_reader` | Planned; `content_rule` is unavailable today |
 | Cosmos containers | `policy_definitions`, `policy_violations`, `policy_exceptions` (PRP-102) | Declared; filled by this engine |
 | Enforcement on real systems | PRP-112 (gateway), PRP-113 (tool call, MCP), PRP-114 (SDK) | OPEN |

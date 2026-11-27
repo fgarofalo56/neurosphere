@@ -154,6 +154,7 @@ nav:
       - runbooks/content-classification.md
       - runbooks/interaction-audit.md
       - runbooks/governance-policy.md
+      - runbooks/notifications.md
       - runbooks/new-user-test.md
   - Walkthroughs:
       - walkthroughs/admin.md
