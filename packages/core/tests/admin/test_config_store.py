@@ -65,8 +65,8 @@ OTHER_ACTOR = "commercial:contoso:entra:person:p-" + "1d" * 32
 
 # Setting keys the contract declares but core deliberately still refuses (fail closed) until
 # PRP-103/105/107 register their members; these examples are asserted refused separately.
-PENDING_SETTING_KEYS = frozenset({"interaction_capture", "notifications", "enforcement"})
-PENDING_ADMIN_KINDS = frozenset({"notification_channel", "notification_subscription"})
+PENDING_SETTING_KEYS = frozenset({"interaction_capture", "enforcement"})
+PENDING_ADMIN_KINDS: frozenset[str] = frozenset()
 
 
 def _examples(
