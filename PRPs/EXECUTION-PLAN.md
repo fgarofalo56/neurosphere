@@ -86,7 +86,7 @@ Gate before the next wave: The hosted profile renders with everything on (offlin
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-107: Notification channels and subscriptions (a notification that reaches a person)](backlog/PRP-107-notification-channels-and-subscriptions.md) | sonnet | required | none | PRP-103, PRP-107 | - | `prp-107-notification-channels` |
+| 1 | [PRP-107: Notification channels and subscriptions (a notification that reaches a person)](active/PRP-107-notification-channels-and-subscriptions.md) | sonnet | required | none | PRP-103, PRP-107 | - | `prp-107-notification-channels` |
 
 Gate before the next wave: Tools and services have real aggregates and appear on the map; capture works at the edge with all six metadata-only guards still failing closed when it is off; a notification is delivered to a local sink.
 
@@ -569,7 +569,7 @@ Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-82-hosted-e
 ### PRP-107 (W22)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-107-notification-channels-and-subscriptions.md
+/prp:prp-execute PRPs/active/PRP-107-notification-channels-and-subscriptions.md
 
 Context for this run: wave W22 of PRPs/EXECUTION-PLAN.md, branch prp-107-notification-channels cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
