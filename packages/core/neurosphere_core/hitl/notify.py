@@ -44,7 +44,10 @@ NotificationEvent = Literal[
     "escalation_capped",
     "review_expired",
 ]
-NotifierChannel = Literal["email", "teams"]
+NotifierChannel = Literal["email", "teams", "outbox"]
+"""``outbox`` (PRP-107): the notification is queued in the notification outbox for the delivery
+worker. Its receipt still says ``recorded`` (recorded in the outbox, not delivered): only the
+worker ever writes a ``delivered`` row, so no HITL receipt can claim delivery."""
 
 _UUID: Final = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 _REF: Final = r"^[a-z0-9][a-z0-9._:-]{0,127}$"

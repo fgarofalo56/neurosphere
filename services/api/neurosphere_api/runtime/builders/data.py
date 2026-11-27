@@ -87,6 +87,7 @@ from neurosphere_core.hitl import DecisionLog, HitlService
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
 from neurosphere_core.ledger import LedgerStore
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
+from neurosphere_core.notifications.hitl import OutboxNotifier
 from neurosphere_core.recommendations import RecommendationStore
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
 from neurosphere_core.recommendations.matching import (
@@ -140,6 +141,7 @@ from neurosphere_api.runtime.builders import (
     ComponentUnavailableError,
 )
 from neurosphere_api.runtime.builders.blob import archive_container
+from neurosphere_api.runtime.builders.notifications import NOTIFICATIONS
 from neurosphere_api.runtime.builders.search import wrap_catalog_for_search
 from neurosphere_api.runtime.pseudonym import resolve_pseudonym_key
 from neurosphere_api.runtime.settings import AuditSiemSettings, AuthSettings
@@ -615,7 +617,14 @@ def _hitl_service(ctx: BuildContext) -> HitlService:
         audit,
         review_policies,
         RecheckerReviewerAuthorizer(rechecker),
+        notifiers=_outbox_notifiers(ctx),
     )
+
+
+def _outbox_notifiers(ctx: BuildContext) -> tuple[OutboxNotifier, ...]:
+    """PRP-107: the outbox notifier when the notifications builder produced one (else none)."""
+    plane = ctx.maybe_shared(NOTIFICATIONS)
+    return (plane.notifier,) if plane is not None else ()
 
 
 def _review_router(ctx: BuildContext) -> None:
