@@ -285,7 +285,7 @@ None run here. Reading content on the hosted app (synthetic domain) is part of P
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | worktree-agent-aed46cb947c743860 (opus) | 2026-11-27: verified ruff/format/pyright + 536 pytest passed; Snyk 0; review APPROVED; merged 0bc2dad2. Follow-ups: core-level 7-day cap (sandbox grant script bypasses API), stale contract docstring on privileged roles |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
