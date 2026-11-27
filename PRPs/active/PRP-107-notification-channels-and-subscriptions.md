@@ -14,7 +14,7 @@ depends_on: [PRP-99-governance-contracts-a, PRP-102-encrypted-interaction-store-
 wave: W22
 branch: prp-107-notification-channels
 allow_parallel: true
-issues: []
+issues: [421, 422]
 started: 2026-11-26
 execution: session
 max_lanes: 4
@@ -249,7 +249,7 @@ One real delivery per channel kind (a Teams tenant, a real webhook receiver, the
 | 5 Delivery worker role | merged | worktree-agent-a5599c0049b0d6fff | sonnet; 0f08f58e merged 2286c2a0; 213 passed (worker + core + integration), ruff+pyright clean, Snyk 0; tests in `services/workers/tests/notifications_worker/` (repo convention, not inside the package); shared `runtime/rechecker.py` helper (new); audit subject is the channel, notification id in `target_version`; 2026-11-26 |
 | 6 HITL wiring, publisher, violation-event binding | merged | worktree-agent-a8dd59149a4957aaa | sonnet; 497d0929 merged d2f39e0d; 500 passed on touched suites (only the manifest-count test red, owned by 7a), Snyk 0; API builder `notifications` runs after `authz`, before `data`; follow-up 31d2590c (orchestrator) makes the worker notifications imports lazy to clear CodeQL py/unsafe-cyclic-import; 2026-11-27 |
 | 7 Admin API and page | merged | 7b e65834c7 (worktree-agent-abb9331906748f4b8), 7a 63c799fe merged 5a6a0e2b (worktree-agent-a0af3c2df63e25a4e), follow-up 9bb1e7d5 | sonnet; 7b page + mock API (vitest 283 and e2e 14 at agent; Snyk 5 false positives on label strings and test Key Vault URIs; also `frontend/tests/e2e/a11y/route-samples.ts`). 7a: 13 routes, minimal API Key Vault reader, outbox `count_deliveries`/`last_error_code`, inventories (manifest_calls, counts 60, real-stack routes.spec), openapi + docs reference regenerated (additions only), 23 Docker visual baselines regenerated; after merge 574 passed (notifications_api, runtime_routes, authz, security authz, demo_profile, core notifications, openapi drift), Snyk 0. Deviation: closed error taxonomy, so refusals are `code` capability_unavailable/invalid_schema with the specific `reason`; missing If-Match is 422 `precondition_required`, stale is 409 `stale_version`; 9bb1e7d5 makes the page show `reason` and the mock answer the same way (vitest 77, e2e 6); 2026-11-27 |
-| 8 Integration and close-out | todo | | |
+| 8 Integration and close-out | merged | orchestrator on prp-107-notification-channels | 9d1a58f1: runbook `docs/runbooks/notifications.md`, changelog fragment, mkdocs nav, governance-policy runbook row (docs tests 132 passed, mkdocs strict clean); review (Opus, one pass) APPROVE, no blockers, follow-ups #421 #422; gitleaks synthetic fixture fixed + `.gitleaksignore` entry; `scripts/ci_parity.py` absent (local Node 26 vs CI 24 noted); live gates OPEN (PRP-136); 2026-11-27 |
 
 Execution deltas (2026-11-26): integration tests live in `tests/integration/notifications_delivery/` (not `notifications/`) to avoid the same-named test package clash with `packages/core/tests/notifications/`.
 

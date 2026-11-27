@@ -41,3 +41,5 @@ bc59a6a004303007cfc6061e6a5d534dd485b2ed:tests/unit/hosted_real_tenant/test_mode
 c2abc5be606063c3ed3969cdc9b9f8e653c5d39d:services/api/tests/governance_policy_api/test_publish_draft.py:generic-api-key:29
 c2abc5be606063c3ed3969cdc9b9f8e653c5d39d:services/api/tests/governance_policy_api/test_publish_draft.py:generic-api-key:140
 c2abc5be606063c3ed3969cdc9b9f8e653c5d39d:services/api/tests/governance_policy_api/test_publish_draft.py:generic-api-key:144
+# PRP-107 item 7a: synthetic HMAC test material (synthetic-signing-material-0001) returned by a fake secret reader in the notifications admin API tests, not a credential. The tree now builds it at runtime.
+63c799fecfd72092f7b117a0c3a41b11151a8c6a:services/api/tests/notifications_api/admin_harness.py:generic-api-key:79
