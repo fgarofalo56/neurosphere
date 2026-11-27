@@ -19,6 +19,7 @@ from neurosphere_core.notifications import (
     SubscriptionResolver,
 )
 from neurosphere_core.notifications.violations import ViolationNotificationSink
+from neurosphere_workers.notifications import wiring as notification_wiring
 from neurosphere_workers.policy_eval import assembly
 from neurosphere_workers.policy_eval.assembly import violation_event_sink
 from neurosphere_workers.runtime.factories import RuntimeConfig
@@ -175,7 +176,7 @@ async def test_binding_returns_the_notification_sink_when_configured(
     monkeypatch.setenv("NS_COSMOS_KEY", "emulator-placeholder")
     monkeypatch.setattr(assembly, "create_cosmos_client", lambda *a, **k: MagicMock())
     rig = Rig()
-    monkeypatch.setattr(assembly, "build_publisher", lambda cfg, client: rig.publisher)
+    monkeypatch.setattr(notification_wiring, "build_publisher", lambda cfg, client: rig.publisher)
     async with ClientLifetime() as lifetime:
         sink = violation_event_sink(_config(), lifetime)
     assert isinstance(sink, ViolationNotificationSink)
@@ -186,6 +187,6 @@ async def test_binding_falls_back_to_noop_when_no_publisher_can_be_built(
 ) -> None:
     monkeypatch.setenv("NS_COSMOS_KEY", "emulator-placeholder")
     monkeypatch.setattr(assembly, "create_cosmos_client", lambda *a, **k: MagicMock())
-    monkeypatch.setattr(assembly, "build_publisher", lambda cfg, client: None)
+    monkeypatch.setattr(notification_wiring, "build_publisher", lambda cfg, client: None)
     async with ClientLifetime() as lifetime:
         assert isinstance(violation_event_sink(_config(), lifetime), NoopViolationEventSink)

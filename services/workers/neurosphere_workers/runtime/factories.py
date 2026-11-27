@@ -208,8 +208,6 @@ from neurosphere_workers.ingestion.gateway_poll import (
 from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 from neurosphere_workers.lifecycle.assembly import LifecycleParts, assemble, build_targets
-from neurosphere_workers.notifications.builder import build_notifications
-from neurosphere_workers.notifications.wiring import build_outbox_notifier
 from neurosphere_workers.policy_eval.assembly import build_policy_eval
 from neurosphere_workers.projections.catalog import CatalogProjection
 from neurosphere_workers.projections.catalog.quarantine_cosmos import CosmosCandidateQuarantine
@@ -660,6 +658,11 @@ def _audit(cfg: RuntimeConfig, cosmos: CosmosClient) -> AuditRepository:
 async def _hitl_service(
     cfg: RuntimeConfig, cosmos: CosmosClient, audit: AuditRepository
 ) -> HitlService:
+    # Imported here, not at module level: the notifications modules reference RuntimeConfig,
+    # and a module-level import would make an import cycle with this module (CodeQL
+    # py/unsafe-cyclic-import).
+    from neurosphere_workers.notifications.wiring import build_outbox_notifier
+
     return HitlService(
         CosmosHitlStore.from_client(cosmos, database=cfg.store.database),
         DecisionLog(audit, CosmosDecisionStore.from_client(cosmos, database=cfg.store.database)),
@@ -670,6 +673,13 @@ async def _hitl_service(
         # PRP-107: queue assignment/escalation events in the notification outbox.
         notifiers=tuple(n for n in (build_outbox_notifier(cfg, cosmos),) if n is not None),
     )
+
+
+async def build_notifications(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    """The ``notifications`` role (PRP-107); its builder is imported lazily, as above."""
+    from neurosphere_workers.notifications.builder import build_notifications as _build
+
+    return await _build(cfg, lifetime)
 
 
 def warn_if_actions_idle(registry: WriteTargetRegistry) -> bool:
