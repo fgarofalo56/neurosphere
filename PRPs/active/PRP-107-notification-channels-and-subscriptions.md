@@ -242,7 +242,7 @@ One real delivery per channel kind (a Teams tenant, a real webhook receiver, the
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 Verify-first Teams and email | in-progress | orchestrator (Learn MCP) | sonnet; 2026-11-26 |
+| 1 Verify-first Teams and email | merged | orchestrator (Learn MCP) | verdicts: `teams_webhook` degraded (Workflows; Commercial + GCC, not GCC High/DoD; connector webhooks retired May 2026), `email` not_built (needs paid ACS resource; SMTP not in Gov); docs-only, no tests; 2026-11-26 |
 | 2 Core model, outbox, resolver | in-progress | worktree | sonnet; also owns `packages/core/tests/admin/test_config_store.py` PENDING sets and the core `NotificationPublisher` (moved from item 6); 2026-11-26 |
 | 3 Egress guard | in-progress | worktree | opus; 2026-11-26 |
 | 4 Senders | todo | | |
