@@ -25,6 +25,7 @@ def test_all_expands_to_the_wire_contract_list() -> None:
         "detections",
         "azure_monitor_ai",
         "policy_eval",
+        "notifications",
     )
     assert parse_roles("all") == ROLE_NAMES
     assert parse_roles("ALL") == ROLE_NAMES

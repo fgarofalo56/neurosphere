@@ -30,6 +30,7 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "detections",
     "azure_monitor_ai",
     "policy_eval",
+    "notifications",
 )
 
 
