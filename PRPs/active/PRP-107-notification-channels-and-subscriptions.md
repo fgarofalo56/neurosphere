@@ -245,10 +245,10 @@ One real delivery per channel kind (a Teams tenant, a real webhook receiver, the
 | 1 Verify-first Teams and email | merged | orchestrator (Learn MCP) | verdicts: `teams_webhook` degraded (Workflows; Commercial + GCC, not GCC High/DoD; connector webhooks retired May 2026), `email` not_built (needs paid ACS resource; SMTP not in Gov); docs-only, no tests; 2026-11-26 |
 | 2 Core model, outbox, resolver | merged | worktree-agent-a4a8efd38cb6bddc3 | sonnet; c25e6c1c merged 6750c3f4; 274 passed (core notifications/admin/hitl), ruff+pyright clean, Snyk 0; owner = envelope `updated_by`; `audience_roles` applied as a scope check; delivered rows carry `last_error_code=http_<status>` (contract has no status field); also owns `packages/core/tests/admin/test_config_store.py` PENDING sets and the core `NotificationPublisher` (moved from item 6); 2026-11-26 |
 | 3 Egress guard | merged | worktree-agent-a36cea3fc24b6eaa9 | opus; 8486e9de merged 39f40c31; 159 passed (security/egress + unit), ruff+pyright clean, Snyk 0; httpcore 1.x pinned backend; combined 433 passed after merge; 2026-11-26 |
-| 4 Senders | todo | | |
+| 4 Senders | in-progress | worktree | sonnet; 2026-11-26 |
 | 5 Delivery worker role | todo | | |
 | 6 HITL wiring, publisher, violation-event binding | todo | | |
-| 7 Admin API and page | todo | | |
+| 7 Admin API and page | in-progress | worktree (7b page) | sonnet; split: 7b page + mock API now, 7a routes after item 6, both to the API contract in the 7b brief; 2026-11-26 |
 | 8 Integration and close-out | todo | | |
 
 Execution deltas (2026-11-26): integration tests live in `tests/integration/notifications_delivery/` (not `notifications/`) to avoid the same-named test package clash with `packages/core/tests/notifications/`.
