@@ -381,6 +381,14 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     ready: "[data-testid='capture-policy-row']",
     persona: "admin",
   },
+  // PRP-107 item 7: notification channels (Admin persona; the mock gates on `admin`).
+  {
+    pattern: "/admin/notifications",
+    name: "admin notifications",
+    url: "/admin/notifications",
+    ready: "[data-testid='channel-row']",
+    persona: "admin",
+  },
 ];
 
 /** Representative routes for the theme pack matrix (home, a dashboard, map table, reports view, sandbox). */
