@@ -38,6 +38,10 @@ Environment: ``NS_INTERACTION_CAPTURE_QUEUE_CAPACITY`` (default 64; shedding sta
 setting's ``shed_capture_at_queue_percent``) and ``NS_INTERACTION_CAPTURE_MAX_ITEMS_PER_REQUEST``
 (default 100), read only when the setting is on.
 
+Store factory (PRP-104 item 2): :func:`interaction_store` builds the interaction store once per
+composition and publishes it under :data:`INTERACTION_STORE`; capture and the interaction
+explorer both obtain it there, so they share ONE instance.
+
 Test seams (``ctx.overrides.backend``): ``retention_policy`` (a ``PolicyState``),
 ``interaction_store`` (a prebuilt capture store), ``interaction_capture_policy_store``.
 """
@@ -48,7 +52,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Mapping
-from typing import Any, Final
+from typing import Any, Final, Protocol, cast
 
 from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
@@ -72,6 +76,7 @@ from neurosphere_core.interactions import (
     InMemoryCapturePolicyStore,
     InMemoryInteractionStore,
     InteractionSettings,
+    InteractionStore,
     build_key_wrapper,
     capture_setting_enabled,
     content_writes_enabled,
@@ -91,6 +96,7 @@ from neurosphere_api.runtime.builders import (
     BuildContext,
     BuilderSpec,
     ComponentUnavailableError,
+    SharedKey,
 )
 from neurosphere_api.runtime.builders.blob import azurite_connection_string
 
@@ -99,7 +105,10 @@ __all__ = [
     "COMPONENTS",
     "DEFAULT_QUEUE_CAPACITY",
     "ENV_QUEUE_CAPACITY",
+    "INTERACTION_STORE",
+    "SharedInteractionStore",
     "build",
+    "interaction_store",
     "queue_capacity_from_env",
 ]
 
@@ -284,6 +293,66 @@ def _customer(ctx: BuildContext) -> str:
     return customer
 
 
+class SharedInteractionStore(CaptureStore, InteractionStore, Protocol):
+    """PRP-102's store seen from both sides: capture writes through it, the explorer reads it."""
+
+
+#: The ONE interaction store of a composition, shared by capture and the explorer (PRP-104).
+INTERACTION_STORE: Final[SharedKey[SharedInteractionStore]] = SharedKey("interaction_store")
+
+
+def _stored_capture_body(ctx: BuildContext) -> InteractionCaptureSetting | None:
+    """The stored setting's ``interaction_capture`` body, whether or not capture is enabled."""
+    snapshot = ctx.maybe_shared(STORED_SETTINGS)
+    if not isinstance(snapshot, StoredSettingsSnapshot):
+        return None
+    entry = snapshot.entries.get(CAPTURE_SETTING_KEY)
+    setting = None if entry is None else entry.setting
+    if setting is None or setting.setting_key != CAPTURE_SETTING_KEY:
+        return None
+    return setting.interaction_capture
+
+
+def _enabled_retention(ctx: BuildContext, retention: PolicyState | None) -> PolicyState:
+    state = _retention(ctx) if retention is None else retention
+    if state is None or not content_writes_enabled(state):
+        raise ComponentUnavailableError("retention_not_enabled")
+    return state
+
+
+def interaction_store(
+    ctx: BuildContext,
+    *,
+    settings: InteractionSettings | None = None,
+    retention: PolicyState | None = None,
+) -> SharedInteractionStore:
+    """The composition's interaction store, built once and memoized (PRP-104 item 2).
+
+    Capture (``_build``) passes the settings and retention it already resolved; the explorer
+    passes neither, and the stored ``interaction_capture`` setting is read REGARDLESS of its
+    ``enabled`` flag: an operator who turns capture off still has stored, possibly held content.
+    The first successful build is published under :data:`INTERACTION_STORE`, so capture and the
+    explorer share one instance (it matters for the in-memory store under ``NS_ENV=local``).
+
+    Raises :class:`ComponentUnavailableError`: ``setting_absent``, ``retention_not_enabled``, or
+    whatever building the store reports (``key_vault_not_configured``, ``cosmos_unconfigured``...).
+    """
+    memo = ctx.maybe_shared(INTERACTION_STORE)
+    if memo is not None:
+        return memo
+    if settings is None:
+        body = _stored_capture_body(ctx)
+        if body is None:
+            raise ComponentUnavailableError("setting_absent")  # nothing read, nothing built
+        retention = _enabled_retention(ctx, retention)
+        settings = _interaction_settings(ctx, body)
+    else:
+        retention = _enabled_retention(ctx, retention)
+    store = cast(SharedInteractionStore, _interaction_store(ctx, settings, retention))
+    ctx.publish(INTERACTION_STORE, store)
+    return store
+
+
 def _build(ctx: BuildContext) -> None:
     app = ctx.app
     setting = _capture_setting(ctx)
@@ -309,7 +378,7 @@ def _build(ctx: BuildContext) -> None:
         _log.warning("component %s: %s", _COMPONENT, exc)  # names the variable only
         raise ComponentUnavailableError("capture_env_invalid") from None
     settings = _interaction_settings(ctx, setting)
-    store = _interaction_store(ctx, settings, retention)
+    store = interaction_store(ctx, settings=settings, retention=retention)
     policy_store = _policy_store(ctx)
     setattr(app.state, STATE_POLICY_STORE, policy_store)
     detectors = default_detector_set()

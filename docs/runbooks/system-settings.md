@@ -54,6 +54,7 @@ carries a reason code. The item ids are stable:
 | `optional.sources_status` | `sources_status` | as above | as above |
 | `optional.agent_identity` | `agent_identity` | as above | as above |
 | `optional.interaction_capture` | `interaction_capture` | as above | as above |
+| `optional.interaction_explorer` | `interaction_explorer` | as above | as above |
 | `optional.governance_policy` | `governance_policy` | as above | as above |
 | `optional.notifications` | `notifications` | as above | as above |
 | `ingest.producers` | `ingest` | ingestion is composed with producers | `ingest_producers_unconfigured` |
