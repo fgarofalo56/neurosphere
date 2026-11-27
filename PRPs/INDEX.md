@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-107-notification-channels-and-subscriptions](active/PRP-107-notification-channels-and-subscriptions.md) | P0 | 1/8 (12%) | todo 5, in-progress 2, merged 1 | sonnet / sonnet | required |
+| [PRP-107-notification-channels-and-subscriptions](active/PRP-107-notification-channels-and-subscriptions.md) | P0 | 3/8 (37%) | todo 5, merged 3 | sonnet / sonnet | required |
 
 ## Backlog
 
