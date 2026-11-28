@@ -8727,6 +8727,42 @@
         ],
         "title": "Filter"
       },
+      "Filters": {
+        "additionalProperties": false,
+        "description": "Selection filters.",
+        "properties": {
+          "agent_ids": {
+            "items": {
+              "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+            },
+            "maxItems": 64,
+            "title": "Agent Ids",
+            "type": "array"
+          },
+          "detected_categories": {
+            "items": {
+              "$ref": "#/components/schemas/DetectedCategory"
+            },
+            "maxItems": 32,
+            "title": "Detected Categories",
+            "type": "array"
+          },
+          "from": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "to": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "agent_ids",
+          "detected_categories"
+        ],
+        "title": "Filters",
+        "type": "object"
+      },
       "FindingsSummaryItem": {
         "additionalProperties": false,
         "properties": {
@@ -11230,6 +11266,116 @@
           "case_ref"
         ],
         "title": "InteractionAccessPurpose",
+        "type": "object"
+      },
+      "InteractionExportManifest": {
+        "additionalProperties": false,
+        "description": "Manifest of one interaction content export (PRP-99). Metadata only: ids, counts, the purpose and an encrypted bundle reference; no content. Written by PRP-104.",
+        "properties": {
+          "audit_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "bundle": {
+            "$ref": "#/components/schemas/EncryptedObjectRef"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
+          },
+          "domain_ids": {
+            "items": {
+              "$ref": "#/components/schemas/DomainId"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "excluded_count": {
+            "minimum": 0.0,
+            "title": "Excluded Count",
+            "type": "integer"
+          },
+          "expires_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "export_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "includes_held_content": {
+            "title": "Includes Held Content",
+            "type": "boolean"
+          },
+          "interaction_count": {
+            "minimum": 0.0,
+            "title": "Interaction Count",
+            "type": "integer"
+          },
+          "interaction_ids": {
+            "items": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "maxItems": 1000,
+            "title": "Interaction Ids",
+            "type": "array"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/InteractionAccessPurpose"
+          },
+          "requested_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "requested_by": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "export_id",
+          "cloud",
+          "customer_id",
+          "domain_ids",
+          "requested_by",
+          "requested_at",
+          "purpose",
+          "filters",
+          "interaction_count",
+          "interaction_ids",
+          "excluded_count",
+          "includes_held_content",
+          "bundle",
+          "audit_id",
+          "expires_at"
+        ],
+        "title": "InteractionExportManifest",
+        "type": "object"
+      },
+      "InteractionExportRequest": {
+        "additionalProperties": false,
+        "description": "Body of ``POST .../interaction-exports`` (PRP-104 item 4).\n\n``purpose`` is the PRP-99 ``InteractionAccessPurpose``; ``filters`` is the PRP-99 export\nmanifest ``Filters`` (``from`` inclusive and ``to`` exclusive on ``captured_at``,\n``agent_ids``, ``detected_categories``), recorded verbatim in the manifest.",
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/InteractionAccessPurpose"
+          }
+        },
+        "required": [
+          "purpose",
+          "filters"
+        ],
+        "title": "InteractionExportRequest",
         "type": "object"
       },
       "InteractionPage": {
@@ -32643,6 +32789,164 @@
         "summary": "Scan",
         "tags": [
           "deploy"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interaction-exports": {
+      "post": {
+        "operationId": "create_interaction_export_api_v1_domains__domain_id__interaction_exports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionExportManifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Interaction Export",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interaction-exports/{export_id}": {
+      "get": {
+        "operationId": "get_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionExportManifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Interaction Export",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interaction-exports/{export_id}/bundle": {
+      "get": {
+        "operationId": "download_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__bundle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "The decrypted export bundle (JSON: interaction id -> redacted content); audited before it is opened"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Interaction Export",
+        "tags": [
+          "interactions"
         ]
       }
     },

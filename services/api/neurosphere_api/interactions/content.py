@@ -83,6 +83,11 @@ __all__ = [
     "TENANCY_MISMATCH",
     "ContentAccess",
     "InteractionContentReader",
+    "access_refusal",
+    "audit_correlation_id",
+    "authorize_content_access",
+    "decrypt_stored",
+    "deny",
     "validate_purpose",
 ]
 
@@ -240,49 +245,9 @@ class InteractionContentReader:
 
     # --- steps -----------------------------------------------------------------------------------
 
-    def _refusal(self, access: ContentAccess, domain_id: str) -> str | None:
-        scope = access.scope
-        if str(scope.cloud) != self._explorer.cloud or (
-            scope.customer_id != self._explorer.customer_id
-        ):
-            return TENANCY_MISMATCH
-        held = domains_with_permission(scope, Permission.INTERACTION_READ, now=access.now)
-        if not held:
-            return "permission_missing"
-        if domain_id not in held:
-            return "target_out_of_scope"
-        # ``allowed_domains`` are the scope's data.read domains: content is read only where the
-        # caller may also list the interaction (PRP-104 gotcha; clarification 6).
-        if domain_id not in frozenset(scope.allowed_domains):
-            return DOMAIN_NOT_READABLE
-        return None
-
     async def _authorize(self, access: ContentAccess, domain_id: str) -> None:
-        reason = self._refusal(access, domain_id)
-        if reason is None:
-            return
-        _LOG.info("content read refused", extra={"deny_reason": reason})
-        if access.denials is not None:
-            attempt = DeniedAttempt(
-                scope=access.scope,
-                permission=Permission.INTERACTION_READ.value,
-                reason=reason,
-                method=access.method,
-                path=access.path,
-                domain_id=domain_id,
-                resource_id=None,
-                correlation_id=access.request_id,
-            )
-            try:
-                await access.denials.record_denial(attempt)
-            except Exception as exc:
-                if access.method.upper() not in SAFE_METHODS:
-                    raise DependencyTransientError(
-                        "audit write failed", reason=AUDIT_WRITE_FAILED
-                    ) from exc
-                _LOG.warning("content read denial record failed", extra={"deny_reason": reason})
-        raise ForbiddenError(
-            f"this operation needs `{Permission.INTERACTION_READ.value}`", reason=reason
+        await authorize_content_access(
+            self._explorer, access, domain_id, Permission.INTERACTION_READ
         )
 
     def _visible(
@@ -361,19 +326,111 @@ class InteractionContentReader:
             ) from exc
 
         # Step 5: decrypt, only after the record is durable.
-        contents: dict[str, RedactedContent] = {}
-        for iid in ids:
-            try:
-                content = await self._explorer.store.read_content(scope.customer_id, domain_id, iid)
-            except InteractionStoreError as exc:
-                if exc.reason in (CONTENT_PURGED, INTERACTION_NOT_FOUND):
-                    continue  # purged or removed between lookup and read
-                raise _store_unavailable() from exc
-            except NeuroSphereError:
-                raise
-            except Exception as exc:
-                raise _store_unavailable() from exc
-            if content.interaction_id.root != iid:
-                raise _store_unavailable()
-            contents[iid] = content
-        return contents
+        return await decrypt_stored(self._explorer, scope.customer_id, domain_id, ids)
+
+
+# --- helpers shared with the export (PRP-104 item 4) ---------------------------------------------
+
+
+def access_refusal(
+    explorer: InteractionExplorer,
+    access: ContentAccess,
+    domain_id: str,
+    permission: Permission,
+) -> str | None:
+    """The refusal reason for ``permission`` in ``domain_id`` at ``access.now``, else ``None``.
+
+    Tenancy (deployment cloud and customer), an UNEXPIRED assignment conferring ``permission``
+    in the domain, and the domain in the scope's ``allowed_domains`` (data.read there).
+    """
+    scope = access.scope
+    if str(scope.cloud) != explorer.cloud or scope.customer_id != explorer.customer_id:
+        return TENANCY_MISMATCH
+    held = domains_with_permission(scope, permission, now=access.now)
+    if not held:
+        return "permission_missing"
+    if domain_id not in held:
+        return "target_out_of_scope"
+    # ``allowed_domains`` are the scope's data.read domains: content is read only where the
+    # caller may also list the interaction (PRP-104 gotcha; clarification 6).
+    if domain_id not in frozenset(scope.allowed_domains):
+        return DOMAIN_NOT_READABLE
+    return None
+
+
+async def deny(
+    access: ContentAccess,
+    domain_id: str,
+    permission: Permission,
+    reason: str,
+    *,
+    resource_id: str | None = None,
+) -> ForbiddenError:
+    """Record a denied attempt and return the 403 to raise.
+
+    For a non-GET request a failed denial write raises 503 ``audit_write_failed`` (as
+    ``require`` does); for a GET it is logged and the 403 still stands.
+    """
+    _LOG.info("content access refused", extra={"deny_reason": reason})
+    if access.denials is not None:
+        attempt = DeniedAttempt(
+            scope=access.scope,
+            permission=permission.value,
+            reason=reason,
+            method=access.method,
+            path=access.path,
+            domain_id=domain_id,
+            resource_id=resource_id,
+            correlation_id=access.request_id,
+        )
+        try:
+            await access.denials.record_denial(attempt)
+        except Exception as exc:
+            if access.method.upper() not in SAFE_METHODS:
+                raise DependencyTransientError(
+                    "audit write failed", reason=AUDIT_WRITE_FAILED
+                ) from exc
+            _LOG.warning("content access denial record failed", extra={"deny_reason": reason})
+    return ForbiddenError(f"this operation needs `{permission.value}`", reason=reason)
+
+
+async def authorize_content_access(
+    explorer: InteractionExplorer,
+    access: ContentAccess,
+    domain_id: str,
+    permission: Permission,
+) -> None:
+    """403 with a denial record unless :func:`access_refusal` passes."""
+    reason = access_refusal(explorer, access, domain_id, permission)
+    if reason is not None:
+        raise await deny(access, domain_id, permission, reason)
+
+
+def audit_correlation_id(request_id: str | None) -> str:
+    """Audit-safe correlation id for a request (see :class:`ContentAccess`)."""
+    return _audit_correlation_id(request_id)
+
+
+async def decrypt_stored(
+    explorer: InteractionExplorer, customer_id: str, domain_id: str, ids: Sequence[str]
+) -> dict[str, RedactedContent]:
+    """``read_content`` for each id, in order; ids purged or removed meanwhile are skipped.
+
+    Callers MUST have appended their fail-closed audit record first.
+    """
+    contents: dict[str, RedactedContent] = {}
+    for iid in ids:
+        try:
+            content = await explorer.store.read_content(customer_id, domain_id, iid)
+        except InteractionStoreError as exc:
+            if exc.reason in (CONTENT_PURGED, INTERACTION_NOT_FOUND):
+                continue  # purged or removed between lookup and read
+            raise _store_unavailable() from exc
+        except NeuroSphereError:
+            raise
+        except Exception as exc:
+            raise _store_unavailable() from exc
+        if content.interaction_id.root != iid:
+            raise _store_unavailable()
+        contents[iid] = content
+    return contents

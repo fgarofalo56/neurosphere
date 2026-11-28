@@ -21,6 +21,13 @@ is the reason):
 
 An unexpected error is ``explorer_build_error`` (logged by type only). Runs after the
 ``interactions`` builder (``default_builders``).
+
+Exports (PRP-104 item 4) are optional INSIDE the explorer: the holder's ``exports`` is the
+content container (``exports/`` prefix), key wrapper and key id from the interactions builder's
+memoized :func:`~neurosphere_api.runtime.builders.interactions.interaction_content_storage`
+(shared with the store). When that cannot be built the explorer still installs, ``exports`` is
+``None`` (export routes answer 503 ``interaction_export_unconfigured``) and the reason is logged
+and kept on ``app.state.interaction_export_off_reason``.
 """
 
 from __future__ import annotations
@@ -28,6 +35,10 @@ from __future__ import annotations
 import logging
 from typing import Final
 
+from neurosphere_api.interactions.export_storage import (
+    BlobExportBackend,
+    InteractionExportStorage,
+)
 from neurosphere_api.interactions.service import (
     InteractionExplorer,
     configure_interaction_explorer,
@@ -38,12 +49,17 @@ from neurosphere_api.runtime.builders import (
     BuilderSpec,
     ComponentUnavailableError,
 )
-from neurosphere_api.runtime.builders.interactions import interaction_store
+from neurosphere_api.runtime.builders.interactions import (
+    interaction_content_storage,
+    interaction_store,
+)
 
-__all__ = ["BUILDER", "COMPONENTS", "build"]
+__all__ = ["BUILDER", "COMPONENTS", "EXPORT_OFF_REASON_ATTRIBUTE", "build"]
 
 COMPONENTS: Final = ("interaction_explorer",)
 _COMPONENT: Final = "interaction_explorer"
+#: ``app.state`` attribute of the export off reason (``None`` while exports are configured).
+EXPORT_OFF_REASON_ATTRIBUTE: Final = "interaction_export_off_reason"
 
 _log = logging.getLogger("neurosphere_api.runtime")
 
@@ -68,6 +84,30 @@ def _customer(ctx: BuildContext) -> str:
     return customer
 
 
+def _exports(ctx: BuildContext) -> InteractionExportStorage | None:
+    """The export side over the shared content container and key wrapper, else ``None``."""
+    try:
+        content = interaction_content_storage(ctx)
+    except ComponentUnavailableError as exc:
+        reason = exc.reason
+    except Exception as exc:
+        _log.warning("interaction exports build raised %s", type(exc).__name__)
+        reason = "export_build_error"
+    else:
+        setattr(ctx.app.state, EXPORT_OFF_REASON_ATTRIBUTE, None)
+        return InteractionExportStorage(
+            backend=BlobExportBackend(
+                content.container,  # type: ignore[arg-type]
+                local=ctx.settings.env == "local",
+            ),
+            wrapper=content.wrapper,
+            kek_uri=content.kek_uri,
+        )
+    setattr(ctx.app.state, EXPORT_OFF_REASON_ATTRIBUTE, reason)
+    _log.warning("interaction exports disabled: %s", reason)
+    return None
+
+
 def _build(ctx: BuildContext) -> None:
     store = interaction_store(ctx)
     customer = _customer(ctx)
@@ -79,6 +119,7 @@ def _build(ctx: BuildContext) -> None:
         audit=audit,
         cloud=ctx.settings.cloud_profile.cloud.value,
         customer_id=customer,
+        exports=_exports(ctx),
     )
     configure_interaction_explorer(ctx.app, explorer)
     ctx.ok(_COMPONENT)
@@ -86,6 +127,7 @@ def _build(ctx: BuildContext) -> None:
 
 def build(ctx: BuildContext) -> None:
     configure_interaction_explorer(ctx.app, None, off_reason="startup_pending")
+    setattr(ctx.app.state, EXPORT_OFF_REASON_ATTRIBUTE, "explorer_off")
     try:
         _build(ctx)
     except ComponentUnavailableError as exc:
