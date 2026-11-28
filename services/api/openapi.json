@@ -36662,6 +36662,46 @@
               "title": "Include Payload",
               "type": "boolean"
             }
+          },
+          {
+            "description": "Access purpose code. Used only with include_payload=true; required then from a caller holding interaction.read in the domain.",
+            "in": "query",
+            "name": "purpose_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Access purpose code. Used only with include_payload=true; required then from a caller holding interaction.read in the domain.",
+              "title": "Purpose Code"
+            }
+          },
+          {
+            "description": "Optional case record id, used only with include_payload=true; bound into the interaction.read audit record.",
+            "in": "query",
+            "name": "case_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional case record id, used only with include_payload=true; bound into the interaction.read audit record.",
+              "title": "Case Ref"
+            }
           }
         ],
         "responses": {

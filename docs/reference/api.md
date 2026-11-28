@@ -1,7 +1,7 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `c8b28357beb154e1e120877e9eafed6bc6674d1c`. Generated: 2026-11-27.
+> Source commit: `7ef142b8fd646be57250e713f236796e1da187bd`. Generated: 2026-11-27.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
 NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 256 operations on 214 paths.
@@ -2060,7 +2060,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 - Operation id: `get_trace_api_v1_replay_domains__domain_id__traces__trace_id__get`
 - Summary: Get Trace
-- Parameters: `domain_id` (path, required), `trace_id` (path, required), `include_payload` (query)
+- Parameters: `domain_id` (path, required), `trace_id` (path, required), `include_payload` (query), `purpose_code` (query), `case_ref` (query)
 - Responses: `200` `TraceDetail`; `422` `HTTPValidationError`
 
 ### Tag: reports
