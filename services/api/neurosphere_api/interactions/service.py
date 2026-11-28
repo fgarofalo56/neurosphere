@@ -38,6 +38,7 @@ from neurosphere_core.interactions.models import INVALID_QUERY
 from neurosphere_core.scope import IdentityScope
 from pydantic import ValidationError
 
+from neurosphere_api.interactions.export_storage import InteractionExportStorage
 from neurosphere_api.interactions.models import InteractionPage
 
 __all__ = [
@@ -67,13 +68,16 @@ class InteractionExplorer:
     ``store`` is the composition's ONE interaction store (shared with capture); ``audit`` is the
     audit repository (item 3's content reads append to it fail-closed); ``cloud`` and
     ``customer_id`` are the deployment's: records of any other cloud or customer are never
-    returned.
+    returned. ``exports`` is the export side (item 4: blobs under ``exports/`` in the content
+    container plus the content key wrapper); ``None`` means exports are not configured and the
+    export routes answer 503 ``interaction_export_unconfigured``.
     """
 
     store: InteractionStore
     audit: AuditRepository
     cloud: str
     customer_id: str
+    exports: InteractionExportStorage | None = None
 
 
 def configure_interaction_explorer(

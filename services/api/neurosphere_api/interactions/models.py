@@ -9,11 +9,15 @@ from __future__ import annotations
 
 from typing import Annotated
 
+from neurosphere_contracts.interactions.v1.interaction_access_purpose import (
+    InteractionAccessPurpose,
+)
+from neurosphere_contracts.interactions.v1.interaction_export_manifest import Filters
 from neurosphere_contracts.interactions.v1.interaction_record import InteractionRecord
 from neurosphere_core.interactions import MAX_QUERY_PAGE_SIZE
 from pydantic import BaseModel, ConfigDict, Field
 
-__all__ = ["InteractionPage"]
+__all__ = ["InteractionExportRequest", "InteractionPage"]
 
 
 class InteractionPage(BaseModel):
@@ -24,3 +28,17 @@ class InteractionPage(BaseModel):
     items: Annotated[list[InteractionRecord], Field(max_length=MAX_QUERY_PAGE_SIZE)]
     #: Opaque token for the next page; ``None`` on the last page.
     continuation: str | None = None
+
+
+class InteractionExportRequest(BaseModel):
+    """Body of ``POST .../interaction-exports`` (PRP-104 item 4).
+
+    ``purpose`` is the PRP-99 ``InteractionAccessPurpose``; ``filters`` is the PRP-99 export
+    manifest ``Filters`` (``from`` inclusive and ``to`` exclusive on ``captured_at``,
+    ``agent_ids``, ``detected_categories``), recorded verbatim in the manifest.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    purpose: InteractionAccessPurpose
+    filters: Filters

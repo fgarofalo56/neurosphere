@@ -1,14 +1,14 @@
 # Reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `7ef142b8fd646be57250e713f236796e1da187bd`. Generated: 2026-11-27.
+> Source commit: `e87579ce801d0e2629eb72291cb7d5b5f7d985a8`. Generated: 2026-11-28.
 > Sources: see each page.
 
 Generated reference pages. They are rebuilt from committed inputs and checked for drift by `tests/docs/test_reference_coverage.py`.
 
 | Page | Contents | Count |
 |---|---|---|
-| [API reference](api.md) | Every REST operation plus the error taxonomy | 256 operations |
+| [API reference](api.md) | Every REST operation plus the error taxonomy | 259 operations |
 | [Connector SDK (Python)](sdk-python.md) | Public symbols of the Python SDK | 31 symbols |
 | [Connector SDK (TypeScript)](sdk-ts.md) | Exports of the TypeScript SDK | 41 symbols |
 | [MCP reference](mcp.md) | Tools with scope requirements, and resources | 7 tools |

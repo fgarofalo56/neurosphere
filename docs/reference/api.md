@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `7ef142b8fd646be57250e713f236796e1da187bd`. Generated: 2026-11-27.
+> Source commit: `e87579ce801d0e2629eb72291cb7d5b5f7d985a8`. Generated: 2026-11-28.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 256 operations on 214 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 259 operations on 217 paths.
 
 ## Status and verification
 
@@ -225,6 +225,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | ingest | POST | `/v1/ingest/events` | Events |
 | ingest | POST | `/v1/ingest/otlp/metrics` | Metrics |
 | ingest | POST | `/v1/ingest/otlp/traces` | Traces |
+| interactions | POST | `/api/v1/domains/{domain_id}/interaction-exports` | Create Interaction Export |
+| interactions | GET | `/api/v1/domains/{domain_id}/interaction-exports/{export_id}` | Get Interaction Export |
+| interactions | GET | `/api/v1/domains/{domain_id}/interaction-exports/{export_id}/bundle` | Download Interaction Export |
 | interactions | GET | `/api/v1/domains/{domain_id}/interactions` | Search Interactions |
 | interactions | GET | `/api/v1/domains/{domain_id}/interactions/{interaction_id}` | Get Interaction |
 | interactions | POST | `/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads` | Read Interaction Content |
@@ -1805,6 +1808,28 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Responses: `202` `IngestResult`
 
 ### Tag: interactions
+
+#### POST `/api/v1/domains/{domain_id}/interaction-exports`
+
+- Operation id: `create_interaction_export_api_v1_domains__domain_id__interaction_exports_post`
+- Summary: Create Interaction Export
+- Parameters: `domain_id` (path, required)
+- Request body: application/json: `InteractionExportRequest` (required)
+- Responses: `201` `InteractionExportManifest`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interaction-exports/{export_id}`
+
+- Operation id: `get_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__get`
+- Summary: Get Interaction Export
+- Parameters: `domain_id` (path, required), `export_id` (path, required)
+- Responses: `200` `InteractionExportManifest`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interaction-exports/{export_id}/bundle`
+
+- Operation id: `download_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__bundle_get`
+- Summary: Download Interaction Export
+- Parameters: `domain_id` (path, required), `export_id` (path, required)
+- Responses: `200` no body; `422` `HTTPValidationError`
 
 #### GET `/api/v1/domains/{domain_id}/interactions`
 
