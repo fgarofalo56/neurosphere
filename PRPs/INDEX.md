@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-104-interaction-explorer-and-export](active/PRP-104-interaction-explorer-and-export.md) | P0 | 5/9 (55%) | todo 3, in-progress 1, merged 5 | opus / opus | required |
+| [PRP-104-interaction-explorer-and-export](active/PRP-104-interaction-explorer-and-export.md) | P0 | 6/9 (66%) | todo 1, in-progress 2, merged 6 | opus / opus | required |
 
 ## Backlog
 
