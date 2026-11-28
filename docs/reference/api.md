@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `2182afd356a72f808bfd5b5d60ad4c7a181c6705`. Generated: 2026-11-27.
+> Source commit: `c8b28357beb154e1e120877e9eafed6bc6674d1c`. Generated: 2026-11-27.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 255 operations on 213 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 256 operations on 214 paths.
 
 ## Status and verification
 
@@ -227,6 +227,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | ingest | POST | `/v1/ingest/otlp/traces` | Traces |
 | interactions | GET | `/api/v1/domains/{domain_id}/interactions` | Search Interactions |
 | interactions | GET | `/api/v1/domains/{domain_id}/interactions/{interaction_id}` | Get Interaction |
+| interactions | POST | `/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads` | Read Interaction Content |
 | lifecycle | GET | `/api/v1/lifecycle/holds` | List Holds |
 | lifecycle | POST | `/api/v1/lifecycle/holds` | Place Hold |
 | lifecycle | DELETE | `/api/v1/lifecycle/holds/{hold_id}` | Release Hold |
@@ -1818,6 +1819,14 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Get Interaction
 - Parameters: `domain_id` (path, required), `interaction_id` (path, required)
 - Responses: `200` `InteractionRecord`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads`
+
+- Operation id: `read_interaction_content_api_v1_domains__domain_id__interactions__interaction_id__content_reads_post`
+- Summary: Read Interaction Content
+- Parameters: `domain_id` (path, required), `interaction_id` (path, required)
+- Request body: application/json: `InteractionAccessPurpose` (required)
+- Responses: `200` `RedactedContent`; `422` `HTTPValidationError`
 
 ### Tag: lifecycle
 
