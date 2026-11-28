@@ -292,7 +292,7 @@ None run here. Reading content on the hosted app (synthetic domain) is part of P
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |
-| 8 | review | worktree-agent-a1a7e19d214226f26 (opus) | 2026-11-27: implementer commit 34504270 (595 + 112 passed); Snyk 0; verify + review running |
+| 8 | merged | worktree-agent-a1a7e19d214226f26 (opus) | 2026-11-27: verified ruff/format/pyright + 519 pytest passed; Snyk 0; review APPROVED; merged 9b30571b. Follow-ups: API vs worker binding signals can disagree; scan-cap truncation has no distinct reason; binding resolved at build time (restart needed); PRP-105 module docstrings still say "unbound" |
 | 9 | todo | | |
 
 ## Completion note (filled at ship)
