@@ -8,6 +8,7 @@ import {
 } from "../../mock-api/server.ts";
 import { AUDIT_DOMAIN_FINANCE } from "../../mock-api/features/audit.ts";
 import { ADMIN_PRINCIPAL_ID } from "../../mock-api/features/admin-core.ts";
+import { INTERACTION_ID } from "../../mock-api/features/interactions.ts";
 import { DOMAIN_MAP_INCIDENT } from "../../mock-api/features/map-topology.ts";
 
 // PRP-24 item 3: one or more concrete URLs for EVERY pattern in src/app/route-manifest.json. The
@@ -74,6 +75,13 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     name: "gateway detail",
     url: `/gateways/detail?${q(`&gateway_id=gw-${"1".repeat(32)}`)}`,
     ready: "[data-testid='inventory-apis']",
+  },
+  // PRP-104 item 6: the interaction explorer with one record open (Viewer persona: metadata only).
+  {
+    pattern: "/interactions",
+    name: "interaction explorer",
+    url: `/interactions?${q(`&interaction_id=${INTERACTION_ID}`)}`,
+    ready: "[data-testid='interaction-detail']",
   },
   {
     pattern: "/map",

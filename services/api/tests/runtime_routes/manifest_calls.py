@@ -189,6 +189,13 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
             non_empty="spans",
         ),
     ),
+    # PRP-104 item 6: the interaction explorer lists GET /api/v1/domains/{domain}/interactions
+    # (page_size=25) on render. It is not listed: content capture is opt-in, so the composed app
+    # and the compose stack have no explorer and the route answers 503
+    # interaction_explorer_unconfigured by design (not an unwired builder). The call is covered by
+    # services/api/tests/interaction_explorer_api and the page's mock-API tests; the real-stack
+    # browser suite expects the 503 (frontend/tests/real-stack/routes.spec.ts).
+    "/interactions": _SHELL,
     "/reports": (
         *_SHELL,
         ApiCall(_REPORTS, q(limit=25), non_empty="items", as_persona="analyst"),

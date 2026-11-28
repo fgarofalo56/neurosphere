@@ -10,8 +10,8 @@ import {
 import { ROUTE_SAMPLES } from "../a11y/route-samples.ts";
 
 // PRP-30 item 10: pixel baselines (Linux only, authoritative in the pinned Playwright image; see
-// frontend/scripts/update-visual-baselines.mjs). 2 styles x {light, dark} x 21 pages = 84, plus
-// high-contrast home in both styles = 86. Only the `visual` project runs this file.
+// frontend/scripts/update-visual-baselines.mjs). 2 styles x {light, dark} x 22 pages = 88, plus
+// high-contrast home in both styles = 90. Only the `visual` project runs this file.
 
 test.use({
   viewport: { width: 1440, height: 900 },
@@ -49,6 +49,8 @@ const PAGES = [
   { slug: "admin-pricing", pattern: "/admin/pricing" },
   { slug: "admin-features", pattern: "/admin/features" },
   { slug: "admin-review-policy", pattern: "/admin/review-policy" },
+  // PRP-104 item 6: the interaction explorer, one record open (Viewer: metadata only, no reveal).
+  { slug: "interactions", pattern: "/interactions" },
 ] as const;
 
 function sampleFor(pattern: string) {

@@ -40,6 +40,7 @@
     "/finops/forecast",
     "/gateways",
     "/gateways/detail",
+    "/interactions",
     "/map",
     "/map/table",
     "/mcp-admin",
