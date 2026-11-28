@@ -287,9 +287,9 @@ None run here. Reading content on the hosted app (synthetic domain) is part of P
 |---|---|---|---|
 | 1 | merged | worktree-agent-aed46cb947c743860 (opus) | 2026-11-27: verified ruff/format/pyright + 536 pytest passed; Snyk 0; review APPROVED; merged 0bc2dad2. Follow-ups: core-level 7-day cap (sandbox grant script bypasses API), stale contract docstring on privileged roles |
 | 2 | merged | worktree-agent-ae3f89cff92c30a5c (opus) | 2026-11-27: verified ruff/format/pyright + 380 pytest passed; Snyk 0; review APPROVED; merged d4c46c74. Follow-up: explorer turns off with retention_not_enabled although held content may exist |
-| 3 | in-progress | implementer worktree (opus) | dispatched 2026-11-27. Plan delta (owner, 2026-11-27): clarification row 4's index access entry descoped (no contract field, no store API); the fail-closed audit record is the access trail; follow-up issue at close-out |
-| 4 | todo | | |
-| 5 | todo | | |
+| 3 | merged | worktree-agent-af320c0eb7875a2f6 (opus) | 2026-11-27: verified ruff/format/pyright + 203 pytest passed; Snyk 0; review APPROVED (3/4 mutations killed; survivor is defence in depth); merged fcc0849d, post-merge 134 passed. Content read also needs data.read in the domain (Gotchas + row 6); GUID-shaped case_ref is 422 (audit guard). Follow-ups: _visible-only domain test; unauthorized + invalid purpose gives 403 not 422. Plan delta (owner, 2026-11-27): clarification row 4's index access entry descoped (no contract field, no store API); the fail-closed audit record is the access trail; follow-up issue at close-out |
+| 4 | in-progress | implementer worktree (opus) | dispatched 2026-11-27. Delta: PRP-102 defines no export prefix and keeps the content container + key wrapper private; item 4 adds memoized public accessors in runtime/builders/interactions.py (same rationale as item 2's factory) and stores bundles + manifests under exports/ in the content container |
+| 5 | in-progress | implementer worktree (opus) | dispatched 2026-11-27 |
 | 6 | todo | | |
 | 7 | todo | | |
 | 8 | merged | worktree-agent-a1a7e19d214226f26 (opus) | 2026-11-27: verified ruff/format/pyright + 519 pytest passed; Snyk 0; review APPROVED; merged 9b30571b. Follow-ups: API vs worker binding signals can disagree; scan-cap truncation has no distinct reason; binding resolved at build time (restart needed); PRP-105 module docstrings still say "unbound" |
