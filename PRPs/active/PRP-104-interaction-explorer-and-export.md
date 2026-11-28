@@ -1,6 +1,9 @@
 ---
 name: PRP-104-interaction-explorer-and-export
-status: backlog
+status: active
+started: 2026-11-27
+execution: session
+max_lanes: 2
 priority: P0
 order: 104
 review: required
@@ -107,6 +110,7 @@ owns:
   - services/api/neurosphere_api/replay/dependencies.py
   - services/api/neurosphere_api/replay/reader.py
   - services/api/neurosphere_api/runtime/builders/interaction_explorer.py
+  - services/api/neurosphere_api/runtime/builders/interactions.py  # item 2 only: one additive public store factory (approved 2026-11-27)
   - packages/core/neurosphere_core/governance/policy/readers/**
   - packages/core/tests/governance_policy_readers/**
   - services/workers/neurosphere_workers/policy_eval/assembly.py
@@ -150,7 +154,6 @@ must_not_touch:
   - services/api/neurosphere_api/copilot/**
   - services/api/neurosphere_api/mcp/**
   - services/api/neurosphere_api/runtime/builders/data.py
-  - services/api/neurosphere_api/runtime/builders/interactions.py
   - services/api/neurosphere_api/ingest/**
   - frontend/src/app/Shell.tsx
   - frontend/tests/mock-api/server.ts
@@ -158,7 +161,7 @@ must_not_touch:
 
 ## Implementation blueprint
 
-Parallelization: item 1 first; items 2 and 5 [P] after 1 (separate files); item 3 after 2; item 4 after 3; item 6 after 2-4; item 7 after 3-5; item 8 after 2; item 9 last.
+Approved plan (2026-11-27, session s-902135): 1 -> 2 -> {3, 8} -> {4, 5} -> {6, 7} -> 9, at most 2 lanes; item 5 waits for item 3 so it calls the real `InteractionContentReader` (no stub). Original blueprint: item 1 first; items 2 and 5 [P] after 1 (separate files); item 3 after 2; item 4 after 3; item 6 after 2-4; item 7 after 3-5; item 8 after 2; item 9 last.
 
 ### Item 1 - Role and permissions
 - Deliverable: `Permission.INTERACTION_READ`, `INTERACTION_EXPORT`, granted to the existing `Role.INTERACTION_INVESTIGATOR` (PRP-99 added the member, empty and already in `PRIVILEGED_ROLES`) and to no other role; docstring table updated; `admin/identity/service.py:97` privileged set and the 7-day cap (row 8); `types.ts` role list; role and privileged-role tests extended.
@@ -171,8 +174,8 @@ Parallelization: item 1 first; items 2 and 5 [P] after 1 (separate files); item 
 
 ### Item 2 - Metadata explorer API  [P]
 - Deliverable: `interactions/{router,service,models}.py` list and detail routes over `InteractionStore.query_index` and `get_metadata`, scope-filtered, page-bounded, `audited_read(Permission.DATA_READ, "interaction.search")`; builder `runtime/builders/interaction_explorer.py` (reuses PRP-103's store construction through its exported factory; reports `interaction_explorer` optional) and its `default_builders` line.
-- Owned files: `services/api/neurosphere_api/interactions/{__init__,router,service,models}.py`, the builder, `services/api/tests/interaction_explorer_api/test_search.py`.
-- Must NOT touch: `runtime/builders/interactions.py`.
+- Owned files: `services/api/neurosphere_api/interactions/{__init__,router,service,models}.py`, the builder, `services/api/tests/interaction_explorer_api/test_search.py`; in `runtime/builders/interactions.py` one additive public store factory only (plan delta 2026-11-27: PRP-103 exported no factory).
+- Must NOT touch: any existing function or behaviour of `runtime/builders/interactions.py`.
 - Depends on: item 1.
 - Acceptance criteria: criterion 2; responses validate against `InteractionRecord` minus nothing (no content field exists); pinned builder-order tests updated.
 - Tests: `services/api/tests/interaction_explorer_api/test_search.py`; re-run `services/api/tests/runtime_api`, `runtime_data`, `runtime_gateway_builder`.
@@ -282,15 +285,15 @@ None run here. Reading content on the hosted app (synthetic domain) is part of P
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
-| 9 | todo | | |
+| 1 | merged | worktree-agent-aed46cb947c743860 (opus) | 2026-11-27: verified ruff/format/pyright + 536 pytest passed; Snyk 0; review APPROVED; merged 0bc2dad2. Follow-ups: core-level 7-day cap (sandbox grant script bypasses API), stale contract docstring on privileged roles |
+| 2 | merged | worktree-agent-ae3f89cff92c30a5c (opus) | 2026-11-27: verified ruff/format/pyright + 380 pytest passed; Snyk 0; review APPROVED; merged d4c46c74. Follow-up: explorer turns off with retention_not_enabled although held content may exist |
+| 3 | merged | worktree-agent-af320c0eb7875a2f6 (opus) | 2026-11-27: verified ruff/format/pyright + 203 pytest passed; Snyk 0; review APPROVED (3/4 mutations killed; survivor is defence in depth); merged fcc0849d, post-merge 134 passed. Content read also needs data.read in the domain (Gotchas + row 6); GUID-shaped case_ref is 422 (audit guard). Follow-ups: _visible-only domain test; unauthorized + invalid purpose gives 403 not 422. Plan delta (owner, 2026-11-27): clarification row 4's index access entry descoped (no contract field, no store API); the fail-closed audit record is the access trail; follow-up issue at close-out |
+| 4 | merged | worktree-agent-a20d93be38d3e32fb (opus) | 2026-11-28: verified ruff/format/pyright + 391 pytest passed; Snyk 0; review APPROVED (3/3 mutations killed); merged af7d3eb1 (openapi/docs regenerated on the merged tree), post-merge 397 passed. 6th open export = 429 + Retry-After; manifest/bundle creator-only; expired = 404 + delete; state in blobs. Follow-ups: cross-replica race past the 5 cap; audit ids vs manifest ids after a mid-export purge; orphan bundle if cleanup fails; cap scan 503s past 2,000 manifests per customer; non-creator on expired export gets 403. Delta: PRP-102 defines no export prefix and keeps the content container + key wrapper private; item 4 adds memoized public accessors in runtime/builders/interactions.py (same rationale as item 2's factory) and stores bundles + manifests under exports/ in the content container |
+| 5 | merged | worktree-agent-af9f0924e885769bc (opus) | 2026-11-28: verified ruff/format/pyright + 478 pytest passed; Snyk 0; review APPROVED (2/2 mutations killed); merged 20822618. >100 pointers per trace = 422 interaction_batch_too_large; legacy per-span loop kept (test-override only). Fix in item 9: _domain_pointers must filter trace_id and keep the first duplicate span like assemble_trace. Follow-up: tenancy-mismatched investigator gets 403 not payload-free |
+| 6 | merged | worktree-agent-a78b3b30ab005dd05 (opus) | 2026-11-28: verified lint/typecheck + vitest 171 + playwright 12 + runtime_routes 6 passed (implementer: playwright 744 incl. a11y/demo-audit, Docker visual 90 with 4 new baselines); Snyk 0; review APPROVED; merged 5598fc0b. Nav: Governance group. /interactions shell-only in manifest_calls (composed app 503s without explorer). Follow-ups: shared client retries a retryable 429 for ~1 min; export dialog lacks from<to check; mock search ignores from/to. Real-stack browser run pending in item 9 |
+| 7 | merged | worktree-agent-a8a56f6a953e18fc5 (opus) | 2026-11-28: verified on a clean tree ruff/format/pyright + 264 pytest passed; Snyk 0; review APPROVED (no vacuous scans); 5/5 mutations killed; merged f7377760. Follow-ups: runtime.builders barrier hides re-exported names; importlib/__import__ not followed; pin exact outcomes on auditor-replay and Government-deployment rows after the row-5 tenancy follow-up |
+| 8 | merged | worktree-agent-a1a7e19d214226f26 (opus) | 2026-11-27: verified ruff/format/pyright + 519 pytest passed; Snyk 0; review APPROVED; merged 9b30571b. Follow-ups: API vs worker binding signals can disagree; scan-cap truncation has no distinct reason; binding resolved at build time (restart needed); PRP-105 module docstrings still say "unbound" |
+| 9 | in-progress | orchestrator + implementer (opus) | 2026-11-28: replay _domain_pointers fix, runbook sections, changelog, real-stack browser run, follow-up issues, Tier-3 regen |
 
 ## Completion note (filled at ship)
 - Date and PR:

@@ -5151,6 +5151,51 @@
         "title": "ConsentRecord",
         "type": "object"
       },
+      "ContentPart": {
+        "additionalProperties": false,
+        "properties": {
+          "char_count": {
+            "minimum": 0.0,
+            "title": "Char Count",
+            "type": "integer"
+          },
+          "part": {
+            "$ref": "#/components/schemas/ContentPartKind"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "part",
+          "char_count",
+          "truncated"
+        ],
+        "title": "ContentPart",
+        "type": "object"
+      },
+      "ContentPartKind": {
+        "enum": [
+          "prompt",
+          "response",
+          "tool_input",
+          "tool_output",
+          "system_instructions"
+        ],
+        "title": "ContentPartKind",
+        "type": "string"
+      },
+      "ContentParts": {
+        "default": [],
+        "description": "Which parts were captured and how large they were; sizes only, never text. Added in schema_version 1.2.0; events without it stay valid.",
+        "items": {
+          "$ref": "#/components/schemas/ContentPart"
+        },
+        "maxItems": 5,
+        "title": "ContentParts",
+        "type": "array"
+      },
       "ContextWindowTokens": {
         "minimum": 0.0,
         "title": "ContextWindowTokens",
@@ -6393,6 +6438,103 @@
         "title": "DeprecateRequest",
         "type": "object"
       },
+      "DetectedCategory": {
+        "enum": [
+          "private_key",
+          "jwt",
+          "bearer_token",
+          "cloud_access_key",
+          "vendor_api_key",
+          "connection_string",
+          "url_with_credentials",
+          "password_assignment",
+          "payment_card",
+          "iban",
+          "us_ssn",
+          "email_address",
+          "phone_number",
+          "ip_address",
+          "mac_address",
+          "guid",
+          "customer_dictionary_term",
+          "customer_identifier_pattern",
+          "other"
+        ],
+        "title": "DetectedCategory",
+        "type": "string"
+      },
+      "DetectionFinding": {
+        "additionalProperties": false,
+        "description": "One detector result for one content part of an interaction (opt-in content capture, PRP-99). A fragment: it has no schema_version of its own and is embedded by RedactedContent (and, in later items, the interaction record). It carries a category, counts and offsets into the redacted text, never the matched text. Rule JSON Schema expresses with if/then: a credential category (CredentialCategory) requires action `replaced`; a credential can never be kept. Pydantic ignores if/then (ADR-0004), so consumers validate against the JSON Schema.",
+        "properties": {
+          "action": {
+            "enum": [
+              "replaced",
+              "kept"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DetectedCategory"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "count": {
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "detector_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Detector Id",
+            "type": "string"
+          },
+          "detector_version": {
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "title": "Detector Version",
+            "type": "string"
+          },
+          "part": {
+            "$ref": "#/components/schemas/ContentPartKind"
+          },
+          "spans": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__interactions__v1__detection_finding__Span"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Spans"
+          }
+        },
+        "required": [
+          "category",
+          "part",
+          "detector_id",
+          "detector_version",
+          "count",
+          "action",
+          "confidence"
+        ],
+        "title": "DetectionFinding",
+        "type": "object"
+      },
       "DiagnosticsState": {
         "additionalProperties": false,
         "properties": {
@@ -7433,6 +7575,47 @@
           "changed_at"
         ],
         "title": "EmergencyDisableView",
+        "type": "object"
+      },
+      "EncryptedObjectRef": {
+        "additionalProperties": false,
+        "description": "Reference to an AES-256-GCM encrypted object in content storage. The pointer is opaque and never fetched by schema validation; the wrapped data key lives in the blob header (PRP-102 decides). Only ciphertext is identified: no hash of plaintext.",
+        "properties": {
+          "algorithm": {
+            "const": "aes_256_gcm",
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "byte_length": {
+            "minimum": 1.0,
+            "title": "Byte Length",
+            "type": "integer"
+          },
+          "ciphertext_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Ciphertext Sha256",
+            "type": "string"
+          },
+          "kek_uri": {
+            "pattern": "^https://[a-z0-9-]{3,24}\\.vault\\.(azure\\.net|usgovcloudapi\\.net)/keys/[A-Za-z0-9-]{1,127}(/[0-9a-f]{32})?$",
+            "title": "Kek Uri",
+            "type": "string"
+          },
+          "pointer": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Pointer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pointer",
+          "kek_uri",
+          "algorithm",
+          "ciphertext_sha256",
+          "byte_length"
+        ],
+        "title": "EncryptedObjectRef",
         "type": "object"
       },
       "Entity": {
@@ -8543,6 +8726,71 @@
           }
         ],
         "title": "Filter"
+      },
+      "Filters": {
+        "additionalProperties": false,
+        "description": "Selection filters.",
+        "properties": {
+          "agent_ids": {
+            "items": {
+              "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+            },
+            "maxItems": 64,
+            "title": "Agent Ids",
+            "type": "array"
+          },
+          "detected_categories": {
+            "items": {
+              "$ref": "#/components/schemas/DetectedCategory"
+            },
+            "maxItems": 32,
+            "title": "Detected Categories",
+            "type": "array"
+          },
+          "from": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "to": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "agent_ids",
+          "detected_categories"
+        ],
+        "title": "Filters",
+        "type": "object"
+      },
+      "FindingsSummaryItem": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "replaced",
+              "kept"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DetectedCategory"
+          },
+          "count": {
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "count",
+          "action"
+        ],
+        "title": "FindingsSummaryItem",
+        "type": "object"
       },
       "FirstRunChecklistItem": {
         "additionalProperties": false,
@@ -10560,6 +10808,12 @@
         "title": "IdFilter",
         "type": "object"
       },
+      "Identifier": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Identifier",
+        "type": "string"
+      },
       "IgnoredItem": {
         "additionalProperties": false,
         "properties": {
@@ -10979,6 +11233,451 @@
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         "title": "IntentId",
         "type": "string"
+      },
+      "InteractionAccessPurpose": {
+        "additionalProperties": false,
+        "description": "Why content is read or exported (PRP-99). A fragment (no schema_version) embedded by access requests and InteractionExportManifest. A code plus an optional case reference, never prose (audit content_guard forbids it).",
+        "properties": {
+          "case_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purpose_code": {
+            "enum": [
+              "incident_investigation",
+              "policy_violation_review",
+              "legal_hold_review",
+              "data_subject_request",
+              "security_review",
+              "quality_review"
+            ],
+            "title": "Purpose Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose_code",
+          "case_ref"
+        ],
+        "title": "InteractionAccessPurpose",
+        "type": "object"
+      },
+      "InteractionExportManifest": {
+        "additionalProperties": false,
+        "description": "Manifest of one interaction content export (PRP-99). Metadata only: ids, counts, the purpose and an encrypted bundle reference; no content. Written by PRP-104.",
+        "properties": {
+          "audit_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "bundle": {
+            "$ref": "#/components/schemas/EncryptedObjectRef"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
+          },
+          "domain_ids": {
+            "items": {
+              "$ref": "#/components/schemas/DomainId"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "excluded_count": {
+            "minimum": 0.0,
+            "title": "Excluded Count",
+            "type": "integer"
+          },
+          "expires_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "export_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "includes_held_content": {
+            "title": "Includes Held Content",
+            "type": "boolean"
+          },
+          "interaction_count": {
+            "minimum": 0.0,
+            "title": "Interaction Count",
+            "type": "integer"
+          },
+          "interaction_ids": {
+            "items": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "maxItems": 1000,
+            "title": "Interaction Ids",
+            "type": "array"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/InteractionAccessPurpose"
+          },
+          "requested_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "requested_by": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "export_id",
+          "cloud",
+          "customer_id",
+          "domain_ids",
+          "requested_by",
+          "requested_at",
+          "purpose",
+          "filters",
+          "interaction_count",
+          "interaction_ids",
+          "excluded_count",
+          "includes_held_content",
+          "bundle",
+          "audit_id",
+          "expires_at"
+        ],
+        "title": "InteractionExportManifest",
+        "type": "object"
+      },
+      "InteractionExportRequest": {
+        "additionalProperties": false,
+        "description": "Body of ``POST .../interaction-exports`` (PRP-104 item 4).\n\n``purpose`` is the PRP-99 ``InteractionAccessPurpose``; ``filters`` is the PRP-99 export\nmanifest ``Filters`` (``from`` inclusive and ``to`` exclusive on ``captured_at``,\n``agent_ids``, ``detected_categories``), recorded verbatim in the manifest.",
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/InteractionAccessPurpose"
+          }
+        },
+        "required": [
+          "purpose",
+          "filters"
+        ],
+        "title": "InteractionExportRequest",
+        "type": "object"
+      },
+      "InteractionPage": {
+        "additionalProperties": false,
+        "description": "One page of interaction metadata, newest ``captured_at`` first.",
+        "properties": {
+          "continuation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InteractionRecord"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "InteractionPage",
+        "type": "object"
+      },
+      "InteractionRecord": {
+        "additionalProperties": false,
+        "description": "Index document of one captured interaction (PRP-99; container interaction_index, declared by PRP-102). Metadata only: it has no content-bearing property, no string over 1024 characters, no hash of plaintext and references neither ContentEnvelope nor RedactedContent. The content lives encrypted behind content_ref (null when nothing was stored).",
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_version_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capture_policy_id": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "capture_policy_version": {
+            "minimum": 1.0,
+            "title": "Capture Policy Version",
+            "type": "integer"
+          },
+          "capture_source": {
+            "enum": [
+              "edge_push",
+              "otlp_attributes",
+              "gateway_log",
+              "connector"
+            ],
+            "title": "Capture Source",
+            "type": "string"
+          },
+          "captured_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "content_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EncryptedObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "correlation_id": {
+            "pattern": "^[A-Za-z0-9._-]{1,128}$",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
+          },
+          "data_asset_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Data Asset Ids"
+          },
+          "detector_set_version": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Detector Set Version",
+            "type": "string"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "event_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "expires_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "findings_summary": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FindingsSummaryItem"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Findings Summary"
+          },
+          "interaction_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "legal_hold_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RecordId"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Legal Hold Ids"
+          },
+          "mcp_server_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Model"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "occurred_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "parts": {
+            "$ref": "#/components/schemas/ContentParts"
+          },
+          "principal_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrincipalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "redaction_state": {
+            "enum": [
+              "redacted",
+              "not_required",
+              "redaction_failed"
+            ],
+            "title": "Redaction State",
+            "type": "string"
+          },
+          "retention_class": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "interaction_default",
+            "title": "Retention Class"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sensitivity_categories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SensitivityCategories"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "service_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "span_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpanId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tool_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__telemetry__v1__telemetry_event__TraceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "interaction_id",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "source_id",
+          "event_id",
+          "correlation_id",
+          "capture_source",
+          "occurred_at",
+          "captured_at",
+          "capture_policy_id",
+          "capture_policy_version",
+          "detector_set_version",
+          "redaction_state",
+          "parts",
+          "content_ref",
+          "expires_at"
+        ],
+        "title": "InteractionRecord",
+        "type": "object"
       },
       "InvoicedSeries": {
         "additionalProperties": false,
@@ -12666,6 +13365,66 @@
           "required"
         ],
         "title": "ModePreflight",
+        "type": "object"
+      },
+      "Model": {
+        "additionalProperties": false,
+        "description": "Model that served the interaction. Null when unknown.",
+        "properties": {
+          "deployment_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "model_name",
+          "model_version",
+          "deployment_id"
+        ],
+        "title": "Model",
         "type": "object"
       },
       "ModelDeployment": {
@@ -16740,6 +17499,97 @@
         "title": "RecordId",
         "type": "string"
       },
+      "RedactedContent": {
+        "additionalProperties": false,
+        "description": "Redacted plaintext of one captured interaction (opt-in content capture, PRP-99): the document PRP-102 encrypts. It exists only in memory between redaction and encryption and after an audited decrypt; it is never an event, audit, index or notification field and no schema references it. Redaction replaces each detection with the placeholder `[[ns-redacted:<detected_category>]]`. Every text is secret-free: JSON Schema rejects text containing a private-key block, JWT, bearer token, AWS access key id, GitHub token, sk- key, Azure storage or Service Bus key assignment, SAS signature or URL with userinfo. The same patterns are mirrored by the Python validator check_secret_free_text in tests/contracts/validators.py, which PRP-101 must keep a subset of its credential detectors. redaction_state is `redacted` or `not_required` only; content whose redaction failed is not representable here. Pydantic ignores `not` (ADR-0004): validate against the JSON Schema before encryption.",
+        "properties": {
+          "detector_set_version": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Detector Set Version",
+            "type": "string"
+          },
+          "interaction_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/RedactedPart"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Parts",
+            "type": "array"
+          },
+          "redaction_state": {
+            "enum": [
+              "redacted",
+              "not_required"
+            ],
+            "title": "Redaction State",
+            "type": "string"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "interaction_id",
+          "redaction_state",
+          "detector_set_version",
+          "parts"
+        ],
+        "title": "RedactedContent",
+        "type": "object"
+      },
+      "RedactedPart": {
+        "additionalProperties": false,
+        "description": "One redacted content part with its detection findings.",
+        "properties": {
+          "findings": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DetectionFinding"
+                },
+                "maxItems": 256,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Findings"
+          },
+          "part": {
+            "$ref": "#/components/schemas/ContentPartKind"
+          },
+          "text": {
+            "$ref": "#/components/schemas/SecretFreeText"
+          },
+          "truncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Truncated"
+          }
+        },
+        "required": [
+          "part",
+          "text"
+        ],
+        "title": "RedactedPart",
+        "type": "object"
+      },
       "Reference": {
         "additionalProperties": false,
         "properties": {
@@ -18582,7 +19432,7 @@
           "trace_id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/TraceId"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__run_reference__TraceId"
               },
               {
                 "type": "null"
@@ -19052,6 +19902,12 @@
         ],
         "title": "SearchResponse",
         "type": "object"
+      },
+      "SecretFreeText": {
+        "maxLength": 32768,
+        "minLength": 0,
+        "title": "SecretFreeText",
+        "type": "string"
       },
       "Semver": {
         "maxLength": 128,
@@ -20225,178 +21081,15 @@
         "title": "SourcesConnectorRowView",
         "type": "object"
       },
-      "Span": {
-        "additionalProperties": false,
-        "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Agent"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "ended_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ended At"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "kind": {
-            "enum": [
-              "agent",
-              "model",
-              "tool",
-              "retrieval",
-              "other"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "late": {
-            "default": false,
-            "title": "Late",
-            "type": "boolean"
-          },
-          "late_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Late Reason"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "parent_span_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Span Id"
-          },
-          "payload": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payload"
-          },
-          "payload_state": {
-            "default": "absent",
-            "enum": [
-              "absent",
-              "redacted",
-              "pending",
-              "redaction_failed",
-              "not_required",
-              "unknown"
-            ],
-            "title": "Payload State",
-            "type": "string"
-          },
-          "sampled": {
-            "default": false,
-            "title": "Sampled",
-            "type": "boolean"
-          },
-          "sampling_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sampling Rate"
-          },
-          "span_id": {
-            "title": "Span Id",
-            "type": "string"
-          },
-          "started_at": {
-            "title": "Started At",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "ok",
-              "error",
-              "unknown"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "tool": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ToolInfo"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "span_id",
-          "name",
-          "kind",
-          "started_at",
-          "status"
-        ],
-        "title": "Span",
-        "type": "object"
-      },
       "SpanCount": {
         "minimum": 0.0,
         "title": "SpanCount",
         "type": "integer"
+      },
+      "SpanId": {
+        "pattern": "^[0-9a-f]{16}$",
+        "title": "SpanId",
+        "type": "string"
       },
       "SpendBudget": {
         "additionalProperties": false,
@@ -21701,7 +22394,7 @@
           },
           "spans": {
             "items": {
-              "$ref": "#/components/schemas/Span"
+              "$ref": "#/components/schemas/neurosphere_api__replay__models__Span"
             },
             "title": "Spans",
             "type": "array"
@@ -21720,11 +22413,6 @@
         ],
         "title": "TraceDetail",
         "type": "object"
-      },
-      "TraceId": {
-        "pattern": "^[a-f0-9]{32}$",
-        "title": "TraceId",
-        "type": "string"
       },
       "TracePage": {
         "additionalProperties": false,
@@ -23071,6 +23759,174 @@
         "title": "Sampling",
         "type": "object"
       },
+      "neurosphere_api__replay__models__Span": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "kind": {
+            "enum": [
+              "agent",
+              "model",
+              "tool",
+              "retrieval",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "late": {
+            "default": false,
+            "title": "Late",
+            "type": "boolean"
+          },
+          "late_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Reason"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Span Id"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "payload_state": {
+            "default": "absent",
+            "enum": [
+              "absent",
+              "redacted",
+              "pending",
+              "redaction_failed",
+              "not_required",
+              "unknown"
+            ],
+            "title": "Payload State",
+            "type": "string"
+          },
+          "sampled": {
+            "default": false,
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Rate"
+          },
+          "span_id": {
+            "title": "Span Id",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "span_id",
+          "name",
+          "kind",
+          "started_at",
+          "status"
+        ],
+        "title": "Span",
+        "type": "object"
+      },
       "neurosphere_api__reports__models__DecisionBody": {
         "additionalProperties": false,
         "properties": {
@@ -23391,6 +24247,11 @@
         ],
         "title": "Owner",
         "type": "object"
+      },
+      "neurosphere_contracts__catalog__v1__run_reference__TraceId": {
+        "pattern": "^[a-f0-9]{32}$",
+        "title": "TraceId",
+        "type": "string"
       },
       "neurosphere_contracts__catalog__v1__tool__Tool": {
         "additionalProperties": false,
@@ -23742,6 +24603,27 @@
         "title": "Window",
         "type": "object"
       },
+      "neurosphere_contracts__interactions__v1__detection_finding__Span": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "Span",
+        "type": "object"
+      },
       "neurosphere_contracts__query__v1__structured_query__CanonicalId": {
         "maxLength": 512,
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
@@ -23931,6 +24813,11 @@
         ],
         "title": "Uncertainty",
         "type": "object"
+      },
+      "neurosphere_contracts__telemetry__v1__telemetry_event__TraceId": {
+        "pattern": "^[0-9a-f]{32}$",
+        "title": "TraceId",
+        "type": "string"
       },
       "neurosphere_core__lifecycle__models__TargetRef": {
         "additionalProperties": false,
@@ -31905,6 +32792,484 @@
         ]
       }
     },
+    "/api/v1/domains/{domain_id}/interaction-exports": {
+      "post": {
+        "operationId": "create_interaction_export_api_v1_domains__domain_id__interaction_exports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionExportManifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Interaction Export",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interaction-exports/{export_id}": {
+      "get": {
+        "operationId": "get_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionExportManifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Interaction Export",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interaction-exports/{export_id}/bundle": {
+      "get": {
+        "operationId": "download_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__bundle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "The decrypted export bundle (JSON: interaction id -> redacted content); audited before it is opened"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Interaction Export",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interactions": {
+      "get": {
+        "operationId": "search_interactions_api_v1_domains__domain_id__interactions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "principal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Principal Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tool_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tool Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "data_asset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Data Asset Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "detected_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Detected Category"
+            }
+          },
+          {
+            "description": "Inclusive lower bound on captured_at (timezone-aware).",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive lower bound on captured_at (timezone-aware).",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Exclusive upper bound on captured_at (timezone-aware).",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exclusive upper bound on captured_at (timezone-aware).",
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "continuation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Continuation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Interactions",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interactions/{interaction_id}": {
+      "get": {
+        "operationId": "get_interaction_api_v1_domains__domain_id__interactions__interaction_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "interaction_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Interaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Interaction",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads": {
+      "post": {
+        "operationId": "read_interaction_content_api_v1_domains__domain_id__interactions__interaction_id__content_reads_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "interaction_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Interaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionAccessPurpose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedactedContent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Interaction Content",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
     "/api/v1/evaluation/domains/{domain}/calibration-samples": {
       "get": {
         "operationId": "calibration_sample_api_v1_evaluation_domains__domain__calibration_samples_get",
@@ -35600,6 +36965,46 @@
               "default": false,
               "title": "Include Payload",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Access purpose code. Used only with include_payload=true; required then from a caller holding interaction.read in the domain.",
+            "in": "query",
+            "name": "purpose_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Access purpose code. Used only with include_payload=true; required then from a caller holding interaction.read in the domain.",
+              "title": "Purpose Code"
+            }
+          },
+          {
+            "description": "Optional case record id, used only with include_payload=true; bound into the interaction.read audit record.",
+            "in": "query",
+            "name": "case_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional case record id, used only with include_payload=true; bound into the interaction.read audit record.",
+              "title": "Case Ref"
             }
           }
         ],

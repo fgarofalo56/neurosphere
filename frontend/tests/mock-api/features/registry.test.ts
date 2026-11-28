@@ -13,6 +13,7 @@ import { handle as evaluations } from "./evaluations.ts";
 import { handle as executionControl } from "./execution-control.ts";
 import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
+import { handle as interactions } from "./interactions.ts";
 import { handle as compliance } from "./compliance.ts";
 import { handle as mapTopology } from "./map-topology.ts";
 import { handle as notifications } from "./notifications.ts";
@@ -42,6 +43,7 @@ describe("feature mock registry", () => {
       sourceStatus,
       capture,
       notifications,
+      interactions,
       adminCore,
       mapTopology,
     ]);

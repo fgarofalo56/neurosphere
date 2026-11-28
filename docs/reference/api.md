@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `80678eb2da75b4ed14bf606421107898e53f4173`. Generated: 2026-11-26.
+> Source commit: `e87579ce801d0e2629eb72291cb7d5b5f7d985a8`. Generated: 2026-11-28.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 253 operations on 211 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 259 operations on 217 paths.
 
 ## Status and verification
 
@@ -225,6 +225,12 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | ingest | POST | `/v1/ingest/events` | Events |
 | ingest | POST | `/v1/ingest/otlp/metrics` | Metrics |
 | ingest | POST | `/v1/ingest/otlp/traces` | Traces |
+| interactions | POST | `/api/v1/domains/{domain_id}/interaction-exports` | Create Interaction Export |
+| interactions | GET | `/api/v1/domains/{domain_id}/interaction-exports/{export_id}` | Get Interaction Export |
+| interactions | GET | `/api/v1/domains/{domain_id}/interaction-exports/{export_id}/bundle` | Download Interaction Export |
+| interactions | GET | `/api/v1/domains/{domain_id}/interactions` | Search Interactions |
+| interactions | GET | `/api/v1/domains/{domain_id}/interactions/{interaction_id}` | Get Interaction |
+| interactions | POST | `/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads` | Read Interaction Content |
 | lifecycle | GET | `/api/v1/lifecycle/holds` | List Holds |
 | lifecycle | POST | `/api/v1/lifecycle/holds` | Place Hold |
 | lifecycle | DELETE | `/api/v1/lifecycle/holds/{hold_id}` | Release Hold |
@@ -1801,6 +1807,52 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Traces
 - Responses: `202` `IngestResult`
 
+### Tag: interactions
+
+#### POST `/api/v1/domains/{domain_id}/interaction-exports`
+
+- Operation id: `create_interaction_export_api_v1_domains__domain_id__interaction_exports_post`
+- Summary: Create Interaction Export
+- Parameters: `domain_id` (path, required)
+- Request body: application/json: `InteractionExportRequest` (required)
+- Responses: `201` `InteractionExportManifest`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interaction-exports/{export_id}`
+
+- Operation id: `get_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__get`
+- Summary: Get Interaction Export
+- Parameters: `domain_id` (path, required), `export_id` (path, required)
+- Responses: `200` `InteractionExportManifest`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interaction-exports/{export_id}/bundle`
+
+- Operation id: `download_interaction_export_api_v1_domains__domain_id__interaction_exports__export_id__bundle_get`
+- Summary: Download Interaction Export
+- Parameters: `domain_id` (path, required), `export_id` (path, required)
+- Responses: `200` no body; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interactions`
+
+- Operation id: `search_interactions_api_v1_domains__domain_id__interactions_get`
+- Summary: Search Interactions
+- Parameters: `domain_id` (path, required), `agent_id` (query), `principal_id` (query), `tool_id` (query), `data_asset_id` (query), `detected_category` (query), `from` (query), `to` (query), `page_size` (query), `continuation` (query)
+- Responses: `200` `InteractionPage`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/domains/{domain_id}/interactions/{interaction_id}`
+
+- Operation id: `get_interaction_api_v1_domains__domain_id__interactions__interaction_id__get`
+- Summary: Get Interaction
+- Parameters: `domain_id` (path, required), `interaction_id` (path, required)
+- Responses: `200` `InteractionRecord`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads`
+
+- Operation id: `read_interaction_content_api_v1_domains__domain_id__interactions__interaction_id__content_reads_post`
+- Summary: Read Interaction Content
+- Parameters: `domain_id` (path, required), `interaction_id` (path, required)
+- Request body: application/json: `InteractionAccessPurpose` (required)
+- Responses: `200` `RedactedContent`; `422` `HTTPValidationError`
+
 ### Tag: lifecycle
 
 #### GET `/api/v1/lifecycle/holds`
@@ -2033,7 +2085,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 - Operation id: `get_trace_api_v1_replay_domains__domain_id__traces__trace_id__get`
 - Summary: Get Trace
-- Parameters: `domain_id` (path, required), `trace_id` (path, required), `include_payload` (query)
+- Parameters: `domain_id` (path, required), `trace_id` (path, required), `include_payload` (query), `purpose_code` (query), `case_ref` (query)
 - Responses: `200` `TraceDetail`; `422` `HTTPValidationError`
 
 ### Tag: reports

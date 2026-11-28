@@ -5,7 +5,8 @@
   return nothing for another customer. It MAY return spans of other domains of the same
   customer (the assembler drops and reports them); it must never return another customer's.
 * :class:`InMemoryTraceReader` -- tests and the synthetic sandbox.
-* :class:`ArchiveTraceReader` -- reads the PRP-07 redacted, pseudonymized archive blobs
+* :class:`ArchiveTraceReader` -- never returns a payload body (``read_payload`` is always None);
+  it reads the PRP-07 redacted, pseudonymized archive blobs
   (``{customer}/{domain or _none}/{yyyy}/{mm}/{dd}/{doc_id}.json.gz``, each a gzip of one
   ``NormalizedEvent`` dump) through a minimal async container protocol. The layout is mirrored
   here on purpose: replay stays independent of ``neurosphere_workers`` internals.
@@ -282,5 +283,11 @@ class ArchiveTraceReader:
     async def read_payload(
         self, customer_id: str, domain_id: str, pointer: str
     ) -> dict[str, Any] | None:
-        # Payload bodies are not part of the PRP-07 archive layout; nothing to read here.
+        """Always None: this reader never decrypts or returns a body (PRP-104 item 5).
+
+        Payload bodies are not part of the PRP-07 archive layout. An ``interaction:<id>`` pointer
+        (PRP-103 capture) names stored interaction content, which only the trace route's audited
+        batch read (``InteractionContentReader.read_many``, ``interaction.read`` plus a purpose)
+        may decrypt; resolving it here would bypass that audit, so it is refused like any other.
+        """
         return None

@@ -85,6 +85,7 @@ from neurosphere_core.governance.policy import (
     validate_draft,
 )
 from neurosphere_core.governance.policy.models import PolicyDefinition
+from neurosphere_core.governance.policy.readers import InteractionFindingReaderAdapter
 from neurosphere_core.governance.policy.rules import (
     InteractionFindingReader,
     RuleBuildContext,
@@ -111,6 +112,7 @@ from neurosphere_api.runtime.builders import (
     BuilderSpec,
     ComponentUnavailableError,
 )
+from neurosphere_api.runtime.builders.interactions import interaction_store
 from neurosphere_api.runtime.errors import StartupRefusedError
 
 __all__ = [
@@ -197,14 +199,26 @@ class SeedFile(BaseModel):
 
 
 def interaction_finding_reader(ctx: BuildContext) -> InteractionFindingReader | None:
-    """The API binding point of the PRP-105 ``InteractionFindingReader`` port.
+    """The API binding point of the PRP-105 ``InteractionFindingReader`` port (PRP-104 item 8).
 
-    Returns ``None`` until PRP-104 item 8 binds the interaction finding reader HERE (the one
-    binding owner); with ``None`` the ``content_rule`` kind is ``evaluator_unavailable`` and a
-    policy using it is refused at publish dry run (``rule_kind_unavailable``).
+    Returns :class:`InteractionFindingReaderAdapter` (finding counts and interaction ids from the
+    metadata index; never content, never a decrypt) over the composition's shared interaction
+    store from the interactions builder's memoized ``interaction_store`` factory, when that store
+    can be built (an ``interaction_capture`` stored setting exists and retention opts in to
+    bodies; the same gate as the interaction explorer). Otherwise ``None``: the ``content_rule``
+    kind is ``evaluator_unavailable`` and a policy using it is refused at publish dry run
+    (``rule_kind_unavailable``). This module is the one API binding owner.
     """
-    del ctx
-    return None
+    try:
+        store = interaction_store(ctx)
+    except ComponentUnavailableError as exc:
+        _log.info("content_rule finding reader unbound: %s", exc.reason)
+        return None
+    except Exception as exc:
+        # Optional: an unexpected store error leaves content_rule unavailable, nothing else.
+        _log.warning("content_rule finding reader unbound: %s", type(exc).__name__)
+        return None
+    return InteractionFindingReaderAdapter(store)
 
 
 class _NoSubjectMetrics:

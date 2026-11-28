@@ -281,6 +281,17 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
+  // PRP-104 item 6: capture and the interaction explorer are opt-in and off in the compose stack.
+  {
+    route: "/interactions",
+    expected: [
+      {
+        status: 503,
+        pathPrefix: "/api/v1/domains/",
+        why: "content capture is opt-in; with no interaction explorer configured the list answers 503 interaction_explorer_unconfigured and the page shows its not-configured state",
+      },
+    ],
+  },
   { route: "/map" },
   { route: "/map/table" },
   { route: "/mcp-admin", rows: "server-row" },

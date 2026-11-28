@@ -313,6 +313,12 @@ def _register_notifications_admin(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_interactions(registry: RouterRegistry) -> None:
+    from neurosphere_api.interactions import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -357,6 +363,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_admin_capture,
     _register_governance_policy,
     _register_notifications_admin,
+    _register_interactions,
 )
 
 

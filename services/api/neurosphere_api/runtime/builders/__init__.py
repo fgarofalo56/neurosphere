@@ -393,6 +393,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         edge,
         gateway,
         governance,
+        interaction_explorer,
         interactions,
         lifecycle,
         mcp,
@@ -418,6 +419,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         sources_status.BUILDER,
         agent_identity.BUILDER,
         interactions.BUILDER,
+        interaction_explorer.BUILDER,  # PRP-104: reuses the interactions store factory
         governance.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,

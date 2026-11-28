@@ -21,7 +21,7 @@ const GROUPS: Record<string, string[]> = {
   "Cost & usage": ["Cost dashboard", "Latency dashboard", "Coverage dashboard", "Reconciliation"],
   Agents: ["Map", "Map table", "Trace replay"],
   Quality: ["Quality", "Recommendations", "Find an agent"],
-  Governance: ["Review", "Actions"],
+  Governance: ["Review", "Actions", "Interactions"],
   Reports: ["Reports"],
 };
 

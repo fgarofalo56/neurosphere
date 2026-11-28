@@ -18,6 +18,7 @@ import { workspaceRoutes } from "../features/workspaces";
 // PRP-31: light route modules only (never a feature index).
 import { catalogExplorerRoutes } from "../features/catalog/routes";
 import { auditRoutes } from "../features/audit/routes";
+import { interactionsRoutes } from "../features/interactions/routes";
 import { curationRoutes } from "../features/curation/routes";
 import { deployRoutes } from "../features/deploy/routes";
 import { evaluationsRoutes } from "../features/evaluations/routes";
@@ -53,6 +54,7 @@ export const appRoutes: readonly RouteObject[] = [
   ...catalogExplorerRoutes,
   ...curationRoutes,
   ...auditRoutes,
+  ...interactionsRoutes,
   ...finopsRoutes,
   ...federationRoutes,
   ...deployRoutes,
