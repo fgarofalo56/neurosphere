@@ -6463,6 +6463,78 @@
         "title": "DetectedCategory",
         "type": "string"
       },
+      "DetectionFinding": {
+        "additionalProperties": false,
+        "description": "One detector result for one content part of an interaction (opt-in content capture, PRP-99). A fragment: it has no schema_version of its own and is embedded by RedactedContent (and, in later items, the interaction record). It carries a category, counts and offsets into the redacted text, never the matched text. Rule JSON Schema expresses with if/then: a credential category (CredentialCategory) requires action `replaced`; a credential can never be kept. Pydantic ignores if/then (ADR-0004), so consumers validate against the JSON Schema.",
+        "properties": {
+          "action": {
+            "enum": [
+              "replaced",
+              "kept"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DetectedCategory"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "count": {
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "detector_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Detector Id",
+            "type": "string"
+          },
+          "detector_version": {
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "title": "Detector Version",
+            "type": "string"
+          },
+          "part": {
+            "$ref": "#/components/schemas/ContentPartKind"
+          },
+          "spans": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__interactions__v1__detection_finding__Span"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Spans"
+          }
+        },
+        "required": [
+          "category",
+          "part",
+          "detector_id",
+          "detector_version",
+          "count",
+          "action",
+          "confidence"
+        ],
+        "title": "DetectionFinding",
+        "type": "object"
+      },
       "DiagnosticsState": {
         "additionalProperties": false,
         "properties": {
@@ -11125,6 +11197,40 @@
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         "title": "IntentId",
         "type": "string"
+      },
+      "InteractionAccessPurpose": {
+        "additionalProperties": false,
+        "description": "Why content is read or exported (PRP-99). A fragment (no schema_version) embedded by access requests and InteractionExportManifest. A code plus an optional case reference, never prose (audit content_guard forbids it).",
+        "properties": {
+          "case_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purpose_code": {
+            "enum": [
+              "incident_investigation",
+              "policy_violation_review",
+              "legal_hold_review",
+              "data_subject_request",
+              "security_review",
+              "quality_review"
+            ],
+            "title": "Purpose Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose_code",
+          "case_ref"
+        ],
+        "title": "InteractionAccessPurpose",
+        "type": "object"
       },
       "InteractionPage": {
         "additionalProperties": false,
@@ -17247,6 +17353,97 @@
         "title": "RecordId",
         "type": "string"
       },
+      "RedactedContent": {
+        "additionalProperties": false,
+        "description": "Redacted plaintext of one captured interaction (opt-in content capture, PRP-99): the document PRP-102 encrypts. It exists only in memory between redaction and encryption and after an audited decrypt; it is never an event, audit, index or notification field and no schema references it. Redaction replaces each detection with the placeholder `[[ns-redacted:<detected_category>]]`. Every text is secret-free: JSON Schema rejects text containing a private-key block, JWT, bearer token, AWS access key id, GitHub token, sk- key, Azure storage or Service Bus key assignment, SAS signature or URL with userinfo. The same patterns are mirrored by the Python validator check_secret_free_text in tests/contracts/validators.py, which PRP-101 must keep a subset of its credential detectors. redaction_state is `redacted` or `not_required` only; content whose redaction failed is not representable here. Pydantic ignores `not` (ADR-0004): validate against the JSON Schema before encryption.",
+        "properties": {
+          "detector_set_version": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Detector Set Version",
+            "type": "string"
+          },
+          "interaction_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/RedactedPart"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Parts",
+            "type": "array"
+          },
+          "redaction_state": {
+            "enum": [
+              "redacted",
+              "not_required"
+            ],
+            "title": "Redaction State",
+            "type": "string"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "interaction_id",
+          "redaction_state",
+          "detector_set_version",
+          "parts"
+        ],
+        "title": "RedactedContent",
+        "type": "object"
+      },
+      "RedactedPart": {
+        "additionalProperties": false,
+        "description": "One redacted content part with its detection findings.",
+        "properties": {
+          "findings": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DetectionFinding"
+                },
+                "maxItems": 256,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Findings"
+          },
+          "part": {
+            "$ref": "#/components/schemas/ContentPartKind"
+          },
+          "text": {
+            "$ref": "#/components/schemas/SecretFreeText"
+          },
+          "truncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Truncated"
+          }
+        },
+        "required": [
+          "part",
+          "text"
+        ],
+        "title": "RedactedPart",
+        "type": "object"
+      },
       "Reference": {
         "additionalProperties": false,
         "properties": {
@@ -19560,6 +19757,12 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "SecretFreeText": {
+        "maxLength": 32768,
+        "minLength": 0,
+        "title": "SecretFreeText",
+        "type": "string"
+      },
       "Semver": {
         "maxLength": 128,
         "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
@@ -20730,174 +20933,6 @@
           "last_attempt_at"
         ],
         "title": "SourcesConnectorRowView",
-        "type": "object"
-      },
-      "Span": {
-        "additionalProperties": false,
-        "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Agent"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "ended_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ended At"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "kind": {
-            "enum": [
-              "agent",
-              "model",
-              "tool",
-              "retrieval",
-              "other"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "late": {
-            "default": false,
-            "title": "Late",
-            "type": "boolean"
-          },
-          "late_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Late Reason"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "parent_span_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Span Id"
-          },
-          "payload": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payload"
-          },
-          "payload_state": {
-            "default": "absent",
-            "enum": [
-              "absent",
-              "redacted",
-              "pending",
-              "redaction_failed",
-              "not_required",
-              "unknown"
-            ],
-            "title": "Payload State",
-            "type": "string"
-          },
-          "sampled": {
-            "default": false,
-            "title": "Sampled",
-            "type": "boolean"
-          },
-          "sampling_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sampling Rate"
-          },
-          "span_id": {
-            "title": "Span Id",
-            "type": "string"
-          },
-          "started_at": {
-            "title": "Started At",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "ok",
-              "error",
-              "unknown"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "tool": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ToolInfo"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "span_id",
-          "name",
-          "kind",
-          "started_at",
-          "status"
-        ],
-        "title": "Span",
         "type": "object"
       },
       "SpanCount": {
@@ -22213,7 +22248,7 @@
           },
           "spans": {
             "items": {
-              "$ref": "#/components/schemas/Span"
+              "$ref": "#/components/schemas/neurosphere_api__replay__models__Span"
             },
             "title": "Spans",
             "type": "array"
@@ -23578,6 +23613,174 @@
         "title": "Sampling",
         "type": "object"
       },
+      "neurosphere_api__replay__models__Span": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "kind": {
+            "enum": [
+              "agent",
+              "model",
+              "tool",
+              "retrieval",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "late": {
+            "default": false,
+            "title": "Late",
+            "type": "boolean"
+          },
+          "late_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Reason"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Span Id"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "payload_state": {
+            "default": "absent",
+            "enum": [
+              "absent",
+              "redacted",
+              "pending",
+              "redaction_failed",
+              "not_required",
+              "unknown"
+            ],
+            "title": "Payload State",
+            "type": "string"
+          },
+          "sampled": {
+            "default": false,
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Rate"
+          },
+          "span_id": {
+            "title": "Span Id",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "span_id",
+          "name",
+          "kind",
+          "started_at",
+          "status"
+        ],
+        "title": "Span",
+        "type": "object"
+      },
       "neurosphere_api__reports__models__DecisionBody": {
         "additionalProperties": false,
         "properties": {
@@ -24252,6 +24455,27 @@
           "end"
         ],
         "title": "Window",
+        "type": "object"
+      },
+      "neurosphere_contracts__interactions__v1__detection_finding__Span": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "Span",
         "type": "object"
       },
       "neurosphere_contracts__query__v1__structured_query__CanonicalId": {
@@ -32673,6 +32897,70 @@
           }
         },
         "summary": "Get Interaction",
+        "tags": [
+          "interactions"
+        ]
+      }
+    },
+    "/api/v1/domains/{domain_id}/interactions/{interaction_id}/content-reads": {
+      "post": {
+        "operationId": "read_interaction_content_api_v1_domains__domain_id__interactions__interaction_id__content_reads_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "interaction_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Interaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionAccessPurpose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedactedContent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Interaction Content",
         "tags": [
           "interactions"
         ]

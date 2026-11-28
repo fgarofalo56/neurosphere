@@ -1,9 +1,10 @@
-"""Interaction explorer routes (PRP-104), mounted at ``/api/v1/domains``. Metadata only.
+"""Interaction explorer routes (PRP-104), mounted at ``/api/v1/domains``.
 
-| Method | Path                                          | Permission    |
-|--------|-----------------------------------------------|---------------|
-| GET    | ``/{domain_id}/interactions``                 | ``data.read`` |
-| GET    | ``/{domain_id}/interactions/{interaction_id}``| ``data.read`` |
+| Method | Path                                                         | Permission         |
+|--------|--------------------------------------------------------------|--------------------|
+| GET    | ``/{domain_id}/interactions``                                | ``data.read``      |
+| GET    | ``/{domain_id}/interactions/{interaction_id}``               | ``data.read``      |
+| POST   | ``/{domain_id}/interactions/{interaction_id}/content-reads`` | ``interaction.read`` |
 
 The path domain is the authorization TARGET (403 with a denial record outside it); the customer
 comes only from the derived ``IdentityScope``. Each allowed read appends one allowed-read record
@@ -13,26 +14,40 @@ bounded by ``MAX_QUERY_PAGE_SIZE`` and continues through an opaque ``continuatio
 Responses are PRP-99 ``InteractionRecord`` metadata: there is no content field. Explorer not
 configured -> 503 ``interaction_explorer_unconfigured``.
 
+The content-reads route (item 3) is the only route that returns captured content: body PRP-99
+``InteractionAccessPurpose``, response the stored ``RedactedContent`` with
+``Cache-Control: no-store``, through :class:`~neurosphere_api.interactions.content.
+InteractionContentReader` (purpose, authorization, fail-closed ``interaction.read`` record, then
+decrypt). ``require(interaction.read)`` gates the route first; the reader re-checks.
+
 No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Final
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Body, Depends, Path, Query, Request, Response
+from neurosphere_contracts.interactions.v1.interaction_access_purpose import (
+    InteractionAccessPurpose,
+)
 from neurosphere_contracts.interactions.v1.interaction_record import InteractionRecord
+from neurosphere_contracts.interactions.v1.redacted_content import RedactedContent
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.interactions import MAX_QUERY_PAGE_SIZE
 from neurosphere_core.interactions.models import DEFAULT_QUERY_PAGE_SIZE
+from neurosphere_core.scope import IdentityScope
 
-from neurosphere_api.authz import domain_from_path
+from neurosphere_api.authz import domain_from_path, require
 from neurosphere_api.authz.read_audit import ReadAudit, audited_read
+from neurosphere_api.authz.state import AuthzState, get_authz_state
+from neurosphere_api.interactions.content import ContentAccess, InteractionContentReader
 from neurosphere_api.interactions.models import InteractionPage
 from neurosphere_api.interactions.service import (
     Explorer,
     InteractionExplorerService,
     InteractionSearch,
 )
+from neurosphere_api.middleware import correlation_id_of
 from neurosphere_api.routers import RouterRegistry
 
 __all__ = ["PREFIX", "build_router", "register"]
@@ -50,6 +65,9 @@ SearchRead = Annotated[
 MetadataRead = Annotated[
     ReadAudit, Depends(audited_read(Permission.DATA_READ, "interaction.metadata_read", _DOMAIN))
 ]
+ContentScope = Annotated[IdentityScope, Depends(require(Permission.INTERACTION_READ, _DOMAIN))]
+Authz = Annotated[AuthzState, Depends(get_authz_state)]
+PurposeBody = Annotated[InteractionAccessPurpose, Body()]
 DomainPath = Annotated[str, Path(min_length=1, max_length=512)]
 InteractionPath = Annotated[str, Path(pattern=_UUID)]
 IdQuery = Annotated[str | None, Query(min_length=1, max_length=512)]
@@ -111,6 +129,33 @@ def build_router() -> APIRouter:
         )
         await audit.allowed([domain_id], 1)
         return record
+
+    @router.post(
+        "/{domain_id}/interactions/{interaction_id}/content-reads",
+        response_model=RedactedContent,
+    )
+    async def read_interaction_content(
+        domain_id: DomainPath,
+        interaction_id: InteractionPath,
+        purpose: PurposeBody,
+        scope: ContentScope,
+        explorer: Explorer,
+        authz: Authz,
+        request: Request,
+        response: Response,
+    ) -> RedactedContent:
+        response.headers["Cache-Control"] = "no-store"
+        access = ContentAccess(
+            scope=scope,
+            now=datetime.fromtimestamp(authz.clock(), UTC),
+            request_id=correlation_id_of(request.scope),
+            method=request.method,
+            path=request.url.path,
+            denials=authz.denial_recorder,
+        )
+        return await InteractionContentReader(explorer).read(
+            access, domain_id, interaction_id, purpose
+        )
 
     return router
 
